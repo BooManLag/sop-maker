@@ -1,0 +1,17 @@
+{
+  "business": "Exception Scan (entry diagnostic) - guarantee cost model. One unit = one Scan. Fixed costs are carried in numbers.json, so here they are 0 to isolate per-Scan economics.",
+  "unit": "Exception Scan",
+  "price": 12000,
+  "variable": [
+    {"label": "Analyst/data-scientist time: 50 h at $75/h loaded (ESTIMATE)", "cost": 3750},
+    {"label": "Compute + LLM for one 24-month export (ESTIMATE)", "cost": 250},
+    {"label": "Week-1 readiness check on Scans that stop there: 20% stop rate x $12,000 not billed (ESTIMATE)", "cost": 2400},
+    {"label": "Guarantee refunds: 15% of completed Scans x $12,000 (ESTIMATE claim rate)", "cost": 1800}
+  ],
+  "fixed_monthly": [{"label": "none (carried in numbers.json)", "cost": 0}],
+  "startup": [{"label": "none", "cost": 0}],
+  "days_per_month": 1,
+  "capacity_per_day": 6,
+  "plan_per_day": 3,
+  "ramp_per_day": [1, 1, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3]
+}
