@@ -1,0 +1,3 @@
+job_id,technician_id,asset_id,equipment_model,job_type,timestamp,checklist_values,parts_used,notes,callback_within_30_days
+job_001,tech_example,asset_001,Valve assembly X,valve replacement,2026-08-01T09:00:00Z,pressure_test:true,approved valve,Pressure reading recorded,false
+job_002,tech_example,asset_002,Valve assembly X,valve replacement,2026-08-02T09:00:00Z,pressure_test:true,approved valve,Pressure reading recorded,true
