@@ -1,0 +1,39 @@
+{
+  "business": "Successful Exceptions (working name): finds where field technicians' off-SOP practices get better outcomes than the documented procedure",
+  "target": "Heads of service operations / service excellence at field service organisations with 50 to 1,000 technicians who service standardised equipment (many repeat jobs on the same models), run Salesforce Field Service, ServiceNow FSM or IFS with digital checklists and parts logging, and already track first-time fix and callbacks",
+  "where": "North America and Europe, B2B, sold online and through the parent company's existing relationships",
+  "basis": "Narrowed from founder/competitors.md and founder/board.md: chosen where the data most likely shows deviations (structured parts/checklist records, many repeat jobs per equipment model) and outcomes are already measured. Unionised utilities/telecom dropped from the first panel (board: technician prompt hardest there). Segment shares, incomes and behaviour mix are informed guesses, not customer data.",
+  "age": [32, 60],
+  "segments": [
+    {"name": "Director of service operations at an industrial equipment manufacturer's service org (compressors, pumps, packaging, material handling; 200 to 1,000 techs)", "share": 0.35, "income": [140000, 230000]},
+    {"name": "Head of service at a commercial building-systems service company (HVAC, elevators, fire and security; 50 to 300 techs, lots of planned maintenance)", "share": 0.30, "income": [110000, 170000]},
+    {"name": "Service excellence lead at a medical or lab equipment service org (regulated, SOP-heavy, deviations already logged; 100 to 600 techs)", "share": 0.20, "income": [130000, 210000]},
+    {"name": "Operations lead at a third-party maintenance contractor servicing many brands (thin margins, 50 to 300 techs)", "share": 0.15, "income": [90000, 145000]}
+  ],
+  "behaviours": [
+    {"name": "Metrics-driven CI leader", "share": 0.20, "how": "Has a Six Sigma belt, trusts only statistically fair comparisons, and will poke holes in any 'deviators did better' claim."},
+    {"name": "Platform loyalist", "share": 0.15, "how": "Prefers to buy from their FSM vendor or its marketplace; separate tools need IT sign-off and rarely get it."},
+    {"name": "Burned by a past AI pilot", "share": 0.15, "how": "Ran an AI pilot that produced a nice dashboard and no savings; now asks for references and proof first."},
+    {"name": "Budget gatekeeper", "share": 0.15, "how": "Needs a hard ROI case in avoided truck rolls and repeat visits before procurement will open a PO; buying cycle is 6 to 12 months."},
+    {"name": "Retirement worrier", "share": 0.15, "how": "Losing senior techs every year and desperate to capture what they know before they go."},
+    {"name": "Early adopter", "share": 0.12, "how": "Likes trying new tools, will run a small pilot on one region if it is quick to stand up."},
+    {"name": "Compliance-first", "share": 0.08, "how": "Every SOP change goes through document control and a quality sign-off; anything touching procedures needs an audit trail."}
+  ],
+  "objections": [
+    "Our job records are too messy to show how techs actually did the work",
+    "My senior techs fix more because they're senior, not because of some deviation",
+    "Techs will read this as surveillance and push back",
+    "Salesforce or ServiceNow will just add this; why buy a separate tool?",
+    "That much a year for a list of things to investigate? Show me the callback savings",
+    "Another integration project; the last one took seven months",
+    "Who are you? I need references in my industry",
+    "We already have a CI analyst who can slice this in Power BI"
+  ],
+  "habits": [
+    "you review first-time-fix and callback numbers every Monday",
+    "you lose two or three senior techs to retirement every year",
+    "your IT team owns the FSM and every integration request joins a long queue",
+    "you report to a VP of Service who wants margin improvement this fiscal year",
+    "you get several AI vendor emails a week and ignore most of them"
+  ]
+}

@@ -1,0 +1,76 @@
+{
+  "business": "Successful Exceptions (working name), internal venture. MODEL CONVENTION: one 'unit' = one region-month of subscription; days_per_month is set to 1 so every *_per_day field below means 'active paying regions in that month'.",
+  "unit": "region-month (one service region or equipment line on subscription)",
+  "price": 2500,
+  "variable": [
+    {
+      "label": "Cloud compute + storage per region (ESTIMATE)",
+      "cost": 120
+    },
+    {
+      "label": "LLM usage: note parsing + technician follow-ups (ESTIMATE)",
+      "cost": 80
+    },
+    {
+      "label": "Customer analyst time: 6 h/month findings review at $75/h loaded (ESTIMATE)",
+      "cost": 450
+    },
+    {
+      "label": "FSM marketplace revenue share, 15% of price (ESTIMATE; varies by marketplace)",
+      "cost": 300
+    }
+  ],
+  "fixed_monthly": [
+    {
+      "label": "Team: 2 engineers + 1 data scientist + 1 product/sales lead, $15k/month loaded each (ESTIMATE; parent company may absorb part)",
+      "cost": 60000
+    },
+    {
+      "label": "Base cloud, tooling, security monitoring (ESTIMATE)",
+      "cost": 3000
+    },
+    {
+      "label": "Sales & marketing programmes: events, content, travel (ESTIMATE)",
+      "cost": 4000
+    }
+  ],
+  "startup": [
+    {
+      "label": "Pre-launch MVP build: 4 FTE x 3 months before month 1 (ESTIMATE)",
+      "cost": 180000
+    },
+    {
+      "label": "Security attestation (SOC 2 Type I) + pen test (ESTIMATE)",
+      "cost": 40000
+    },
+    {
+      "label": "FSM marketplace listing + security review (ESTIMATE)",
+      "cost": 10000
+    },
+    {
+      "label": "Legal: data-processing + data-pooling contract templates (ESTIMATE)",
+      "cost": 15000
+    },
+    {
+      "label": "Design-partner diagnostics delivered free/at cost (ESTIMATE)",
+      "cost": 20000
+    }
+  ],
+  "days_per_month": 1,
+  "capacity_per_day": 60,
+  "plan_per_day": 40,
+  "ramp_per_day": [
+    0,
+    0,
+    1,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    8,
+    10,
+    12
+  ]
+}
