@@ -15,7 +15,9 @@ test('expert capture through human publishing and proposed SOP improvement',asyn
  await expect(page.getByRole('heading',{name:'Your know-how is now a standard.'})).toBeVisible();
  await page.getByRole('button',{name:'Good Exception home'}).click();
  await page.getByRole('button',{name:/Improve existing SOP/}).click();
- await page.getByRole('button',{name:'Check data'}).click();
+ await page.getByRole('combobox').first().selectOption({index:1});
+ await page.getByRole('button',{name:/Use sample service records/}).click();
+ await expect(page.getByRole('button',{name:'Run sample scan'})).toBeVisible();
  await page.getByRole('button',{name:'Run sample scan'}).click();
  await page.getByRole('button',{name:'Review findings',exact:true}).click();
  await page.getByRole('button',{name:'Review finding',exact:true}).first().click();
