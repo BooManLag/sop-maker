@@ -7,9 +7,10 @@
     "build": "next build",
     "start": "node scripts/start.mjs",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test tests/*.test.ts",
+    "test": "tsx --import ./tests/setup.ts --test tests/*.test.ts",
     "seed": "tsx scripts/seed.ts",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "demo:reset": "tsx scripts/seed.ts --reset"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",

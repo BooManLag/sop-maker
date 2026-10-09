@@ -6,11 +6,10 @@ A working B2B product foundation for capturing expert know-how, finding promisin
 
 ## Local setup
 
-Requires Node.js 22 or newer and npm. This cloud workspace uses Node.js 24.
+Requires Node.js 22 or newer and npm.
 
 ```sh
-cd /workspace/sop-maker
-npm ci --cache /workspace/.npm-cache
+npm ci
 npm run seed
 npm run dev
 ```
@@ -24,7 +23,7 @@ npm run build
 npm start
 ```
 
-Tests exercise privacy normalization, insufficient-data behavior, sample-size planning, human approval and the complete sample lifecycle. Tests write demo records; use `npm run seed -- --reset` to explicitly discard local demo changes and restore the scenario. Normal seed preserves existing data. Demo data persists in ignored `.demo-data/store.json`.
+Tests exercise privacy normalization, insufficient-data behavior, sample-size planning, human approval and the complete sample lifecycle. Tests use a temporary data directory and never touch your demo data. Normal seed preserves existing data; run `npm run demo:reset` to discard local demo changes and restore the scenario. Demo data persists in ignored `.demo-data/store.json`.
 
 ## Explore
 
@@ -41,8 +40,8 @@ See [architecture.md](architecture.md) for domain boundaries, API contracts, sta
 ## Browser verification
 
 ```sh
-PLAYWRIGHT_BROWSERS_PATH=/workspace/.browser-cache npx playwright install chromium
-PLAYWRIGHT_BROWSERS_PATH=/workspace/.browser-cache npm run test:e2e
+npx playwright install chromium
+npm run test:e2e
 ```
 
-The browser suite starts a development server when needed (or reuses the running local server). It exercises both flows, verifies approval gates and unchanged baseline, checks mobile navigation, and rejects the insufficient sample CSV. Run against a fresh demo seed; browser tests add local sample records.
+The browser suite starts its own development server on port 3100 with a temporary data directory, so it can run alongside `npm run dev` without touching your demo data. It exercises both flows, verifies approval gates and unchanged baseline, checks mobile navigation, and rejects the insufficient sample CSV.
