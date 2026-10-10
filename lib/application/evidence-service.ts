@@ -3,6 +3,7 @@ import type { Store } from './store';
 import type { Actor } from '../server/auth';
 import { ApiError, requireCondition } from '../server/errors';
 import { demoResponse } from '../demo';
+import { trialPrimaryOutcome } from '../domain';
 import { EvidenceEngine, normalizeRecords, requiredSamplePerGroup } from '../services';
 import type { schemas } from '../server/contracts';
 import type { z } from 'zod';
@@ -61,6 +62,17 @@ export function scanDto(scan: ReturnType<typeof getScan>) {
     createdAt: scan.createdAt,
   };
 }
+export function scanDetailDto(scan: ReturnType<typeof getScan>) {
+  return {
+    ...scanDto(scan),
+    readiness: scan.readiness,
+    funnel: scan.status === 'complete' && scan.demo ? sampleFunnel(scan) : undefined,
+  };
+}
+/** Illustrative funnel for the sample scenario; only the surviving count is real. */
+function sampleFunnel(scan: ReturnType<typeof getScan>) {
+  return [47219, 23, 9, 4, scan.findingIds.length];
+}
 export function checkReadiness(s: Store, id: string) {
   const scan = getScan(s, id);
   requireCondition(
@@ -112,7 +124,7 @@ export function runScan(s: Store, id: string) {
   scan.findingIds = s.findings
     .filter((f) => f.processId === scan.processId && f.status !== 'dismissed')
     .map((f) => f.id);
-  return { id: scan.id, demo: true, funnel: [47219, 23, 9, 4, scan.findingIds.length] };
+  return { id: scan.id, demo: true, funnel: sampleFunnel(scan) };
 }
 export function dismissFinding(s: Store, id: string) {
   const f = getFinding(s, id);
@@ -178,7 +190,7 @@ export function createTrial(s: Store, body: Input<'trialCreate'>, actor: Actor) 
     id: randomUUID(),
     findingId: f.id,
     equipment: body.equipment,
-    primaryOutcome: '30-day callback rate',
+    primaryOutcome: trialPrimaryOutcome,
     testGroup: body.testGroup,
     control: 'Current SOP',
     requiredPerGroup: requiredSamplePerGroup(),
@@ -233,9 +245,22 @@ export function createChange(s: Store, body: Input<'changeCreate'>) {
   s.changes.push(change);
   return change;
 }
-export function submitChange(s: Store, id: string, body: Input<'changeSubmit'>) {
+/** A trial with its result (if any) and the finding it validates. */
+export function trialDetailDto(s: Store, id?: string) {
+  const trial = getTrial(s, id);
+  return {
+    ...trial,
+    result: s.results.find((r) => r.trialId === trial.id),
+    finding: getFinding(s, trial.findingId),
+  };
+}
+export function getChange(s: Store, id?: string) {
   const change = s.changes.find((x) => x.id === id);
   requireCondition(change, 'Change request not found.', 404);
+  return change;
+}
+export function submitChange(s: Store, id: string, body: Input<'changeSubmit'>) {
+  const change = getChange(s, id);
   if (change.status === 'submitted') {
     requireCondition(
       change.proposedStep === body.proposedStep,

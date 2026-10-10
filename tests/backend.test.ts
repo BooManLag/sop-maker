@@ -8,7 +8,7 @@ import { Backend } from '../lib/application/backend';
 import { JsonRepository, JsonRepositoryProvider } from '../lib/infrastructure/json-repository';
 import { GuardedCaptureAdapter } from '../lib/server/ai';
 import { DemoGeminiAdapter, normalizeRecords } from '../lib/services';
-import { readConfig, type ServerConfig, LIMITS } from '../lib/server/config';
+import { readConfig, type ServerConfig } from '../lib/server/config';
 import { demoActor, type Actor } from '../lib/server/auth';
 import { resolveEndpoint } from '../lib/server/contracts';
 import { initialStore } from '../lib/application/store';
