@@ -750,6 +750,134 @@
         }
       }
     },
+    "/captures/{id}": {
+      "get": {
+        "operationId": "captureGet",
+        "summary": "captureGet",
+        "description": "Requires read permission. Tenant comes only from verified Firebase custom claims. Review/admin writes require recent MFA by default.",
+        "security": [
+          {
+            "firebaseBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,128}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success. Private identity claims and raw uploaded records are omitted. Collection endpoints return {items,nextCursor,total}. See docs/API.md for response shapes."
+          },
+          "400": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/processes/{id}/analyze-capture": {
       "post": {
         "operationId": "captureAnalyze",
@@ -985,6 +1113,238 @@
         },
         "responses": {
           "201": {
+            "description": "Success. Private identity claims and raw uploaded records are omitted. Collection endpoints return {items,nextCursor,total}. See docs/API.md for response shapes."
+          },
+          "400": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/processes/{id}/draft": {
+      "post": {
+        "operationId": "processDraftSave",
+        "summary": "processDraftSave",
+        "description": "Requires write permission. Tenant comes only from verified Firebase custom claims. Review/admin writes require recent MFA by default.",
+        "security": [
+          {
+            "firebaseBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,128}$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Required in production, scoped to actor and tenant; retained for 24 hours. Reusing with different input returns 409.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{16,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "steps": {
+                    "minItems": 1,
+                    "maxItems": 100,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z0-9_-]{1,128}$"
+                        },
+                        "sequence": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 100
+                        },
+                        "action": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 300
+                        },
+                        "required": {
+                          "type": "boolean"
+                        },
+                        "condition": {
+                          "type": "string",
+                          "maxLength": 2000
+                        },
+                        "rationale": {
+                          "type": "string",
+                          "maxLength": 2000
+                        },
+                        "warning": {
+                          "type": "string",
+                          "maxLength": 2000
+                        },
+                        "evidence": {
+                          "type": "string",
+                          "maxLength": 2000
+                        },
+                        "durationMinSeconds": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 86400
+                        },
+                        "durationMaxSeconds": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 86400
+                        },
+                        "source": {
+                          "type": "string",
+                          "enum": [
+                            "expert_walkthrough",
+                            "baseline",
+                            "validated_field_practice"
+                          ]
+                        },
+                        "evidenceLinks": {
+                          "maxItems": 20,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "pattern": "^[A-Za-z0-9_-]{1,128}$"
+                          }
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "sequence",
+                        "action",
+                        "required",
+                        "source"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "steps"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
             "description": "Success. Private identity claims and raw uploaded records are omitted. Collection endpoints return {items,nextCursor,total}. See docs/API.md for response shapes."
           },
           "400": {
@@ -1521,6 +1881,134 @@
         },
         "responses": {
           "201": {
+            "description": "Success. Private identity claims and raw uploaded records are omitted. Collection endpoints return {items,nextCursor,total}. See docs/API.md for response shapes."
+          },
+          "400": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/scans/{id}": {
+      "get": {
+        "operationId": "scanGet",
+        "summary": "scanGet",
+        "description": "Requires read permission. Tenant comes only from verified Firebase custom claims. Review/admin writes require recent MFA by default.",
+        "security": [
+          {
+            "firebaseBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,128}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
             "description": "Success. Private identity claims and raw uploaded records are omitted. Collection endpoints return {items,nextCursor,total}. See docs/API.md for response shapes."
           },
           "400": {
@@ -3601,6 +4089,134 @@
         },
         "responses": {
           "201": {
+            "description": "Success. Private identity claims and raw uploaded records are omitted. Collection endpoints return {items,nextCursor,total}. See docs/API.md for response shapes."
+          },
+          "400": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/change-requests/{id}": {
+      "get": {
+        "operationId": "changeGet",
+        "summary": "changeGet",
+        "description": "Requires read permission. Tenant comes only from verified Firebase custom claims. Review/admin writes require recent MFA by default.",
+        "security": [
+          {
+            "firebaseBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,128}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
             "description": "Success. Private identity claims and raw uploaded records are omitted. Collection endpoints return {items,nextCursor,total}. See docs/API.md for response shapes."
           },
           "400": {

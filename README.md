@@ -46,7 +46,6 @@ npm run test:e2e
 
 The browser suite starts its own development server on port 3100 with a temporary data directory, so it can run alongside `npm run dev` without touching your demo data. It exercises both flows, verifies approval gates and unchanged baseline, checks mobile navigation, and rejects the insufficient sample CSV.
 
-
 ## Backend verification and operations
 
 The backend is organized into HTTP, application, domain and repository layers. Requests use strict schemas; production uses Firebase ID tokens, tenant scoping and reviewer/admin MFA. Writes have transactionally enforced idempotency, audit events and workflow constraints. AI adapters cannot publish or fabricate authoritative evidence. The local demo retains its sample workflows.

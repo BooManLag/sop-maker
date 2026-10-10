@@ -1,7 +1,6 @@
 import { mkdtemp, mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
-import { randomUUID } from 'node:crypto';
 import { Backend } from '../lib/application/backend';
 import { JsonRepositoryProvider } from '../lib/infrastructure/json-repository';
 import { initialStore } from '../lib/application/store';

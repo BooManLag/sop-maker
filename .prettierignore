@@ -1,0 +1,7 @@
+.next
+.next-e2e
+.demo-data
+docs
+package-lock.json
+next-env.d.ts
+tsconfig.json

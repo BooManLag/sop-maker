@@ -1,1 +1,9 @@
-{"hosting":{"public":"public","ignore":["firebase.json","**/.*","**/node_modules/**"],"rewrites":[{"source":"**","run":{"serviceId":"good-exception","region":"us-central1"}}]}}
+{
+  "hosting": {
+    "public": "public",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "rewrites": [
+      { "source": "**", "run": { "serviceId": "good-exception", "region": "us-central1" } }
+    ]
+  }
+}

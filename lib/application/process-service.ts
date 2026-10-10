@@ -88,6 +88,12 @@ export function createClarification(s: Store, id: string, body: Input<'clarifica
   s.clarifications.push(result);
   return result;
 }
+export function saveDraftSteps(s: Store, id: string, body: Input<'processDraftSave'>) {
+  const p = getProcess(s, id);
+  requireDraft(p);
+  p.versions[0].steps = body.steps.map((step, i) => ({ ...step, sequence: i + 1 }));
+  return p;
+}
 export function publishProcess(s: Store, id: string, body: Input<'processPublish'>, actor: Actor) {
   const p = getProcess(s, id);
   requireCondition(body.approved, 'Explicit human approval is required.');
@@ -115,5 +121,21 @@ export function processDto(process: ReturnType<typeof getProcess>) {
       ...version,
       approved: !!approvedBy,
     })),
+  };
+}
+export function getCapture(s: Store, id?: string) {
+  const capture = s.captures.find((c) => c.id === id);
+  requireCondition(capture, 'Capture not found.', 404);
+  return capture;
+}
+export function captureDraftDto(s: Store, id?: string) {
+  const capture = getCapture(s, id);
+  return {
+    id: capture.id,
+    processId: capture.processId,
+    questions: capture.questions ?? [],
+    answers: s.clarifications
+      .filter((c) => c.captureId === capture.id)
+      .map(({ question, answer }) => ({ question, answer })),
   };
 }

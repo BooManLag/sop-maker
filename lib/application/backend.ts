@@ -183,12 +183,18 @@ export class Backend {
         return page(s.auditEvents, q);
       case 'processGet':
         return processes.processDto(processes.getProcess(s, id));
+      case 'captureGet':
+        return processes.captureDraftDto(s, id);
+      case 'changeGet': {
+        const change = evidence.getChange(s, id);
+        return { ...change, trial: evidence.trialDetailDto(s, change.trialId) };
+      }
+      case 'scanGet':
+        return evidence.scanDetailDto(evidence.getScan(s, id));
       case 'findingGet':
         return evidence.getFinding(s, id);
-      case 'trialGet': {
-        const t = evidence.getTrial(s, id);
-        return { ...t, result: s.results.find((r) => r.trialId === t.id) };
-      }
+      case 'trialGet':
+        return evidence.trialDetailDto(s, id);
       case 'scanFindings': {
         const scan = evidence.getScan(s, id);
         requireCondition(scan.status === 'complete', 'Run the scan first.', 409);
@@ -225,6 +231,8 @@ export class Backend {
           409,
         );
         p.versions[0].steps = extraction.steps;
+        processes.getCapture(s, parseInput('captureAnalyze', input).captureId).questions =
+          extraction.questions;
         return {
           ...extraction,
           demo: ctx.actor.demo,
@@ -235,6 +243,8 @@ export class Backend {
       }
       case 'clarificationCreate':
         return processes.createClarification(s, id!, parseInput(operation, input));
+      case 'processDraftSave':
+        return processes.processDto(processes.saveDraftSteps(s, id!, parseInput(operation, input)));
       case 'processPublish':
         return processes.processDto(
           processes.publishProcess(s, id!, parseInput(operation, input), ctx.actor),
