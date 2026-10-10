@@ -1,48 +1,61 @@
 import { test, expect } from '@playwright/test';
-test('expert capture through human publishing and proposed SOP improvement',async({page})=>{
- await page.goto('/');
- await page.getByRole('button',{name:/Create first SOP/}).first().click();
- await page.getByRole('button',{name:'Use sample walkthrough'}).click();
- await page.getByRole('button',{name:'Analyze walkthrough'}).click();
- await page.getByRole('button',{name:'Clarify the know-how'}).click();
- await page.getByRole('button',{name:'Use sample expert explanation'}).click();
- await page.getByRole('button',{name:'Next question'}).click();
- await page.getByRole('button',{name:'Use sample expert explanation'}).click();
- await page.getByRole('button',{name:'Build SOP draft'}).click();
- await expect(page.getByRole('button',{name:'Publish baseline SOP'})).toBeDisabled();
- await page.getByRole('checkbox').check();
- await page.getByRole('button',{name:'Publish baseline SOP'}).click();
- await expect(page.getByRole('heading',{name:'Your know-how is now a standard.'})).toBeVisible();
- await page.getByRole('button',{name:'Good Exception home'}).click();
- await page.getByRole('button',{name:/Improve existing SOP/}).click();
- await page.getByRole('combobox').first().selectOption({index:1});
- await page.getByRole('button',{name:/Use sample service records/}).click();
- await expect(page.getByRole('button',{name:'Run sample scan'})).toBeVisible();
- await page.getByRole('button',{name:'Run sample scan'}).click();
- await page.getByRole('button',{name:'Review findings',exact:true}).click();
- await page.getByRole('button',{name:'Review finding',exact:true}).first().click();
- await page.getByRole('button',{name:'Ask technicians why'}).click();
- await expect(page.getByRole('heading',{name:'The why behind the practice.'})).toBeVisible();
- await page.getByRole('button',{name:'Create validation trial'}).click();
- await page.getByRole('button',{name:'Start demo validation'}).click();
- await page.getByRole('button',{name:'Load sample trial result'}).click();
- await page.getByRole('button',{name:'Propose SOP update'}).click();
- await page.getByRole('button',{name:'Submit for approval',exact:true}).click();
- await expect(page.getByRole('button',{name:'Submitted for approval',exact:true})).toBeDisabled();
- const baseline=await (await page.request.get('/api/processes/valve-replacement')).json();
- expect(baseline.currentVersion).toBe(1);
- await page.getByRole('button',{name:'Good Exception home'}).click();
- await page.setViewportSize({width:390,height:844});
- expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
- await page.getByRole('button',{name:'Toggle menu'}).click();
- await page.getByRole('navigation').getByRole('button',{name:/Processes/}).click();
- await expect(page.getByRole('heading',{name:'Processes',exact:true})).toBeVisible();
+test('expert capture through human publishing and proposed SOP improvement', async ({ page }) => {
+  await page.goto('/');
+  await page
+    .getByRole('button', { name: /Create first SOP/ })
+    .first()
+    .click();
+  await page.getByRole('button', { name: 'Use sample walkthrough' }).click();
+  await page.getByRole('button', { name: 'Analyze walkthrough' }).click();
+  await page.getByRole('button', { name: 'Clarify the know-how' }).click();
+  await page.getByRole('button', { name: 'Use sample expert explanation' }).click();
+  await page.getByRole('button', { name: 'Next question' }).click();
+  await page.getByRole('button', { name: 'Use sample expert explanation' }).click();
+  await page.getByRole('button', { name: 'Build SOP draft' }).click();
+  await expect(page.getByRole('button', { name: 'Publish baseline SOP' })).toBeDisabled();
+  await page.getByRole('checkbox').check();
+  await page.getByRole('button', { name: 'Publish baseline SOP' }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Your know-how is now a standard.' }),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Good Exception home' }).click();
+  await page.getByRole('button', { name: /Improve existing SOP/ }).click();
+  await page.getByRole('combobox').first().selectOption({ index: 1 });
+  await page.getByRole('button', { name: /Use sample service records/ }).click();
+  await expect(page.getByRole('button', { name: 'Run sample scan' })).toBeVisible();
+  await page.getByRole('button', { name: 'Run sample scan' }).click();
+  await page.getByRole('button', { name: 'Review findings', exact: true }).click();
+  await page.getByRole('button', { name: 'Review finding', exact: true }).first().click();
+  await page.getByRole('button', { name: 'Ask technicians why' }).click();
+  await expect(page.getByRole('heading', { name: 'The why behind the practice.' })).toBeVisible();
+  await page.getByRole('button', { name: 'Create validation trial' }).click();
+  await page.getByRole('button', { name: 'Start demo validation' }).click();
+  await page.getByRole('button', { name: 'Load sample trial result' }).click();
+  await page.getByRole('button', { name: 'Propose SOP update' }).click();
+  await page.getByRole('button', { name: 'Submit for approval', exact: true }).click();
+  await expect(
+    page.getByRole('button', { name: 'Submitted for approval', exact: true }),
+  ).toBeDisabled();
+  const baseline = await (await page.request.get('/api/processes/valve-replacement')).json();
+  expect(baseline.currentVersion).toBe(1);
+  await page.getByRole('button', { name: 'Good Exception home' }).click();
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.getByRole('button', { name: 'Toggle menu' }).click();
+  await page
+    .getByRole('navigation')
+    .getByRole('button', { name: /Processes/ })
+    .click();
+  await expect(page.getByRole('heading', { name: 'Processes', exact: true })).toBeVisible();
 });
-test('insufficient uploaded records do not produce findings',async({page})=>{
- await page.goto('/');await page.getByRole('button',{name:/Improve existing SOP/}).click();
- await page.locator('input[type=file]').setInputFiles('public/sample-jobs.csv');
- await expect(page.getByText('2 jobs imported.',{exact:false})).toBeVisible();
- await page.getByRole('button',{name:'Check data'}).click();
- await expect(page.getByRole('heading',{name:'Not enough evidence for a reliable scan.'})).toBeVisible();
- await expect(page.getByRole('button',{name:'Run sample scan'})).toBeDisabled();
+test('insufficient uploaded records do not produce findings', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: /Improve existing SOP/ }).click();
+  await page.locator('input[type=file]').setInputFiles('public/sample-jobs.csv');
+  await expect(page.getByText('2 jobs imported.', { exact: false })).toBeVisible();
+  await page.getByRole('button', { name: 'Check data' }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Not enough evidence for a reliable scan.' }),
+  ).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Run sample scan' })).toBeDisabled();
 });

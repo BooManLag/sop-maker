@@ -1,0 +1,23 @@
+{
+  "date": "2026-10-10T05:01:35.864Z",
+  "revision": "working-tree",
+  "scope": "Local application/HTTP handler + JSON disk reads; excludes network transport, Firestore and production autoscaling",
+  "tenantProcesses": 100,
+  "requests": 400,
+  "concurrency": 16,
+  "statuses": {
+    "200": 400
+  },
+  "durationMs": 661,
+  "latencyMs": {
+    "p50": 24.64,
+    "p95": 32.28,
+    "p99": 34.62
+  },
+  "rssBytes": 148844544,
+  "target": {
+    "p95Ms": 500,
+    "errors": 0
+  },
+  "pass": true
+}

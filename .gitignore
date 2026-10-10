@@ -7,3 +7,10 @@ out/
 .demo-data/
 test-results/
 playwright-report/
+.next-e2e/
+*-debug.log
+ui-debug.log
+.demo-backups/
+.firebase/
+*.tfstate*
+.terraform/

@@ -1,7 +1,25 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { handleApi, ApiError } from '@/lib/api';
-export const runtime='nodejs';
-async function route(request:NextRequest,context:{params:Promise<{path:string[]}>}){
- try{const {path}=await context.params;let body={};if(request.method==='POST'){const tooLarge=()=>NextResponse.json({error:'Upload is too large. Maximum request size is 5 MB.'},{status:413});if(Number(request.headers.get('content-length')??0)>5_000_000)return tooLarge();const raw=await request.text();if(Buffer.byteLength(raw)>5_000_000)return tooLarge();body=raw?JSON.parse(raw):{};}return NextResponse.json(await handleApi(request.method,path,body));}catch(e){return NextResponse.json({error:e instanceof Error?e.message:'Request failed.'},{status:e instanceof ApiError?e.status:400});}
+import { getRuntime } from '@/lib/server/runtime';
+import { randomUUID } from 'node:crypto';
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+async function route(request: Request, context: { params: Promise<{ path: string[] }> }) {
+  try {
+    return await getRuntime().handler(request, (await context.params).path);
+  } catch {
+    // Configuration failures must not reveal secret names or infrastructure details.
+    const requestId = randomUUID();
+    console.error(
+      JSON.stringify({ severity: 'ERROR', event: 'backend_initialization_failed', requestId }),
+    );
+    return Response.json(
+      { error: 'Backend configuration is unavailable.', code: 'UNAVAILABLE', requestId },
+      { status: 503, headers: { 'Cache-Control': 'no-store', 'X-Request-ID': requestId } },
+    );
+  }
 }
-export const GET=route; export const POST=route;
+export const GET = route;
+export const POST = route;
+export const OPTIONS = route;
+export const PUT = route;
+export const PATCH = route;
+export const DELETE = route;
