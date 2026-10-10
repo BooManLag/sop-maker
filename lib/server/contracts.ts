@@ -2,9 +2,8 @@ import { z } from 'zod';
 import { LIMITS } from './config';
 import { ApiError } from './errors';
 import type { Permission } from './auth';
-export const idSchema = z.string().regex(/^[A-Za-z0-9_-]{1,128}$/);
-const short = z.string().trim().min(1).max(300);
-const prose = z.string().trim().min(1).max(2000);
+import { idSchema, proseText as prose, shortText as short } from '../validation';
+export { idSchema };
 const optionalProse = z.string().trim().max(2000).optional();
 export const stepSchema = z
   .object({
@@ -64,6 +63,13 @@ export const extractionSchema = z
       ctx.addIssue({ code: 'custom', message: 'Step sequences must be contiguous.' });
   });
 const empty = z.object({}).strict();
+const uniqueSteps = z
+  .array(stepSchema)
+  .min(1)
+  .max(LIMITS.steps)
+  .refine((steps) => new Set(steps.map((s) => s.id)).size === steps.length, {
+    message: 'Step IDs must be unique.',
+  });
 export const schemas = {
   workspace: empty,
   processList: empty,
@@ -73,6 +79,7 @@ export const schemas = {
   auditList: empty,
   processCreate: z.object({ title: short, equipment: short }).strict(),
   processGet: empty,
+  captureGet: empty,
   captureCreate: z
     .object({
       kind: z.enum(['text', 'video', 'audio', 'document']),
@@ -90,16 +97,13 @@ export const schemas = {
       answer: prose,
     })
     .strict(),
+  processDraftSave: z.object({ steps: uniqueSteps }).strict(),
   processPublish: z
     .object({
       approved: z.literal(true, { error: 'Explicit human approval is required.' }),
-      steps: z.array(stepSchema).min(1).max(LIMITS.steps),
+      steps: uniqueSteps,
     })
-    .strict()
-    .superRefine((v, c) => {
-      if (new Set(v.steps.map((s) => s.id)).size !== v.steps.length)
-        c.addIssue({ code: 'custom', message: 'Step IDs must be unique.' });
-    }),
+    .strict(),
   scanCreate: z
     .object({
       processId: idSchema,
@@ -110,6 +114,7 @@ export const schemas = {
     .refine((v) => v.demo || !!v.rows?.length, {
       message: 'Upload records or explicitly choose the sample.',
     }),
+  scanGet: empty,
   scanReadiness: empty,
   scanRun: empty,
   scanFindings: empty,
@@ -121,6 +126,7 @@ export const schemas = {
   trialGet: empty,
   trialResults: z.object({ sample: z.literal(true) }).strict(),
   changeCreate: z.object({ trialId: idSchema }).strict(),
+  changeGet: empty,
   changeSubmit: z.object({ proposedStep: prose }).strict(),
   retention: empty,
 } satisfies Record<string, z.ZodType>;
@@ -150,6 +156,7 @@ export const endpoints: Endpoint[] = [
     permission: 'write',
     create: true,
   },
+  { operation: 'captureGet', method: 'GET', path: 'captures/:id', permission: 'read' },
   {
     operation: 'captureAnalyze',
     method: 'POST',
@@ -164,12 +171,19 @@ export const endpoints: Endpoint[] = [
     create: true,
   },
   {
+    operation: 'processDraftSave',
+    method: 'POST',
+    path: 'processes/:id/draft',
+    permission: 'write',
+  },
+  {
     operation: 'processPublish',
     method: 'POST',
     path: 'processes/:id/publish',
     permission: 'review',
   },
   { operation: 'scanCreate', method: 'POST', path: 'scans', permission: 'write', create: true },
+  { operation: 'scanGet', method: 'GET', path: 'scans/:id', permission: 'read' },
   { operation: 'scanReadiness', method: 'POST', path: 'scans/:id/readiness', permission: 'write' },
   { operation: 'scanRun', method: 'POST', path: 'scans/:id/run', permission: 'write' },
   { operation: 'scanFindings', method: 'GET', path: 'scans/:id/findings', permission: 'read' },
@@ -205,6 +219,7 @@ export const endpoints: Endpoint[] = [
     permission: 'review',
     create: true,
   },
+  { operation: 'changeGet', method: 'GET', path: 'change-requests/:id', permission: 'read' },
   {
     operation: 'changeSubmit',
     method: 'POST',

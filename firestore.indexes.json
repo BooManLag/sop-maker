@@ -1,1 +1,4 @@
-{"indexes":[],"fieldOverrides":[{"collectionGroup":"backend","fieldPath":"payload","indexes":[]}]}
+{
+  "indexes": [],
+  "fieldOverrides": [{ "collectionGroup": "backend", "fieldPath": "payload", "indexes": [] }]
+}
