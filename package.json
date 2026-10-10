@@ -3,28 +3,40 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --hostname 0.0.0.0",
+    "dev": "next dev --hostname 127.0.0.1",
     "build": "next build",
     "start": "node scripts/start.mjs",
     "typecheck": "tsc --noEmit",
     "test": "tsx --import ./tests/setup.ts --test tests/*.test.ts",
     "seed": "tsx scripts/seed.ts",
     "test:e2e": "playwright test",
-    "demo:reset": "tsx scripts/seed.ts --reset"
+    "demo:reset": "tsx scripts/seed.ts --reset",
+    "test:emulator": "node scripts/test-emulator.mjs",
+    "backup": "tsx scripts/backup.ts",
+    "format": "prettier --write lib app/api scripts tests instrumentation.ts next.config.ts playwright.config.ts",
+    "format:check": "prettier --check lib app/api scripts tests instrumentation.ts next.config.ts playwright.config.ts",
+    "api:generate": "tsx scripts/openapi.ts",
+    "api:check": "tsx scripts/openapi.ts --check",
+    "test:load": "tsx scripts/load-test.ts"
   },
   "dependencies": {
+    "firebase-admin": "^14.5.0",
     "lucide-react": "^0.468.0",
-    "next": "^15.5.12",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "xlsx": "npm:@e965/xlsx@^0.20.3"
+    "next": "^16.4.0",
+    "proper-lockfile": "^4.1.2",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "xlsx": "npm:@e965/xlsx@^0.20.3",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.0",
     "@tailwindcss/postcss": "^4.1.0",
     "@types/node": "^22.0.0",
+    "@types/proper-lockfile": "^4.1.4",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "prettier": "^3.9.9",
     "tailwindcss": "^4.1.0",
     "tsx": "^4.20.0",
     "typescript": "^5.9.0"

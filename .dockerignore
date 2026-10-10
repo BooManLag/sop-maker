@@ -4,3 +4,8 @@ node_modules
 .demo-data
 .env*
 attachments
+.next-e2e
+*-debug.log
+.demo-backups
+test-results
+playwright-report

@@ -1,59 +1,39 @@
-# Good Exception foundation
+# Good Exception backend architecture
 
-## Current implementation
+Good Exception captures expert know-how into a human-approved SOP and investigates candidate practices through controlled validation. It analyzes practices, never worker rankings. The complete illustrative demo remains available locally. The backend now has verified Firebase identity and Firestore adapters, tested with isolated emulators; no live cloud project or AI provider has been connected.
 
-Next.js App Router, React, TypeScript, Tailwind CSS v4, and REST handlers. The frontend is an accessible responsive workspace with Processes, Findings and Trials. Overview presents the two main paths. API calls are real local HTTP requests. Domain types live in `lib/domain.ts`; user interfaces never compute evidence statistics. `lib/api.ts` enforces lifecycle transitions, and `lib/services.ts` separates extraction from evidence analysis.
+## Boundaries
 
-The entire local app is a **single-organization demonstration**, not a production service. There is no authentication, authorization or tenant isolation yet. Do not expose it publicly with real customer records. There are no worker scorecards, rankings or disciplinary outputs.
-
-`JsonRepository` serializes writes and atomically replaces `.demo-data/store.json`. It is suitable for one local Node process only. It does not provide distributed transactions, encryption, retention policies or production audit logging. Drafts, published versions, captures, clarifications, imported records, findings, responses, trials and change requests are retained locally between restarts. Publish v1 explicitly requires human approval. Submitted v2 requests never replace v1 automatically. The foundation intentionally ends at human review; organizational final approval is not implemented.
-
-## Boundaries and Google Cloud target
-
-| Boundary | Local implementation | Google Cloud production target |
+| Layer | Responsibility | Main files |
 | --- | --- | --- |
-| UI | Next.js workspace | Firebase Hosting rewrite to Next.js on Cloud Run |
-| Identity | Explicit demo reviewer | Firebase Authentication, server-side verified ID tokens, organization-scoped roles |
-| Application API | `/api/*` REST handlers | TypeScript Cloud Run service |
-| Repository | `Repository` interface / atomic local JSON | Firestore with tenant-scoped document paths and transactional version approval |
-| Uploads | File metadata and pasted text; CSV/XLSX parsed locally | Cloud Storage signed upload URLs, content validation and retention |
-| Capture AI | `CaptureAdapter` / `DemoGeminiAdapter` | Vertex AI Gemini multimodal adapter, schema validation and evidence references |
-| Evidence | `AnalyticsService` / `EvidenceEngine` readiness | Python Cloud Run Jobs, pandas/scipy/statsmodels, BigQuery cohort queries |
-| Orchestration | Direct demo calls | Pub/Sub and Cloud Run Jobs with idempotent operation records |
-| Credentials | None needed locally | Workload identity and Secret Manager; never put service account keys in the UI |
-| Operations | Local errors and HTTP responses | Cloud Logging / Monitoring with identifiers redacted |
+| UI | Responsive process, finding and trial workflows | `components/workspace.tsx` |
+| HTTP | Bounded request parsing, CORS, identity, safe errors, response codes | `lib/server/http.ts`, `contracts.ts` |
+| Authorization | Verified organization/role, resource scope, reviewer/admin MFA | `lib/server/auth.ts` |
+| Application | Workflow invariants, idempotency, short transactions, audit events | `lib/application/backend.ts`, `process-service.ts`, `evidence-service.ts` |
+| Domain | Structured SOP versions, evidence, trials, proposals | `lib/domain.ts`, `lib/application/store.ts` |
+| Repository port | Tenant-scoped atomic reads and writes | `lib/application/ports.ts` |
+| Local infrastructure | Lease locking, fsync, atomic rename, backup/restore | `lib/infrastructure/json-repository.ts`, `backup.ts` |
+| Cloud infrastructure | Firebase revoked-token verification and Firestore transactions | `lib/infrastructure/firebase.ts`, `firestore-repository.ts` |
+| AI boundary | Input/output limits, strict candidate schema, failure isolation | `lib/server/ai.ts` |
+| Runtime | Dependency composition, admission, health, logs and shutdown | `lib/server/runtime.ts`, `hooks.ts` |
 
-`firebase.json` and `Dockerfile` are deployment scaffolding, not provisioned infrastructure. No Google Cloud resources were created, and deployment has not been tested. Firebase project selection and Cloud Run resource creation require a separate deployment task. The configured Cloud Run service must actually exist before a Hosting deploy.
+Configuration comes from validated environment names; secrets are never returned, logged or included in drafts. Local demo identities are accepted only for loopback requests. Production fails closed unless Firebase/project, allowed origins and HMAC configuration exist, and Cloud Run refuses demo/emulator mode. Production Firebase authentication is backend-only at present: the UI still uses the demo flow and needs a separate sign-in integration before public use.
 
-## Evidence integrity
+## Storage and lifecycle
 
-The sample historical rates (6.2% vs 4.1%), 142 comparable jobs, 18 technicians, held-out narrative, and trial rates (4.4% vs 7.0%) are **illustrative scenario values**. They do not come from a fitted model and do not assert significance. No fabricated confidence intervals are shown. Sample funnels are labeled. Live analytics explicitly fails rather than returning demo findings for uploaded records. The downloadable CSV is a two-row format example and correctly fails readiness.
+The repository is scoped before any object lookup. Firestore uses one transactionally updated, versioned aggregate document per tenant; direct browser access is denied. The foundation explicitly caps serialized state at 750 KB, domain collections at 500 entries and retained audit entries at 1,000. It is not a warehouse-scale design. The [storage ADR](../adr/001-backend-boundaries.md) explains the capacity envelope, migration and eventual per-entity/BigQuery boundary.
 
-Imports validate unique job IDs, normalize outcomes and hash technician references before storage. The unsalted hash is only a demo pseudonymization strategy; production should use organization-scoped keyed HMAC with Secret Manager and exclude raw identifiers and personal notes from warehouse ingestion. Pseudonymization is not anonymization. Free-text redaction and real retention controls are still required.
+Schema v2 migrates the old local JSON format without replacing current SOPs. Mutations enforce parent references, unique trial/finding and change/trial relations, valid published versions and organization consistency. Idempotency keys are scoped to actor/tenant and checked inside the transaction. Capture extraction runs outside the transaction; its draft fingerprint is checked before commit. Model output never publishes an SOP, changes privileges, computes outcome evidence or executes tools.
 
-Readiness checks minimum rows, callback completeness, technician references, equipment/job fields and checklist coverage. These are preliminary data checks, not proof of statistical identifiability. The uploader must supply fully observed 30-day outcomes; maturity is not independently inferred. Exact physical steps and sequences are not inferred from missing events.
+Raw capture content and imported rows have 30-day expiration; the retention endpoint purges expired raw content, while approved SOPs remain authoritative knowledge. Request keys expire after 24 hours and audit events after 90 days. Production scheduling, backup retention and a real restore drill remain external launch prerequisites. Local backup recovery is automated in tests.
 
-Production evidence jobs must retain source record references, SOP version, analysis version, cohort eligibility, pseudonymized technician history, matching strata, sample counts, uncertainty estimates and held-out outcomes. Historical association creates a candidate only. Controlled validation requires prespecified allocation, outcome maturity, sufficient sample, safety constraints and approved analysis. The sample-size helper uses a standard two-proportion approximation (two-sided alpha .05, power .80); production planning must adjust for clustering and attrition.
+## Current versus future integrations
 
-Gemini may extract actions, ask questions, summarize rationale and explain trusted evidence. Gemini must never invent rates, determine statistical significance or approve changes. Human review remains a separate authority.
+- **Implemented and emulator-tested:** Firebase Admin token verification including disabled/revoked users, trusted custom-claim roles, Firestore transactions, tenant isolation and deny-all client rules.
+- **Implemented locally:** both labeled demo product loops, import readiness, HMAC pseudonymization in configured mode, strict schemas, read/write limits, audit events, safe errors, health and diagnostic metrics, backup/restore, OpenAPI, CI and bounded load checks.
+- **Explicitly unavailable:** live Gemini, binary media ingestion, BigQuery evidence computation, technician messaging, field-trial allocation/ingestion, RAG, agent tools, paid model usage and final organizational approval of v2. Production never substitutes sample evidence for these integrations.
+- **Not deployed or claimed:** Cloud Run/Firebase Hosting, live IAM/KMS/TLS validation, automated cloud backups, retention scheduling, Cloud Monitoring alert delivery, autoscaling validation, a production sign-in UI or legal/provider data-processing approval.
 
-## API contracts
+Google Cloud remains the target: Next.js behind Firebase Hosting + Cloud Run; Firebase Auth; Firestore; Cloud Storage; BigQuery plus Python evidence jobs; Vertex AI through a backend adapter; Pub/Sub only once durable jobs exist; Secret Manager; Cloud Logging/Monitoring. No Kubernetes, Kafka or separate service mesh is introduced.
 
-All paths use `/api`. POST bodies are JSON and errors return `{ "error": "message" }` with non-2xx status. GET `/workspace` returns current local state.
-
-- POST `/processes`: `{title,equipment}`; GET `/processes/:id`
-- POST `/processes/:id/captures`: `{expertReference,kind,text?,fileName?}`
-- POST `/processes/:id/analyze-capture`: `{captureId,sample}`; returns steps, questions and demo notice. Non-text media is unsupported unless explicitly exploring a sample.
-- POST `/processes/:id/clarifications`: `{captureId,stepId,question,answer}`
-- POST `/processes/:id/publish`: `{steps,approved:true}`. Duplicate baseline publication is rejected.
-- POST `/scans`: `{processId,demo,rows?}`; process must be published.
-- POST `/scans/:id/readiness`: `{}`; POST `/scans/:id/run`: `{}`; GET `/scans/:id/findings`
-- GET `/findings/:id`; POST `/findings/:id/request-explanation`: `{}` (sample response, sends no message); POST `/findings/:id/dismiss`: `{}`
-- POST `/trials`: `{findingId,equipment,testGroup}`; GET `/trials/:id`
-- POST `/trials/:id/results`: `{sample:true}`; explicitly loads an illustrative result, not real ingestion.
-- POST `/change-requests`: `{trialId}`; validated trial required.
-- POST `/change-requests/:id/submit`: `{proposedStep}`; enqueues a local review request, sends no notification.
-
-## Before production
-
-Connect and verify Firebase auth / tenant authorization, Firestore transactions and audit events, secure upload storage, Gemini schema contracts, BigQuery imports, Python evidence computation, job orchestration, real trial ingestion, approval policies and observability. Add request limits/rate limits, input schemas and authenticated data access. Do not mistake the demo for these capabilities.
+See the [API contract](../API.md), [complete checklist assessment](../backend-checklist.md), [operations runbook](../operations/runbook.md), and [threat model](../operations/threat-model.md).

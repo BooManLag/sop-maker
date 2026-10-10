@@ -12,6 +12,17 @@ Project documents, grouped by category. The product's own readme is [../README.m
 |---|---|
 | [product/architecture.md](product/architecture.md) | Domain boundaries, API contracts, statistical limits, Google Cloud target and production prerequisites |
 
+## Backend engineering
+
+| File | What it is |
+|---|---|
+| [API.md](API.md) and [openapi.json](openapi.json) | Versioned API, validation and authentication contracts |
+| [backend-checklist.md](backend-checklist.md) | Assessment of all 183 supplied backend requirements |
+| [adr/001-backend-boundaries.md](adr/001-backend-boundaries.md) | Storage capacity limits and architectural decisions |
+| [evidence/validation.md](evidence/validation.md) | Local, emulator, browser and container validation results |
+| [operations/runbook.md](operations/runbook.md) | Startup, recovery and production prerequisites |
+| [operations/threat-model.md](operations/threat-model.md) | Trust boundaries, mitigations and remaining risks |
+
 ## Strategy
 
 | File | What it is |

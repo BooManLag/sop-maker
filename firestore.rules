@@ -1,0 +1,8 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Browser and mobile SDK clients never access backend state directly.
+    // Cloud Run's Admin SDK uses IAM plus application tenant authorization.
+    match /{document=**} { allow read, write: if false; }
+  }
+}
