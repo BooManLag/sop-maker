@@ -35,7 +35,7 @@ Uploaded media is accepted as metadata but is not processed or retained as a bin
 
 The current workspace has no authentication and is for local demonstration only. No messages are sent to technicians, no live jobs are assigned, and no SOP change is approved automatically. JSON exports preserve structural versions and evidence references. Worker rankings are never created.
 
-See [architecture.md](architecture.md) for domain boundaries, API contracts, statistical limitations, Google Cloud target services and production prerequisites. Deployment scaffolding is included but has not been deployed.
+See [architecture.md](docs/product/architecture.md) for domain boundaries, API contracts, statistical limitations, Google Cloud target services and production prerequisites. Deployment scaffolding is included but has not been deployed. Business and planning documents are indexed in [docs/README.md](docs/README.md).
 
 ## Browser verification
 
