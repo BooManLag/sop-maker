@@ -109,7 +109,7 @@ This is **not** quite what was pitched. Start as a **retrospective "callback for
 
 ## The competition
 
-Researched 2026-10-08 from public sources only. Every row is in [competitors.csv](competitors.csv) with its link. Where a source couldn't be reached or a price isn't public, it says so. **No vendor in this market publishes a price for the comparable product.** Pricing is almost entirely quote-based, and the few third-party estimates disagree with each other.
+Researched 2026-10-08 from public sources only. Every row is in [competitors.csv](strategy/competitors.csv) with its link. Where a source couldn't be reached or a price isn't public, it says so. **No vendor in this market publishes a price for the comparable product.** Pricing is almost entirely quote-based, and the few third-party estimates disagree with each other.
 
 ### 1. The table, most direct first
 
@@ -277,7 +277,7 @@ Buyers say they would buy **1.0 times** in the first month on average.
 
 ## Pricing
 
-Inputs: [pricing-curve.md](pricing-curve.md) (100 simulated buyers), [competitors.md](competitors.md), and [numbers.json](numbers.json) run through the CFO tool. **All costs in numbers.json are estimates until the CFO step confirms them.** The panel answers are simulated. They choose what to test and prove nothing.
+Inputs: [pricing-curve.md](offer-pricing/pricing-curve.md) (100 simulated buyers), [competitors.md](strategy/competitors.md), and [numbers.json](finance/numbers.json) run through the CFO tool. **All costs in numbers.json are estimates until the CFO step confirms them.** The panel answers are simulated. They choose what to test and prove nothing.
 
 ### What the panel says about price
 
@@ -346,7 +346,7 @@ What answers them: the Scan price (small first cheque), the held-out check (it i
 
 ## The offer
 
-Built with the Offers lens (a summary of a published framework, from founder-board/lenses.md) on top of the 100-buyer panel ([panel/results.md](panel/results.md)), the competitor complaints ([competitors.md](competitors.md)) and the cost model ([numbers.json](numbers.json), [numbers-scan.json](numbers-scan.json)). The old pitch is kept as [pitch-v1.md](pitch-v1.md). The new one is [pitch.md](pitch.md).
+Built with the Offers lens (a summary of a published framework, from founder-board/lenses.md) on top of the 100-buyer panel ([panel/results.md](panel/results.md)), the competitor complaints ([competitors.md](strategy/competitors.md)) and the cost model ([numbers.json](finance/numbers.json), [numbers-scan.json](finance/numbers-scan.json)). The old pitch is kept as [pitch-v1.md](go-to-market/pitch-v1.md). The new one is [pitch.md](go-to-market/pitch.md).
 
 ### 1. The problem list (in the buyer's words, from the panel and competitor reviews)
 
@@ -463,9 +463,9 @@ Not re-tested: K, L and M are cheap, specific answers to the remaining objection
 
 ### The CFO's note
 
-**Read this first.** Every cost below is an **estimate**. The founder has not yet supplied the team's loaded cost, how much of it the parent company absorbs, or any quoted prices. Sources and reasoning are in [cfo-sources.md](cfo-sources.md). Replace the estimates in [numbers.json](numbers.json) and re-run before anyone treats these as a budget.
+**Read this first.** Every cost below is an **estimate**. The founder has not yet supplied the team's loaded cost, how much of it the parent company absorbs, or any quoted prices. Sources and reasoning are in [cfo-sources.md](finance/cfo-sources.md). Replace the estimates in [numbers.json](finance/numbers.json) and re-run before anyone treats these as a budget.
 
-**Model convention:** one unit is one *region-month* of subscription at $2,500 ($30,000/yr, from [pricing.md](pricing.md)). The tool's "per day" means "active paying regions that month". The entry Exception Scan is modelled separately in [numbers-scan.json](numbers-scan.json).
+**Model convention:** one unit is one *region-month* of subscription at $2,500 ($30,000/yr, from [pricing.md](offer-pricing/pricing.md)). The tool's "per day" means "active paying regions that month". The entry Exception Scan is modelled separately in [numbers-scan.json](finance/numbers-scan.json).
 
 - **The margin.** Each region-month leaves **$1,550 (62%)** after its own costs: compute, LLM, analyst review time and a 15% marketplace share. Fixed costs are estimated at **$67,000/month**, mostly a 4-person team. **Break-even is 44 paying regions.** The plan of 40 regions is **below** break-even, so at plan the venture loses **5%** of revenue. Capacity is 60. Year 1 operating result: **−$723,400 on $130,000 revenue**.
 - **The line to watch: team cost, then price.** The team is 90% of fixed cost. If the team is 3 people instead of 4 ($45K/month), break-even drops from **44 to 34 regions** and the margin at plan goes from **−5% to +10%**. That is a bigger swing than any price or volume what-if. The price comes next: $3,000/month ($36K/yr) moves break-even from 44 to 33.
@@ -486,7 +486,7 @@ Not re-tested: K, L and M are cheap, specific answers to the remaining objection
 - **The Scan pays for itself, but doesn't move the venture.** At $12,000 each Scan leaves **$3,800 (32%)** after a 20% week-1 stop rate and 15% refunds (all estimated). Design-partner Scans at $6,000 run at about cost, and the 5 of them sit inside the $20,000 design-partner startup line. Even 3 list-price Scans a month adds about $11,400/month, against a $67,000 fixed base.
 - **How the ramp was set.** The original panel converted 3% (an upper bound) at the subscription price. The Exception Scan re-test converted 20% (20 buyers, an upper bound) at the Scan price. Buyers described a 6–12 month procurement cycle. So the ramp assumes zero paying regions in months 1–2 (design-partner Scans only), the first conversions in month 3 and 12 regions by month 12. That is roughly 1 new region a month at first, rising to 2 a month. **There is no real conversion data yet.** /founder-launch's design-partner test is what replaces this guess.
 
-#### Board conditions about money ([board.md](board.md))
+#### Board conditions about money ([board.md](strategy/board.md))
 
 - **C6, put a money figure on an avoided callback: NOT MET.** We still don't know any customer's cost per truck roll or repeat visit. Get it from each design partner in week 1 (offer.md item K). Without it the ROI case procurement asks for doesn't exist.
 - **C9, how the first 10 customers arrive and what each costs: NOT MET.** CAC is unknown. Sales cost is buried in the team line plus $4K/month programmes. /founder-marketing must name the channel. The parent company's relationships are the cheapest channel if they exist.
@@ -554,7 +554,7 @@ Fixed costs: $67,000 a month (Team: 2 engineers + 1 data scientist + 1 product/s
 
 ## Marketing
 
-Built from [panel/results.md](panel/results.md) (100 buyers, v1 pitch), [panel-offer/results.md](panel-offer/results.md) (20 buyers, Exception Scan), [competitors.md](competitors.md), [offer.md](offer.md), [pricing.md](pricing.md) and [cfo.md](cfo.md). All buyer evidence comes from simulated panels. It shows which messages to test, not what will convert. "[Name]" stands in until /founder-brand picks one.
+Built from [panel/results.md](panel/results.md) (100 buyers, v1 pitch), [panel-offer/results.md](panel-offer/results.md) (20 buyers, Exception Scan), [competitors.md](strategy/competitors.md), [offer.md](offer-pricing/offer.md), [pricing.md](offer-pricing/pricing.md) and [cfo.md](finance/cfo.md). All buyer evidence comes from simulated panels. It shows which messages to test, not what will convert. "[Name]" stands in until /founder-brand picks one.
 
 ### 1. Who first (from the evidence)
 
@@ -666,7 +666,7 @@ Three versions:
 
 ## Brand
 
-Brief from [marketing.md](marketing.md): position on the **callback metric + method**, not on "AI". The first audience is heads of service in building systems and directors of service ops at industrial equipment makers. Competitors' language to stay clear of ([competitors.md](competitors.md)): "physical AI" (DeepHow), "AI-native platform for the industrial frontline" (Augmentir), "conversational AI" (Aquant). Panel reasons people buy: "find what my best people do differently", "from records I already keep" (P027, P045, P099).
+Brief from [marketing.md](go-to-market/marketing.md): position on the **callback metric + method**, not on "AI". The first audience is heads of service in building systems and directors of service ops at industrial equipment makers. Competitors' language to stay clear of ([competitors.md](strategy/competitors.md)): "physical AI" (DeepHow), "AI-native platform for the industrial frontline" (Augmentir), "conversational AI" (Aquant). Panel reasons people buy: "find what my best people do differently", "from records I already keep" (P027, P045, P099).
 
 ### 1. Ten name candidates
 
@@ -757,7 +757,7 @@ I can only run public lookups. A trademark lawyer confirms registrability, and n
 
 ## Operations
 
-How Good Exception (working name, see [brand.md](brand.md)) runs from day one. Day one means the **design-partner Exception Scan**, delivered by people on exported data, before the connector product exists. Inputs: [idea.md](idea.md), [offer.md](offer.md), [numbers.json](numbers.json), [numbers-scan.json](numbers-scan.json), [board.md](board.md).
+How Good Exception (working name, see [brand.md](go-to-market/brand.md)) runs from day one. Day one means the **design-partner Exception Scan**, delivered by people on exported data, before the connector product exists. Inputs: [idea.md](strategy/idea.md), [offer.md](offer-pricing/offer.md), [numbers.json](finance/numbers.json), [numbers-scan.json](finance/numbers-scan.json), [board.md](strategy/board.md).
 
 Rules differ by country and change. Every licence, data-protection and contract item below must be confirmed with the parent company's legal team or a professional. **Not legal advice.**
 
@@ -887,7 +887,7 @@ The CFO assumes 4 FTE ($15K/month loaded each, an estimate). The founder must re
 
 ## Launch plan
 
-Today is **Thursday 8 October 2026**. **Launch is Monday 16 November 2026**: the Exception Scan design-partner programme opens. That is the earliest realistic date, given the 2–4 week legal-template lead time and the 1–2 week secure-upload setup in [ops.md](ops.md). The launch *is* the cheap real-world test. No connector product gets built (the $180K MVP line in numbers.json) until real buyers pass the success lines below.
+Today is **Thursday 8 October 2026**. **Launch is Monday 16 November 2026**: the Exception Scan design-partner programme opens. That is the earliest realistic date, given the 2–4 week legal-template lead time and the 1–2 week secure-upload setup in [ops.md](operations/ops.md). The launch *is* the cheap real-world test. No connector product gets built (the $180K MVP line in numbers.json) until real buyers pass the success lines below.
 
 Owners: **F** = founder / product-sales lead · **DS** = data scientist · **AN** = analyst · **EN** = engineer · **PL** = parent's legal team · **PA** = parent's account managers · **SP** = executive sponsor at the parent.
 

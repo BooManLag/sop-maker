@@ -1,6 +1,6 @@
 # Pricing
 
-Inputs: [pricing-curve.md](pricing-curve.md) (100 simulated buyers), [competitors.md](competitors.md), and [numbers.json](numbers.json) run through the CFO tool. **All costs in numbers.json are estimates until the CFO step confirms them.** The panel answers are simulated. They choose what to test and prove nothing.
+Inputs: [pricing-curve.md](pricing-curve.md) (100 simulated buyers), [competitors.md](../strategy/competitors.md), and [numbers.json](../finance/numbers.json) run through the CFO tool. **All costs in numbers.json are estimates until the CFO step confirms them.** The panel answers are simulated. They choose what to test and prove nothing.
 
 ## What the panel says about price
 

@@ -1,6 +1,6 @@
 # Operations
 
-How Good Exception (working name, see [brand.md](brand.md)) runs from day one. Day one means the **design-partner Exception Scan**, delivered by people on exported data, before the connector product exists. Inputs: [idea.md](idea.md), [offer.md](offer.md), [numbers.json](numbers.json), [numbers-scan.json](numbers-scan.json), [board.md](board.md).
+How Good Exception (working name, see [brand.md](../go-to-market/brand.md)) runs from day one. Day one means the **design-partner Exception Scan**, delivered by people on exported data, before the connector product exists. Inputs: [idea.md](../strategy/idea.md), [offer.md](../offer-pricing/offer.md), [numbers.json](../finance/numbers.json), [numbers-scan.json](../finance/numbers-scan.json), [board.md](../strategy/board.md).
 
 Rules differ by country and change. Every licence, data-protection and contract item below must be confirmed with the parent company's legal team or a professional. **Not legal advice.**
 

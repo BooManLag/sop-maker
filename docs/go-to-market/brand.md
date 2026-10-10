@@ -1,6 +1,6 @@
 # Brand
 
-Brief from [marketing.md](marketing.md): position on the **callback metric + method**, not on "AI". The first audience is heads of service in building systems and directors of service ops at industrial equipment makers. Competitors' language to stay clear of ([competitors.md](competitors.md)): "physical AI" (DeepHow), "AI-native platform for the industrial frontline" (Augmentir), "conversational AI" (Aquant). Panel reasons people buy: "find what my best people do differently", "from records I already keep" (P027, P045, P099).
+Brief from [marketing.md](marketing.md): position on the **callback metric + method**, not on "AI". The first audience is heads of service in building systems and directors of service ops at industrial equipment makers. Competitors' language to stay clear of ([competitors.md](../strategy/competitors.md)): "physical AI" (DeepHow), "AI-native platform for the industrial frontline" (Augmentir), "conversational AI" (Aquant). Panel reasons people buy: "find what my best people do differently", "from records I already keep" (P027, P045, P099).
 
 ## 1. Ten name candidates
 

@@ -1,6 +1,6 @@
 # Marketing
 
-Built from [panel/results.md](panel/results.md) (100 buyers, v1 pitch), [panel-offer/results.md](panel-offer/results.md) (20 buyers, Exception Scan), [competitors.md](competitors.md), [offer.md](offer.md), [pricing.md](pricing.md) and [cfo.md](cfo.md). All buyer evidence comes from simulated panels. It shows which messages to test, not what will convert. "[Name]" stands in until /founder-brand picks one.
+Built from [panel/results.md](panel/results.md) (100 buyers, v1 pitch), [panel-offer/results.md](panel-offer/results.md) (20 buyers, Exception Scan), [competitors.md](../strategy/competitors.md), [offer.md](../offer-pricing/offer.md), [pricing.md](../offer-pricing/pricing.md) and [cfo.md](../finance/cfo.md). All buyer evidence comes from simulated panels. It shows which messages to test, not what will convert. "[Name]" stands in until /founder-brand picks one.
 
 ## 1. Who first (from the evidence)
 

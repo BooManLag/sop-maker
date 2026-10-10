@@ -1,6 +1,6 @@
 # The offer: "The Exception Scan"
 
-Built with the Offers lens (a summary of a published framework, from founder-board/lenses.md) on top of the 100-buyer panel ([panel/results.md](panel/results.md)), the competitor complaints ([competitors.md](competitors.md)) and the cost model ([numbers.json](numbers.json), [numbers-scan.json](numbers-scan.json)). The old pitch is kept as [pitch-v1.md](pitch-v1.md). The new one is [pitch.md](pitch.md).
+Built with the Offers lens (a summary of a published framework, from founder-board/lenses.md) on top of the 100-buyer panel ([panel/results.md](panel/results.md)), the competitor complaints ([competitors.md](../strategy/competitors.md)) and the cost model ([numbers.json](../finance/numbers.json), [numbers-scan.json](../finance/numbers-scan.json)). The old pitch is kept as [pitch-v1.md](../go-to-market/pitch-v1.md). The new one is [pitch.md](../go-to-market/pitch.md).
 
 ## 1. The problem list (in the buyer's words, from the panel and competitor reviews)
 
