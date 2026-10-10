@@ -78,11 +78,14 @@ export class JsonRepository implements Repository {
           await handle.close();
         }
         await rename(temporary, this.file);
-        const dir = await open(this.directory, 'r');
-        try {
-          await dir.sync();
-        } finally {
-          await dir.close();
+        // Windows cannot fsync a directory handle (EPERM); NTFS journals the rename itself.
+        if (process.platform !== 'win32') {
+          const dir = await open(this.directory, 'r');
+          try {
+            await dir.sync();
+          } finally {
+            await dir.close();
+          }
         }
         return result;
       } finally {

@@ -49,6 +49,7 @@ export interface ExpertCapture {
   kind: 'text' | 'video' | 'audio' | 'document';
   text?: string;
   fileName?: string;
+  questions?: string[];
   createdAt?: string;
   expiresAt?: string;
 }
@@ -146,6 +147,8 @@ export interface TechnicianResponse {
   equipment: string;
   doNotUse: string;
 }
+/** The outcome every trial in this product compares; findings are scored on the same measure. */
+export const trialPrimaryOutcome = '30-day callback rate';
 export interface ValidationTrial {
   id: ID;
   findingId: ID;
