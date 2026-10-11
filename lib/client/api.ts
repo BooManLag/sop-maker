@@ -34,7 +34,7 @@ export type ScanDetail = {
   id: string;
   processId: string;
   demo: boolean;
-  status: 'uploaded' | 'ready' | 'complete';
+  status: 'uploaded' | 'ready' | 'analyzing' | 'failed' | 'complete';
   recordCount: number;
   readiness?: Readiness;
   funnel?: number[];
@@ -119,7 +119,10 @@ export function createApiClient({
       post<{ id: string }>('scans', body),
     scan: (id: string) => get<ScanDetail>(`scans/${id}`),
     checkReadiness: (scanId: string) => post<Readiness>(`scans/${scanId}/readiness`),
-    runScan: (scanId: string) => post<{ id: string; funnel: number[] }>(`scans/${scanId}/run`),
+    runScan: (scanId: string) =>
+      post<{ id: string; status: 'analyzing' | 'complete'; funnel?: number[] }>(
+        `scans/${scanId}/run`,
+      ),
 
     finding: (id: string) => get<Finding>(`findings/${id}`),
     dismissFinding: (id: string) => post<Finding>(`findings/${id}/dismiss`),

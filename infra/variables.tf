@@ -23,6 +23,11 @@ variable "gemini_model" {
   type    = string
   default = "gemini-3.5-flash"
 }
+variable "agent_model" {
+  type        = string
+  default     = ""
+  description = "Model for the scan agent. Empty = gemini_model."
+}
 variable "gemini_location" {
   type    = string
   default = "global"

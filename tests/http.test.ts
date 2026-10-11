@@ -271,3 +271,21 @@ test('every registered data operation rejects missing authentication', async () 
     assert.equal(response.status, 401, endpoint.operation);
   }
 });
+test('the analysis worker endpoint rejects callers without a verified Cloud Tasks token', async () => {
+  const { handler } = await setup();
+  const job = JSON.stringify({ organizationId: 'tenant_a', scanId: randomUUID() });
+  const call = () =>
+    handler(
+      new Request('https://api.example.com/api/v1/internal/analysis', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${'admin'.repeat(6)}`,
+        },
+        body: job,
+      }),
+      ['v1', 'internal', 'analysis'],
+    );
+  // A valid Firebase user token is not a Cloud Tasks token.
+  assert.equal((await call()).status, 403);
+});

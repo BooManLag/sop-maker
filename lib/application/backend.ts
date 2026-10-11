@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
-import type { RepositoryProvider } from './ports';
+import type { Repository, RepositoryProvider } from './ports';
+import type { AnalysisQueue } from './analysis/worker';
 import type { Store } from './store';
 import { consumeQuota, pruneExpired } from './store';
 import { authorize, type RequestContext } from '../server/auth';
@@ -41,6 +42,7 @@ export class Backend {
     readonly repositories: RepositoryProvider,
     readonly config: ServerConfig,
     private capture: GuardedCaptureAdapter,
+    private analysis?: AnalysisQueue,
   ) {}
   async execute(
     endpoint: Endpoint,
@@ -108,7 +110,7 @@ export class Backend {
       captureFingerprint = digest(snapshot.process);
       extraction = await this.capture.extract(snapshot.capture.text ?? '', body.sample);
     }
-    return repository.transact((s) => {
+    const response = await repository.transact((s) => {
       pruneExpired(s);
       const cached = replay(s);
       if (cached) return cached.response;
@@ -148,6 +150,17 @@ export class Backend {
         s.idempotency.push({ key, fingerprint, response, expiresAt: Date.now() + 86400_000 });
       return response;
     });
+    if (endpoint.operation === 'scanRun' && this.analysis && response?.status === 'analyzing')
+      await this.enqueueAnalysis(repository, context.actor.organizationId, id!);
+    return response;
+  }
+  private async enqueueAnalysis(repository: Repository, organizationId: string, scanId: string) {
+    try {
+      await this.analysis!.enqueue({ organizationId, scanId });
+    } catch {
+      await repository.transact((s) => evidence.failAnalysis(s, scanId));
+      throw new ApiError(503, 'The scan could not be queued for analysis. Try running it again.');
+    }
   }
   private read(
     s: Store,
@@ -256,7 +269,7 @@ export class Backend {
       case 'scanReadiness':
         return evidence.checkReadiness(s, id!);
       case 'scanRun':
-        return evidence.runScan(s, id!);
+        return evidence.runScan(s, id!, Boolean(this.analysis));
       case 'findingDismiss':
         return evidence.dismissFinding(s, id!);
       case 'findingRestore':
