@@ -1,8 +1,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { EvidenceEngine, normalizeRecords, requiredSamplePerGroup } from '../../src/lib/services';
-import { handleApi } from '../../src/lib/api';
-import { repository, initialStore } from '../../src/lib/repository';
+import {
+  EvidenceEngine,
+  normalizeRecords,
+  requiredSamplePerGroup,
+} from '../../src/lib/application/evidence-engine';
+import { handleApi } from '../support/handle-api';
+import { initialStore } from '../../src/lib/application/store';
+import { readConfig } from '../../src/lib/server/config';
+import { JsonRepositoryProvider } from '../../src/lib/infrastructure/json-repository';
+
+const repository = new JsonRepositoryProvider(readConfig().dataDir).forTenant('demo-org');
 test('imports pseudonymize technicians and preserve unknown outcomes', () => {
   const [row] = normalizeRecords([
     { job_id: 'one', technician_id: 'Jane', callback_within_30_days: 'unknown' },

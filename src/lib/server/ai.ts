@@ -1,7 +1,7 @@
 import { ApiError } from './errors';
 import { extractionSchema } from './contracts';
 import { LIMITS } from './config';
-import type { CaptureAdapter } from '../services';
+import type { CaptureAdapter } from '../application/ports';
 /** No tools, remote URLs, credentials or authoritative writes are offered to the model. */
 export class GuardedCaptureAdapter {
   private failures = 0;

@@ -1,4 +1,11 @@
-import { repository, initialStore } from '../src/lib/repository';
+import { initialStore } from '../src/lib/application/store';
+import { readConfig } from '../src/lib/server/config';
+import { JsonRepositoryProvider } from '../src/lib/infrastructure/json-repository';
+
+const config = readConfig();
+if (config.mode !== 'demo')
+  throw new Error('Local demo repository cannot be loaded in production mode.');
+const repository = new JsonRepositoryProvider(config.dataDir).forTenant('demo-org');
 async function seed() {
   if (process.argv.includes('--reset'))
     await repository.transact((store) => Object.assign(store, initialStore()));
