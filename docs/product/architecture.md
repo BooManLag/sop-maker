@@ -6,16 +6,16 @@ Good Exception captures expert know-how into a human-approved SOP and investigat
 
 | Layer | Responsibility | Main files |
 | --- | --- | --- |
-| UI | Responsive process, finding and trial workflows | `components/workspace.tsx` |
-| HTTP | Bounded request parsing, CORS, identity, safe errors, response codes | `lib/server/http.ts`, `contracts.ts` |
-| Authorization | Verified organization/role, resource scope, reviewer/admin MFA | `lib/server/auth.ts` |
-| Application | Workflow invariants, idempotency, short transactions, audit events | `lib/application/backend.ts`, `process-service.ts`, `evidence-service.ts` |
-| Domain | Structured SOP versions, evidence, trials, proposals | `lib/domain.ts`, `lib/application/store.ts` |
-| Repository port | Tenant-scoped atomic reads and writes | `lib/application/ports.ts` |
-| Local infrastructure | Lease locking, fsync, atomic rename, backup/restore | `lib/infrastructure/json-repository.ts`, `backup.ts` |
-| Cloud infrastructure | Firebase revoked-token verification and Firestore transactions | `lib/infrastructure/firebase.ts`, `firestore-repository.ts` |
-| AI boundary | Input/output limits, strict candidate schema, failure isolation | `lib/server/ai.ts` |
-| Runtime | Dependency composition, admission, health, logs and shutdown | `lib/server/runtime.ts`, `hooks.ts` |
+| UI | Responsive process, finding and trial workflows | `src/app/(workspace)/`, `src/features/` |
+| HTTP | Bounded request parsing, CORS, identity, safe errors, response codes | `src/lib/server/http.ts`, `contracts.ts` |
+| Authorization | Verified organization/role, resource scope, reviewer/admin MFA | `src/lib/server/auth.ts` |
+| Application | Workflow invariants, idempotency, short transactions, audit events | `src/lib/application/backend.ts`, `process-service.ts`, `evidence-service.ts` |
+| Domain | Structured SOP versions, evidence, trials, proposals | `src/lib/domain/types.ts`, `src/lib/application/store.ts` |
+| Repository port | Tenant-scoped atomic reads and writes | `src/lib/application/ports.ts` |
+| Local infrastructure | Lease locking, fsync, atomic rename, backup/restore | `src/lib/infrastructure/json-repository.ts`, `backup.ts` |
+| Cloud infrastructure | Firebase revoked-token verification and Firestore transactions | `src/lib/infrastructure/firebase.ts`, `firestore-repository.ts` |
+| AI boundary | Input/output limits, strict candidate schema, failure isolation | `src/lib/server/ai.ts` |
+| Runtime | Dependency composition, admission, health, logs and shutdown | `src/lib/server/runtime.ts`, `hooks.ts` |
 
 Configuration comes from validated environment names; secrets are never returned, logged or included in drafts. Local demo identities are accepted only for loopback requests. Production fails closed unless Firebase/project, allowed origins and HMAC configuration exist, and Cloud Run refuses demo/emulator mode. Production Firebase authentication is backend-only at present: the UI still uses the demo flow and needs a separate sign-in integration before public use.
 

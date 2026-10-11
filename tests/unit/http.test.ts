@@ -7,7 +7,7 @@ import { randomUUID } from 'node:crypto';
 import { Backend } from '../../src/lib/application/backend';
 import { JsonRepositoryProvider } from '../../src/lib/infrastructure/json-repository';
 import { GuardedCaptureAdapter } from '../../src/lib/server/ai';
-import { DemoGeminiAdapter } from '../../src/lib/services';
+import { DemoGeminiAdapter } from '../../src/lib/infrastructure/demo-capture-adapter';
 import { createHttpHandler } from '../../src/lib/server/http';
 import { Observability } from '../../src/lib/server/observability';
 import { AdmissionControl, readJson } from '../../src/lib/server/limits';

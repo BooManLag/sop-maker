@@ -1,54 +1,7 @@
 import { createHash, createHmac } from 'node:crypto';
-import { ApiError } from './server/errors';
-import type { Execution, ProcessStep, Readiness } from './domain/types';
-import { captureSteps } from './domain/demo-data';
-export interface CaptureAdapter {
-  extract(
-    text: string,
-    sample: boolean,
-    options?: { signal: AbortSignal; maxOutputTokens: number },
-  ): Promise<ProcessStep[]>;
-  questions(steps: ProcessStep[]): Promise<string[]>;
-}
-export class DemoGeminiAdapter implements CaptureAdapter {
-  async extract(text: string, sample: boolean) {
-    if (sample)
-      return structuredClone(captureSteps).map((s) => ({
-        ...s,
-        source: 'expert_walkthrough' as const,
-      }));
-    const lines = text
-      .split(/\r?\n/)
-      .map((line) => line.replace(/^\s*\d+[.)]\s*/, ''))
-      .flatMap((line) => line.split(/\.(?:\s|$)/))
-      .map((line) => line.trim())
-      .filter(Boolean);
-    if (!lines.length) throw new Error('Add a walkthrough or choose the sample.');
-    return lines.map((action, i) => ({
-      id: `step-${i + 1}`,
-      sequence: i + 1,
-      action,
-      required: true,
-      source: 'expert_walkthrough' as const,
-    }));
-  }
-  async questions(steps: ProcessStep[]) {
-    const judgment = steps.find((s) => /wait|repeat/i.test(s.action));
-    return judgment
-      ? [
-          `You included “${judgment.action}”. Why is that useful?`,
-          'When should this practice be used?',
-        ]
-      : [
-          'What judgment or safety check should someone know before following these steps?',
-          'When does the procedure need to change?',
-        ];
-  }
-}
-export interface AnalyticsService {
-  readiness(records: Execution[]): Readiness;
-  analyze(records: Execution[]): Promise<never>;
-}
+import { ApiError } from '../server/errors';
+import type { Execution, Readiness } from '../domain/types';
+import type { AnalyticsService } from './ports';
 export class EvidenceEngine implements AnalyticsService {
   readiness(records: Execution[]): Readiness {
     const known = records.filter((r) => r.callback !== null);

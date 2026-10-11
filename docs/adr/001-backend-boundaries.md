@@ -6,7 +6,7 @@ HTTP owns parsing, byte limits, CORS, identity verification, response status and
 
 `Backend` accepts repository and extraction ports; `createHttpHandler` accepts authentication, admission control and observability ports. Tests can exercise failure behavior with injected providers without changing business logic. Firebase emulator integration tests exercise the real Admin SDK rather than hiding persistence/auth failures behind mocks.
 
-Ownership in code: `lib/server` is the transport/security boundary; `lib/application` owns process/evidence transitions; `lib/infrastructure` owns provider adapters and recovery; `lib/domain.ts` owns shared domain types. Repository maintainers review backend and schema changes; organization-specific operational owners still need to be assigned before a deployment.
+Ownership in code: `src/lib/server` is the transport/security boundary; `src/lib/application` owns process/evidence transitions; `src/lib/infrastructure` owns provider adapters and recovery; `src/lib/domain/types.ts` owns shared domain types. Repository maintainers review backend and schema changes; organization-specific operational owners still need to be assigned before a deployment.
 
 ## Storage choice
 
