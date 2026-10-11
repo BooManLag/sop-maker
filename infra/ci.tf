@@ -50,3 +50,20 @@ resource "google_service_account_iam_member" "deployer_acts_as_runtime" {
   role               = "roles/iam.serviceAccountUser"
   member             = google_service_account.deployer.member
 }
+
+# Live model evals run from GitHub with an identity that can call Vertex AI and nothing else.
+resource "google_service_account" "eval" {
+  account_id   = "${var.app_name}-eval"
+  display_name = "${var.app_name} model evals"
+}
+resource "google_service_account_iam_member" "eval_wif" {
+  service_account_id = google_service_account.eval.name
+  role               = "roles/iam.workloadIdentityUser"
+  member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github.name}/attribute.repository/${var.github_repository}"
+}
+resource "google_project_iam_member" "eval" {
+  for_each = toset(["roles/aiplatform.user", "roles/serviceusage.serviceUsageConsumer"])
+  project  = var.project_id
+  role     = each.value
+  member   = google_service_account.eval.member
+}
