@@ -3,6 +3,7 @@ import { GoogleGenAI } from '@google/genai';
 import { z } from 'zod';
 import type { Embedder, AnalysisToolkit } from '../application/analysis/toolkit';
 import { MAX_FINDINGS } from '../application/analysis/toolkit';
+import { metered, tokens } from './ai-usage';
 
 export interface VertexSettings {
   projectId: string;
@@ -34,19 +35,24 @@ export function vertexEmbedder(settings: VertexSettings): Embedder {
     location: settings.location,
   });
   return {
-    async embed(texts) {
-      const vectors: number[][] = [];
-      for (let i = 0; i < texts.length; i += 100) {
-        const response = await client.models.embedContent({
-          model: settings.embeddingModel,
-          contents: texts.slice(i, i + 100),
-          config: { taskType: 'CLUSTERING', outputDimensionality: 256 },
-        });
-        for (const e of response.embeddings ?? []) vectors.push(e.values ?? []);
-      }
-      if (vectors.length !== texts.length) throw new Error('Embedding count mismatch.');
-      return vectors;
-    },
+    embed: (texts) =>
+      metered('scan_embed', settings.embeddingModel, async () => {
+        const vectors: number[][] = [];
+        let calls = 0;
+        for (let i = 0; i < texts.length; i += 100) {
+          calls++;
+          const response = await client.models.embedContent({
+            model: settings.embeddingModel,
+            contents: texts.slice(i, i + 100),
+            config: { taskType: 'CLUSTERING', outputDimensionality: 256 },
+          });
+          for (const e of response.embeddings ?? []) vectors.push(e.values ?? []);
+        }
+        if (vectors.length !== texts.length) throw new Error('Embedding count mismatch.');
+        // Embedding responses carry no token counts; characters are the billing unit.
+        const input = texts.reduce((n, t) => n + t.length, 0);
+        return { value: vectors, input, output: 0, calls };
+      }),
   };
 }
 
@@ -114,10 +120,22 @@ export function adkDriver(settings: VertexSettings): AnalysisDriver {
       newMessage: { role: 'user', parts: [{ text: 'Analyze this scan and propose findings.' }] },
       runConfig: { maxLlmCalls: 25 },
     });
-    for await (const event of run) {
-      if (signal.aborted) throw new Error('Analysis timed out.');
-      // A model error must fail the attempt so Cloud Tasks retries, not complete with partial findings.
-      if (event.errorCode) throw new Error(`Agent model error: ${event.errorCode}`);
-    }
+    await metered('scan_agent', settings.model, async () => {
+      let input = 0;
+      let output = 0;
+      let calls = 0;
+      for await (const event of run) {
+        if (signal.aborted) throw new Error('Analysis timed out.');
+        // A model error must fail the attempt so Cloud Tasks retries, not complete with partial findings.
+        if (event.errorCode) throw new Error(`Agent model error: ${event.errorCode}`);
+        if (event.usageMetadata) {
+          const used = tokens(event.usageMetadata);
+          input += used.input;
+          output += used.output;
+          calls++;
+        }
+      }
+      return { value: undefined, input, output, calls };
+    });
   };
 }

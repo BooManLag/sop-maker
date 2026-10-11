@@ -3,6 +3,7 @@ import type { ProcessStep } from '../domain';
 import type { CaptureAdapter } from '../services';
 import { DemoGeminiAdapter } from '../services';
 import { LIMITS } from './config';
+import { metered, tokens, type AiFeature } from './ai-usage';
 
 export interface GeminiSettings {
   projectId: string;
@@ -10,6 +11,7 @@ export interface GeminiSettings {
   model: string;
 }
 type Generate = (request: {
+  feature: AiFeature;
   system: string;
   prompt: string;
   schema: object;
@@ -57,21 +59,23 @@ function vertexGenerate(settings: GeminiSettings): Generate {
     project: settings.projectId,
     location: settings.location,
   });
-  return async ({ system, prompt, schema, signal, maxOutputTokens }) => {
-    const response = await client.models.generateContent({
-      model: settings.model,
-      contents: prompt,
-      config: {
-        systemInstruction: system,
-        responseMimeType: 'application/json',
-        responseJsonSchema: schema,
-        temperature: 0.2,
-        maxOutputTokens,
-        abortSignal: signal,
-      },
+  return ({ feature, system, prompt, schema, signal, maxOutputTokens }) =>
+    metered(feature, settings.model, async () => {
+      const response = await client.models.generateContent({
+        model: settings.model,
+        contents: prompt,
+        config: {
+          systemInstruction: system,
+          responseMimeType: 'application/json',
+          responseJsonSchema: schema,
+          temperature: 0.2,
+          maxOutputTokens,
+          abortSignal: signal,
+        },
+      });
+      const used = tokens(response.usageMetadata);
+      return { value: response.text, ...used };
     });
-    return response.text;
-  };
 }
 const optional = (value: unknown) =>
   typeof value === 'string' && value.trim() ? value.trim() : undefined;
@@ -91,6 +95,7 @@ export class VertexGeminiAdapter implements CaptureAdapter {
     // The bundled sample walkthrough has a fixed, reviewed draft; spending tokens on it adds nothing.
     if (sample) return this.sample.extract(text, true);
     const raw = await this.generate({
+      feature: 'capture_extract',
       system: EXTRACT_INSTRUCTION,
       prompt: `Walkthrough:\n"""\n${text}\n"""`,
       schema: stepsSchema,
@@ -116,6 +121,7 @@ export class VertexGeminiAdapter implements CaptureAdapter {
   }
   async questions(steps: ProcessStep[]): Promise<string[]> {
     const raw = await this.generate({
+      feature: 'capture_questions',
       system: QUESTION_INSTRUCTION,
       prompt: `Draft steps:\n${steps.map((s) => `${s.sequence}. ${s.action}`).join('\n')}`,
       schema: questionsSchema,

@@ -26,5 +26,5 @@ Open: app name (Terraform variable until chosen, must be set before first apply)
 2. Terraform and CI deploy
 3. ADK scan agent with Cloud Tasks (done)
 4. Multimodal capture (deferred; lightweight browser audio if time allows)
-5. Extraction eval set
-6. Monitoring dashboard and architecture diagram
+5. Extraction and scan-agent evals (done)
+6. AI usage metrics, Monitoring dashboard, architecture diagram (done)
