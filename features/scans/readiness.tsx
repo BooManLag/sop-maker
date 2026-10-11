@@ -107,8 +107,8 @@ function ReadinessReview({ scan, readiness }: { scan: ScanDetail; readiness: Rea
       )}
       {!scan.demo && readiness.eligible && (
         <Alert>
-          The data passed the initial readiness check. Live analytics is not connected; the scan
-          cannot yet produce evidence-backed findings for this upload.
+          Gemini will group similar job notes into practices. Callback rates and the held-out check
+          on later jobs are computed from your records, not by the model.
         </Alert>
       )}
       <FormActions>
@@ -116,12 +116,12 @@ function ReadinessReview({ scan, readiness }: { scan: ScanDetail; readiness: Rea
           <Link href={`/scans/new?processId=${scan.processId}`}>Change data</Link>
         </Button>
         <Button
-          disabled={run.isPending || !readiness.eligible || !scan.demo}
+          disabled={run.isPending || !readiness.eligible}
           onClick={() =>
             run.mutate(undefined, { onSuccess: () => router.push(`/scans/${scan.id}/results`) })
           }
         >
-          Run sample scan
+          {scan.demo ? 'Run sample scan' : 'Run scan'}
           <ArrowRight size={16} aria-hidden />
         </Button>
       </FormActions>

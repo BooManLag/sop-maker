@@ -19,8 +19,13 @@ export const useProcess = (id: string) =>
   useQuery({ queryKey: queryKeys.process(id), queryFn: () => api.process(id) });
 export const useCapture = (id: string) =>
   useQuery({ queryKey: queryKeys.capture(id), queryFn: () => api.capture(id) });
+/** Polls while a live scan is being analyzed in the background. */
 export const useScan = (id: string) =>
-  useQuery({ queryKey: queryKeys.scan(id), queryFn: () => api.scan(id) });
+  useQuery({
+    queryKey: queryKeys.scan(id),
+    queryFn: () => api.scan(id),
+    refetchInterval: (query) => (query.state.data?.status === 'analyzing' ? 3000 : false),
+  });
 export const useFinding = (id: string) =>
   useQuery({ queryKey: queryKeys.finding(id), queryFn: () => api.finding(id) });
 export const useTrial = (id: string) =>

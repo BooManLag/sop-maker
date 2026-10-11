@@ -31,7 +31,8 @@ resource "google_cloud_run_v2_service" "app" {
   template {
     service_account                  = google_service_account.runtime.email
     max_instance_request_concurrency = 80
-    timeout                          = "60s"
+    # Scan analysis runs inside a Cloud Tasks request for up to four minutes.
+    timeout = "300s"
     scaling {
       min_instance_count = 0
       max_instance_count = var.max_instances
@@ -41,7 +42,7 @@ resource "google_cloud_run_v2_service" "app" {
       image = "us-docker.pkg.dev/cloudrun/container/hello"
       ports { container_port = 8080 }
       resources {
-        limits            = { cpu = "1", memory = "512Mi" }
+        limits            = { cpu = "1", memory = "1Gi" }
         cpu_idle          = true
         startup_cpu_boost = true
       }
@@ -56,6 +57,22 @@ resource "google_cloud_run_v2_service" "app" {
       env {
         name  = "GOOD_EXCEPTION_GEMINI_MODEL"
         value = var.gemini_model
+      }
+      env {
+        name  = "GOOD_EXCEPTION_AGENT_MODEL"
+        value = var.agent_model == "" ? var.gemini_model : var.agent_model
+      }
+      env {
+        name  = "GOOD_EXCEPTION_TASKS_QUEUE"
+        value = google_cloud_tasks_queue.analysis.id
+      }
+      env {
+        name  = "GOOD_EXCEPTION_WORKER_URL"
+        value = local.worker_url
+      }
+      env {
+        name  = "GOOD_EXCEPTION_TASKS_INVOKER"
+        value = google_service_account.tasks.email
       }
       env {
         name  = "GOOGLE_CLOUD_LOCATION"

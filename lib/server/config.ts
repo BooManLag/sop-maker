@@ -16,6 +16,20 @@ const environment = z.object({
     .string()
     .regex(/^[a-z0-9.-]{3,64}$/)
     .optional(),
+  GOOD_EXCEPTION_AGENT_MODEL: z
+    .string()
+    .regex(/^[a-z0-9.-]{3,64}$/)
+    .optional(),
+  GOOD_EXCEPTION_EMBEDDING_MODEL: z
+    .string()
+    .regex(/^[a-z0-9.-]{3,64}$/)
+    .default('gemini-embedding-001'),
+  GOOD_EXCEPTION_TASKS_QUEUE: z
+    .string()
+    .regex(/^projects\/[a-z0-9-]+\/locations\/[a-z0-9-]+\/queues\/[A-Za-z0-9-]+$/)
+    .optional(),
+  GOOD_EXCEPTION_WORKER_URL: z.string().url().startsWith('https://').optional(),
+  GOOD_EXCEPTION_TASKS_INVOKER: z.string().email().optional(),
   GOOGLE_CLOUD_LOCATION: z
     .string()
     .regex(/^[a-z0-9-]{2,32}$/)
@@ -30,7 +44,8 @@ export interface ServerConfig {
   allowedOrigins: string[];
   projectId?: string;
   databaseId: string;
-  gemini?: { model: string; location: string };
+  gemini?: { model: string; agentModel: string; embeddingModel: string; location: string };
+  tasks?: { queue: string; workerUrl: string; invokerEmail: string };
   pseudonymKey?: string;
   requireMfa: boolean;
   emulator: boolean;
@@ -75,8 +90,21 @@ export function readConfig(env: Record<string, string | undefined> = process.env
     projectId: e.GOOGLE_CLOUD_PROJECT,
     databaseId: e.FIRESTORE_DATABASE_ID,
     gemini: e.GOOD_EXCEPTION_GEMINI_MODEL
-      ? { model: e.GOOD_EXCEPTION_GEMINI_MODEL, location: e.GOOGLE_CLOUD_LOCATION }
+      ? {
+          model: e.GOOD_EXCEPTION_GEMINI_MODEL,
+          agentModel: e.GOOD_EXCEPTION_AGENT_MODEL ?? e.GOOD_EXCEPTION_GEMINI_MODEL,
+          embeddingModel: e.GOOD_EXCEPTION_EMBEDDING_MODEL,
+          location: e.GOOGLE_CLOUD_LOCATION,
+        }
       : undefined,
+    tasks:
+      e.GOOD_EXCEPTION_TASKS_QUEUE && e.GOOD_EXCEPTION_WORKER_URL && e.GOOD_EXCEPTION_TASKS_INVOKER
+        ? {
+            queue: e.GOOD_EXCEPTION_TASKS_QUEUE,
+            workerUrl: e.GOOD_EXCEPTION_WORKER_URL,
+            invokerEmail: e.GOOD_EXCEPTION_TASKS_INVOKER,
+          }
+        : undefined,
     pseudonymKey: e.GOOD_EXCEPTION_PSEUDONYM_KEY,
     requireMfa: e.GOOD_EXCEPTION_REQUIRE_MFA === 'true',
     emulator: Boolean(e.FIRESTORE_EMULATOR_HOST),

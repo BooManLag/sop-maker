@@ -57,7 +57,22 @@ export function ScanResults({ scanId }: { scanId: string }) {
     <QueryState query={useScan(scanId)}>
       {(scan) =>
         scan.funnel ? (
-          <Funnel counts={scan.funnel} />
+          <Funnel counts={scan.funnel} demo={scan.demo} />
+        ) : scan.status === 'analyzing' ? (
+          <EmptyState
+            title="Analyzing your records."
+            description="Gemini is grouping job notes and testing each practice against callbacks. This usually takes a minute or two."
+          />
+        ) : scan.status === 'failed' ? (
+          <EmptyState
+            title="The analysis did not finish."
+            description="No findings were created. Run the scan again from the data check."
+            action={
+              <Button asChild>
+                <Link href={`/scans/${scanId}`}>Back to data check</Link>
+              </Button>
+            }
+          />
         ) : (
           <EmptyState
             title="This scan has not run yet."
@@ -74,13 +89,13 @@ export function ScanResults({ scanId }: { scanId: string }) {
   );
 }
 
-function Funnel({ counts }: { counts: number[] }) {
+function Funnel({ counts, demo }: { counts: number[]; demo: boolean }) {
   const revealed = useStagedReveal(counts.length);
   const done = revealed >= counts.length;
   const survivors = counts.at(-1) ?? 0;
   return (
     <div className="mx-auto my-11 max-w-[650px]">
-      <Eyebrow>SAMPLE SCAN</Eyebrow>
+      <Eyebrow>{demo ? 'SAMPLE SCAN' : 'SCAN RESULTS'}</Eyebrow>
       <h1
         className="mt-5.5 text-2xl leading-[1.13] tracking-[-1.6px] sm:text-3xl"
         aria-live="polite"
@@ -113,9 +128,10 @@ function Funnel({ counts }: { counts: number[] }) {
       </ol>
       <Disclosure summary="View methodology">
         <p>
-          This is an illustrative funnel, not an analysis of uploaded records. Live analysis will
-          compare practices within technician histories and equipment groups, then test on later
-          jobs. Historical association does not establish causation.
+          {demo
+            ? 'This is an illustrative funnel, not an analysis of uploaded records.'
+            : 'Similar job notes were grouped with Gemini embeddings. Each group was compared with all other jobs on 30-day callbacks using the oldest 70% of jobs, then checked on the newest 30%. A Gemini agent chose which practices to propose; every rate was computed from your records.'}{' '}
+          Historical association does not establish causation.
         </p>
       </Disclosure>
       <Button asChild className={cn('mt-6', !done && 'pointer-events-none opacity-45')}>

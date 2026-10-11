@@ -3,7 +3,10 @@ import type { Store } from './store';
 import type { Actor } from '../server/auth';
 import { ApiError, requireCondition } from '../server/errors';
 import { demoResponse } from '../demo';
-import { trialPrimaryOutcome } from '../domain';
+import { trialPrimaryOutcome, type Finding } from '../domain';
+import type { AnalysisOutcome } from './analysis/toolkit';
+import { DISCOVERY_SHARE } from './analysis/stats';
+export const ANALYSIS_VERSION = 'agent-v1';
 import { EvidenceEngine, normalizeRecords, requiredSamplePerGroup } from '../services';
 import type { schemas } from '../server/contracts';
 import type { z } from 'zod';
@@ -66,7 +69,7 @@ export function scanDetailDto(scan: ReturnType<typeof getScan>) {
   return {
     ...scanDto(scan),
     readiness: scan.readiness,
-    funnel: scan.status === 'complete' && scan.demo ? sampleFunnel(scan) : undefined,
+    funnel: scan.status !== 'complete' ? undefined : scan.demo ? sampleFunnel(scan) : scan.funnel,
   };
 }
 /** Illustrative funnel for the sample scenario; only the surviving count is real. */
@@ -80,7 +83,7 @@ export function checkReadiness(s: Store, id: string) {
     'Imported records expired. Import a fresh dataset.',
     409,
   );
-  if (scan.status === 'complete') return scan.readiness;
+  if (scan.status === 'complete' || scan.status === 'analyzing') return scan.readiness;
   scan.readiness = scan.demo
     ? {
         eligible: true,
@@ -107,25 +110,83 @@ export function checkReadiness(s: Store, id: string) {
   scan.status = scan.readiness.eligible ? 'ready' : 'uploaded';
   return scan.readiness;
 }
-export function runScan(s: Store, id: string) {
+/** Live scans are analyzed in the background; the caller enqueues the job after this commits. */
+export function runScan(s: Store, id: string, liveAnalysis: boolean) {
   const scan = getScan(s, id);
+  if (scan.status === 'analyzing' || (scan.status === 'complete' && !scan.demo))
+    return { id: scan.id, demo: false, status: scan.status };
   requireCondition(scan.readiness?.eligible, 'Not enough evidence to run a reliable scan.', 422);
   requireCondition(
     !scan.expiresAt || Date.parse(scan.expiresAt) > Date.now(),
     'Imported records expired. Import a fresh dataset.',
     409,
   );
-  if (!scan.demo)
-    throw new ApiError(
-      503,
-      'Live evidence analysis is not connected. Your data has not been replaced with sample findings.',
-    );
+  if (!scan.demo) {
+    if (!liveAnalysis)
+      throw new ApiError(
+        503,
+        'Live evidence analysis is not connected. Your data has not been replaced with sample findings.',
+      );
+    scan.status = 'analyzing';
+    return { id: scan.id, demo: false, status: scan.status };
+  }
   scan.status = 'complete';
   scan.findingIds = s.findings
     .filter((f) => f.processId === scan.processId && f.status !== 'dismissed')
     .map((f) => f.id);
-  return { id: scan.id, demo: true, funnel: sampleFunnel(scan) };
+  return { id: scan.id, demo: true, status: scan.status, funnel: sampleFunnel(scan) };
 }
+/** Snapshot the worker analyzes outside any transaction; undefined when there is nothing to do. */
+export function analysisInput(s: Store, id: string) {
+  const scan = s.scans.find((x) => x.id === id);
+  if (!scan || scan.status !== 'analyzing') return undefined;
+  const process = getProcess(s, scan.processId);
+  const version = process.versions.find((v) => v.version === process.currentVersion);
+  requireCondition(version, 'The scan baseline SOP is missing.', 409);
+  return { records: scan.records, steps: version.steps, sopVersion: version.version };
+}
+export function completeAnalysis(
+  s: Store,
+  id: string,
+  outcome: AnalysisOutcome,
+  sopVersion: number,
+) {
+  const scan = s.scans.find((x) => x.id === id);
+  if (!scan || scan.status !== 'analyzing') return;
+  const findings: Finding[] = outcome.findings.map((p) => ({
+    id: randomUUID(),
+    processId: scan.processId,
+    title: p.title,
+    grade: p.evaluation.grade,
+    description: p.description,
+    standard: p.standard,
+    practice: p.practice,
+    baselineRate: p.evaluation.baselineRate,
+    practiceRate: p.evaluation.practiceRate,
+    technicians: p.evaluation.technicians,
+    evidence: {
+      sourceRecordIds: p.jobIds.slice(0, 200),
+      sopVersion,
+      analysisVersion: ANALYSIS_VERSION,
+      sampleSize: p.evaluation.jobs,
+      heldOutResult: p.evaluation.heldOut.holds
+        ? `Held on later jobs: ${percent(p.evaluation.heldOut.practice.rate)}% vs ${percent(p.evaluation.heldOut.baseline.rate)}% callbacks`
+        : 'Did not hold on later jobs',
+      methodology: `Jobs grouped by similar notes (Gemini embeddings); oldest ${Math.round(DISCOVERY_SHARE * 100)}% used for discovery, newest jobs held out. Rates computed in code, not by the model.`,
+      demonstration: false,
+    },
+    status: 'candidate',
+  }));
+  s.findings.push(...findings);
+  scan.findingIds = findings.map((f) => f.id);
+  scan.funnel = outcome.funnel;
+  scan.status = 'complete';
+}
+export function failAnalysis(s: Store, id: string) {
+  const scan = s.scans.find((x) => x.id === id);
+  if (scan?.status === 'analyzing') scan.status = 'failed';
+}
+const percent = (rate: number) => Math.round(rate * 1000) / 10;
 export function dismissFinding(s: Store, id: string) {
   const f = getFinding(s, id);
   requireCondition(
