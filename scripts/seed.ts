@@ -1,4 +1,4 @@
-import { repository, initialStore } from '../lib/repository';
+import { repository, initialStore } from '../src/lib/repository';
 async function seed() {
   if (process.argv.includes('--reset'))
     await repository.transact((store) => Object.assign(store, initialStore()));

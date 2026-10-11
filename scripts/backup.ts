@@ -1,6 +1,6 @@
 import path from 'node:path';
-import { readConfig } from '../lib/server/config';
-import { backupDemo, restoreDemo } from '../lib/infrastructure/backup';
+import { readConfig } from '../src/lib/server/config';
+import { backupDemo, restoreDemo } from '../src/lib/infrastructure/backup';
 async function main() {
   const config = readConfig();
   if (config.mode !== 'demo')

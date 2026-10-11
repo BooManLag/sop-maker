@@ -2,12 +2,12 @@ import assert from 'node:assert/strict';
 import { mkdtemp } from 'node:fs/promises';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
-import { Backend } from '../../lib/application/backend';
-import { JsonRepositoryProvider } from '../../lib/infrastructure/json-repository';
-import { GuardedCaptureAdapter } from '../../lib/server/ai';
-import { DemoGeminiAdapter } from '../../lib/services';
-import { createHttpHandler } from '../../lib/server/http';
-import type { ServerConfig } from '../../lib/server/config';
+import { Backend } from '../../src/lib/application/backend';
+import { JsonRepositoryProvider } from '../../src/lib/infrastructure/json-repository';
+import { GuardedCaptureAdapter } from '../../src/lib/server/ai';
+import { DemoGeminiAdapter } from '../../src/lib/services';
+import { createHttpHandler } from '../../src/lib/server/http';
+import type { ServerConfig } from '../../src/lib/server/config';
 
 export const sessionToken = 'test-session-token-for-tenant-a';
 
@@ -49,7 +49,10 @@ export async function realBackendFetch(mode: ServerConfig['mode'] = 'production'
   });
   const sent: Request[] = [];
   const fetch: typeof globalThis.fetch = async (input, init) => {
-    const request = new Request(new URL(String(input instanceof Request ? input.url : input), origin), init);
+    const request = new Request(
+      new URL(String(input instanceof Request ? input.url : input), origin),
+      init,
+    );
     sent.push(request.clone());
     const segments = new URL(request.url).pathname.split('/').slice(2);
     return handler(request, segments);

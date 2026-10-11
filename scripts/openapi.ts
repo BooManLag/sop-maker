@@ -1,6 +1,6 @@
 import { writeFile, readFile } from 'node:fs/promises';
 import { z } from 'zod';
-import { endpoints, schemas } from '../lib/server/contracts';
+import { endpoints, schemas } from '../src/lib/server/contracts';
 export function openApiDocument() {
   const paths: Record<string, Record<string, unknown>> = {};
   const error = {
