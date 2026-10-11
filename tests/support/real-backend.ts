@@ -49,7 +49,10 @@ export async function realBackendFetch(mode: ServerConfig['mode'] = 'production'
   });
   const sent: Request[] = [];
   const fetch: typeof globalThis.fetch = async (input, init) => {
-    const request = new Request(new URL(String(input instanceof Request ? input.url : input), origin), init);
+    const request = new Request(
+      new URL(String(input instanceof Request ? input.url : input), origin),
+      init,
+    );
     sent.push(request.clone());
     const segments = new URL(request.url).pathname.split('/').slice(2);
     return handler(request, segments);
