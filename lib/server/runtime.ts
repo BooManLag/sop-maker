@@ -5,6 +5,7 @@ import { FirestoreRepositoryProvider } from '../infrastructure/firestore-reposit
 import { firebaseTokenVerifier, firestoreDatabase } from '../infrastructure/firebase';
 import { GuardedCaptureAdapter, UnavailableCaptureAdapter } from './ai';
 import { DemoGeminiAdapter } from '../services';
+import { VertexGeminiAdapter } from './gemini';
 import { createHttpHandler } from './http';
 import { AdmissionControl } from './limits';
 let runtime: ReturnType<typeof compose> | undefined;
@@ -18,7 +19,11 @@ function compose() {
     repositories,
     config,
     new GuardedCaptureAdapter(
-      config.mode === 'demo' ? new DemoGeminiAdapter() : new UnavailableCaptureAdapter(),
+      config.mode === 'demo'
+        ? new DemoGeminiAdapter()
+        : config.gemini && config.projectId
+          ? VertexGeminiAdapter.fromSettings({ projectId: config.projectId, ...config.gemini })
+          : new UnavailableCaptureAdapter(),
     ),
   );
   const admission = new AdmissionControl();

@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { GuardedCaptureAdapter, UnavailableCaptureAdapter } from '../lib/server/ai';
 import { DemoGeminiAdapter } from '../lib/services';
+import { VertexGeminiAdapter } from '../lib/server/gemini';
 import type { ProcessStep } from '../lib/domain';
 const step: ProcessStep = {
   id: 'step_1',
@@ -102,4 +103,57 @@ test('provider timeout aborts the adapter and never returns a draft', async () =
   });
   await assert.rejects(adapter.extract('A walkthrough', false), /timed out/);
   assert.equal(signal?.aborted, true);
+});
+test('Vertex adapter shapes model JSON into guarded, renumbered steps', async () => {
+  const prompts: string[] = [];
+  const adapter = new GuardedCaptureAdapter(
+    new VertexGeminiAdapter(async ({ prompt }) => {
+      prompts.push(prompt);
+      return prompts.length === 1
+        ? JSON.stringify({
+            steps: [
+              { action: ' Isolate power ', required: true, warning: 'Lockout first' },
+              {
+                action: 'Wait 30 seconds',
+                required: false,
+                rationale: '',
+                id: 'x',
+                source: 'baseline',
+              },
+            ],
+          })
+        : JSON.stringify({ questions: ['Why wait 30 seconds?'] });
+    }),
+  );
+  const result = await adapter.extract('Isolate power, then wait.', false);
+  assert.deepEqual(result.steps, [
+    {
+      id: 'step-1',
+      sequence: 1,
+      action: 'Isolate power',
+      required: true,
+      warning: 'Lockout first',
+      source: 'expert_walkthrough',
+    },
+    {
+      id: 'step-2',
+      sequence: 2,
+      action: 'Wait 30 seconds',
+      required: false,
+      source: 'expert_walkthrough',
+    },
+  ]);
+  assert.deepEqual(result.questions, ['Why wait 30 seconds?']);
+  assert.match(prompts[0], /"""\nIsolate power, then wait\.\n"""/);
+});
+test('Vertex adapter fails closed on non-JSON output and skips the model for the sample', async () => {
+  const broken = new GuardedCaptureAdapter(new VertexGeminiAdapter(async () => 'not json'));
+  await assert.rejects(broken.extract('A walkthrough', false), /unavailable/);
+  let calls = 0;
+  const sample = new VertexGeminiAdapter(async () => {
+    calls++;
+    return JSON.stringify({ questions: ['Why?'] });
+  });
+  assert.ok((await sample.extract('', true)).length > 0);
+  assert.equal(calls, 0);
 });
