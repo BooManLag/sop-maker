@@ -1,4 +1,4 @@
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, HarmBlockThreshold, HarmCategory } from '@google/genai';
 import type { ProcessStep } from '../domain';
 import type { CaptureAdapter } from '../services';
 import { DemoGeminiAdapter } from '../services';
@@ -53,6 +53,30 @@ const questionsSchema = {
   required: ['questions'],
 };
 
+/**
+ * Field procedures legitimately mention hazards ("isolate live power", "hot oil"), so dangerous
+ * content blocks only at high probability; other categories block from medium. A blocked
+ * response has no text, fails JSON parsing, and the guard returns 503 without saving anything.
+ */
+export const SAFETY_SETTINGS = [
+  {
+    category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+    threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+  },
+  {
+    category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+    threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+  },
+  {
+    category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+    threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+  },
+  {
+    category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+    threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+  },
+];
+
 function vertexGenerate(settings: GeminiSettings): Generate {
   const client = new GoogleGenAI({
     vertexai: true,
@@ -70,6 +94,7 @@ function vertexGenerate(settings: GeminiSettings): Generate {
           responseJsonSchema: schema,
           temperature: 0.2,
           maxOutputTokens,
+          safetySettings: SAFETY_SETTINGS,
           abortSignal: signal,
         },
       });

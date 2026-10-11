@@ -12,11 +12,11 @@ Target: AI Builder Cup (JPAC). Judging weight that drives this plan: Technical M
 | Scan analysis | Gemini embeddings group job notes in memory; an ADK agent picks practices to test; code computes every rate with a held-out check on the newest 30% of jobs. Runs via Cloud Tasks (max 2 concurrent, 3 attempts). Embeddings are not persisted yet: tenant state is one size-capped document. |
 | Multimodal | Deferred. If time allows: short browser audio clips sent straight to Gemini |
 | Agent | ADK "good-exception finder" in Cloud Run; tools: get SOP, list note clusters, evaluate practice, propose finding; findings are candidates for human review. Firestore vector search across scans is a later addition |
-| Quality | Structured output, context caching, safety settings, extraction eval set in CI |
+| Quality | Structured output, safety settings (dangerous content blocks only at high, since SOPs name hazards), extraction and agent evals. Context caching skipped: our prompts are far below Vertex's minimum cacheable size |
 | Observability | Cloud Logging and Trace, token/latency/cost metrics per feature, Monitoring dashboard, budget alert |
 | IaC | Terraform (`infra/`), GCS state, variables `project_id`, `region`, `app_name`; Firebase CLI still owns rules and indexes |
 | CI/CD | GitHub Actions with Workload Identity Federation (no keys) → Artifact Registry → Cloud Run |
-| Ops | Firebase MCP server, read-only, viewer credential |
+| Ops | Firebase MCP server in `.mcp.json` with an allowlist of read-only tools; use a viewer credential |
 
 Open: app name (Terraform variable until chosen, must be set before first apply), GCP project not yet created, hackathon theme.
 

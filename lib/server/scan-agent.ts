@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { Embedder, AnalysisToolkit } from '../application/analysis/toolkit';
 import { MAX_FINDINGS } from '../application/analysis/toolkit';
 import { metered, tokens } from './ai-usage';
+import { SAFETY_SETTINGS } from './gemini';
 
 export interface VertexSettings {
   projectId: string;
@@ -68,7 +69,7 @@ export function adkDriver(settings: VertexSettings): AnalysisDriver {
         location: settings.location,
       }),
       instruction: INSTRUCTION,
-      generateContentConfig: { temperature: 0.2 },
+      generateContentConfig: { temperature: 0.2, safetySettings: SAFETY_SETTINGS },
       tools: [
         new FunctionTool({
           name: 'get_sop',
