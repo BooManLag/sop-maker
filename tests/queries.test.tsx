@@ -16,7 +16,10 @@ test('after a write, pages showing workspace data refresh without a reload', asy
 
   const queryClient = new QueryClient({
     // No garbage-collection timers, so the test process can exit as soon as it finishes.
-    defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { gcTime: Infinity } },
+    defaultOptions: {
+      queries: { retry: false, gcTime: Infinity },
+      mutations: { gcTime: Infinity },
+    },
   });
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
@@ -25,7 +28,8 @@ test('after a write, pages showing workspace data refresh without a reload', asy
     () => ({ workspace: useWorkspace(), dismiss: useWorkspaceMutation(api.dismissFinding) }),
     { wrapper },
   );
-  const statusOf = (id: string) => result.current.workspace.data?.findings.find((f) => f.id === id)?.status;
+  const statusOf = (id: string) =>
+    result.current.workspace.data?.findings.find((f) => f.id === id)?.status;
 
   await waitFor(() => assert.equal(statusOf('finding-31'), 'candidate'));
   await act(() => result.current.dismiss.mutateAsync('finding-31'));
