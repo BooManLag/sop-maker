@@ -4,7 +4,7 @@ import type { Actor } from '../server/auth';
 import { ApiError, requireCondition } from '../server/errors';
 import { demoResponse } from '../domain/demo-data';
 import { trialPrimaryOutcome } from '../domain/types';
-import { EvidenceEngine, normalizeRecords, requiredSamplePerGroup } from '../services';
+import { EvidenceEngine, normalizeRecords, requiredSamplePerGroup } from './evidence-engine';
 import type { schemas } from '../server/contracts';
 import type { z } from 'zod';
 import { getProcess } from './process-service';

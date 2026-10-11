@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { GuardedCaptureAdapter, UnavailableCaptureAdapter } from '../../src/lib/server/ai';
-import { DemoGeminiAdapter } from '../../src/lib/services';
+import { DemoGeminiAdapter } from '../../src/lib/infrastructure/demo-capture-adapter';
 import type { ProcessStep } from '../../src/lib/domain/types';
 const step: ProcessStep = {
   id: 'step_1',

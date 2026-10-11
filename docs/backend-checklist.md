@@ -4,7 +4,7 @@ Date: 2026-10-10. Approved scope: **local and Firebase emulator validation only*
 
 **Implemented** = code with local/emulator evidence. **Partial / external gate** = work exists but deployment/organizational validation remains. **Pending integration** = unavailable capability or uncompleted required review. **Not applicable** = no such feature is exposed; implementing it reopens its requirements. This is not a production-readiness certification.
 
-Evidence: `tests/*.test.ts`, `tests/integration/firebase.test.ts`, `tests/browser/lifecycle.spec.ts`, `docs/evidence/local-load.json`, `docs/API.md`, the architecture ADR, and operations/threat-model runbooks.
+Evidence: `tests/*.test.ts`, `tests/integration/firebase.test.ts`, `tests/e2e/lifecycle.spec.ts`, `docs/evidence/local-load.json`, `docs/API.md`, the architecture ADR, and operations/threat-model runbooks.
 
 ## 1. Architecture and Code Organization
 
@@ -23,30 +23,30 @@ Evidence: `tests/*.test.ts`, `tests/integration/firebase.test.ts`, `tests/browse
 
 | ID | Requirement | Status | Evidence / remaining action |
 | --- | --- | --- | --- |
-| 2.1 | P0: All API inputs are validated on the server using strict schemas. | Implemented | Strict shared schemas, registered methods/roles, scoped idempotency and DTOs; lib/server/contracts.ts, docs/API.md and docs/openapi.json. |
-| 2.2 | P0: Every API operation verifies authentication and required authorization. | Implemented | Strict shared schemas, registered methods/roles, scoped idempotency and DTOs; lib/server/contracts.ts, docs/API.md and docs/openapi.json. |
-| 2.3 | P0: API responses avoid exposing internal fields, stack traces or sensitive data. | Implemented | Strict shared schemas, registered methods/roles, scoped idempotency and DTOs; lib/server/contracts.ts, docs/API.md and docs/openapi.json. |
-| 2.4 | P1: Endpoints follow consistent naming, HTTP methods and status codes. | Implemented | Strict shared schemas, registered methods/roles, scoped idempotency and DTOs; lib/server/contracts.ts, docs/API.md and docs/openapi.json. |
-| 2.5 | P1: A standard error response structure is implemented. | Implemented | Strict shared schemas, registered methods/roles, scoped idempotency and DTOs; lib/server/contracts.ts, docs/API.md and docs/openapi.json. |
-| 2.6 | P1: Pagination, filtering and sorting are supported where needed. | Implemented | Strict shared schemas, registered methods/roles, scoped idempotency and DTOs; lib/server/contracts.ts, docs/API.md and docs/openapi.json. |
-| 2.7 | P1: Idempotency keys or equivalent safeguards protect retryable create and payment operations. | Implemented | Strict shared schemas, registered methods/roles, scoped idempotency and DTOs; lib/server/contracts.ts, docs/API.md and docs/openapi.json. |
+| 2.1 | P0: All API inputs are validated on the server using strict schemas. | Implemented | Strict shared schemas, registered methods/roles, scoped idempotency and DTOs; src/lib/server/contracts.ts, docs/API.md and docs/openapi.json. |
+| 2.2 | P0: Every API operation verifies authentication and required authorization. | Implemented | Strict shared schemas, registered methods/roles, scoped idempotency and DTOs; src/lib/server/contracts.ts, docs/API.md and docs/openapi.json. |
+| 2.3 | P0: API responses avoid exposing internal fields, stack traces or sensitive data. | Implemented | Strict shared schemas, registered methods/roles, scoped idempotency and DTOs; src/lib/server/contracts.ts, docs/API.md and docs/openapi.json. |
+| 2.4 | P1: Endpoints follow consistent naming, HTTP methods and status codes. | Implemented | Strict shared schemas, registered methods/roles, scoped idempotency and DTOs; src/lib/server/contracts.ts, docs/API.md and docs/openapi.json. |
+| 2.5 | P1: A standard error response structure is implemented. | Implemented | Strict shared schemas, registered methods/roles, scoped idempotency and DTOs; src/lib/server/contracts.ts, docs/API.md and docs/openapi.json. |
+| 2.6 | P1: Pagination, filtering and sorting are supported where needed. | Implemented | Strict shared schemas, registered methods/roles, scoped idempotency and DTOs; src/lib/server/contracts.ts, docs/API.md and docs/openapi.json. |
+| 2.7 | P1: Idempotency keys or equivalent safeguards protect retryable create and payment operations. | Implemented | Strict shared schemas, registered methods/roles, scoped idempotency and DTOs; src/lib/server/contracts.ts, docs/API.md and docs/openapi.json. |
 | 2.8 | P1: API contracts are documented through OpenAPI or equivalent specifications. | Implemented | OpenAPI is generated from runtime request schemas; response shapes documented in docs/API.md. CI detects schema drift. |
 | 2.9 | P1: Public API compatibility and versioning policies are established. | Implemented | /api/v1 is canonical and /api is a compatibility alias; breaking changes require v2. |
-| 2.10 | P1: Request sizes and payload nesting are bounded. | Implemented | Strict shared schemas, registered methods/roles, scoped idempotency and DTOs; lib/server/contracts.ts, docs/API.md and docs/openapi.json. |
+| 2.10 | P1: Request sizes and payload nesting are bounded. | Implemented | Strict shared schemas, registered methods/roles, scoped idempotency and DTOs; src/lib/server/contracts.ts, docs/API.md and docs/openapi.json. |
 
 ## 3. Authentication and Authorization
 
 | ID | Requirement | Status | Evidence / remaining action |
 | --- | --- | --- | --- |
 | 3.1 | P0: Passwords are securely hashed with Argon2id, scrypt or properly configured bcrypt. | Not applicable | No application passwords are stored; Firebase owns password hashing. Emulator credentials are random test fixtures. |
-| 3.2 | P0: Authorization is checked on every relevant resource, including tenant and object ownership. | Implemented | Verified Firebase claims and role/MFA checks; tests/backend.test.ts, tests/http.test.ts and tests/integration/firebase.test.ts. |
-| 3.3 | P0: Users cannot elevate privileges by modifying request bodies or resource IDs. | Implemented | Verified Firebase claims and role/MFA checks; tests/backend.test.ts, tests/http.test.ts and tests/integration/firebase.test.ts. |
-| 3.4 | P0: Tokens and sessions have secure expiration, validation and revocation strategies. | Implemented | Verified Firebase claims and role/MFA checks; tests/backend.test.ts, tests/http.test.ts and tests/integration/firebase.test.ts. |
+| 3.2 | P0: Authorization is checked on every relevant resource, including tenant and object ownership. | Implemented | Verified Firebase claims and role/MFA checks; tests/unit/backend.test.ts, tests/unit/http.test.ts and tests/integration/firebase.test.ts. |
+| 3.3 | P0: Users cannot elevate privileges by modifying request bodies or resource IDs. | Implemented | Verified Firebase claims and role/MFA checks; tests/unit/backend.test.ts, tests/unit/http.test.ts and tests/integration/firebase.test.ts. |
+| 3.4 | P0: Tokens and sessions have secure expiration, validation and revocation strategies. | Implemented | Verified Firebase claims and role/MFA checks; tests/unit/backend.test.ts, tests/unit/http.test.ts and tests/integration/firebase.test.ts. |
 | 3.5 | P0: Service credentials use least-privilege permissions. | Partial / external gate | No live service account provisioned. Least-privilege IAM responsibilities documented; actual bindings require a project. |
-| 3.6 | P1: Sensitive administrative actions require stronger authentication when appropriate. | Implemented | Verified Firebase claims and role/MFA checks; tests/backend.test.ts, tests/http.test.ts and tests/integration/firebase.test.ts. |
+| 3.6 | P1: Sensitive administrative actions require stronger authentication when appropriate. | Implemented | Verified Firebase claims and role/MFA checks; tests/unit/backend.test.ts, tests/unit/http.test.ts and tests/integration/firebase.test.ts. |
 | 3.7 | P1: Login and recovery endpoints have abuse protections. | Partial / external gate | No local login/recovery endpoints. Firebase abuse/App Check provider settings require a configured project. |
 | 3.8 | P1: Session cookies use Secure, HttpOnly and appropriate SameSite settings when cookies are used. | Not applicable | Bearer-token authentication only; no authentication cookies. |
-| 3.9 | P1: Access control is tested against horizontal and vertical privilege escalation. | Implemented | Verified Firebase claims and role/MFA checks; tests/backend.test.ts, tests/http.test.ts and tests/integration/firebase.test.ts. |
+| 3.9 | P1: Access control is tested against horizontal and vertical privilege escalation. | Implemented | Verified Firebase claims and role/MFA checks; tests/unit/backend.test.ts, tests/unit/http.test.ts and tests/integration/firebase.test.ts. |
 
 ## 4. Database and Data Integrity
 
@@ -68,18 +68,18 @@ Evidence: `tests/*.test.ts`, `tests/integration/firebase.test.ts`, `tests/browse
 
 | ID | Requirement | Status | Evidence / remaining action |
 | --- | --- | --- | --- |
-| 5.1 | P0: Secrets and API keys are stored in a secrets manager or secured environment configuration. | Implemented | Strict transport/security boundaries; lib/server and docs/operations/threat-model.md; automated abuse cases. |
+| 5.1 | P0: Secrets and API keys are stored in a secrets manager or secured environment configuration. | Implemented | Strict transport/security boundaries; src/lib/server and docs/operations/threat-model.md; automated abuse cases. |
 | 5.2 | P0: Production endpoints use HTTPS and secure transport settings. | Partial / external gate | Production API HSTS is implemented; managed HTTPS ingress must be configured and verified before deployment. |
-| 5.3 | P0: Known injection vulnerabilities are mitigated, including SQL, command and template injection. | Implemented | Strict transport/security boundaries; lib/server and docs/operations/threat-model.md; automated abuse cases. |
+| 5.3 | P0: Known injection vulnerabilities are mitigated, including SQL, command and template injection. | Implemented | Strict transport/security boundaries; src/lib/server and docs/operations/threat-model.md; automated abuse cases. |
 | 5.4 | P0: User-controlled URLs and remote resource fetching are protected against SSRF. | Not applicable | No remote fetching of user-controlled or model-generated URLs exists. |
 | 5.5 | P0: File uploads validate size, type, content and authorized access. | Implemented | Binary media is explicitly rejected until content inspection/storage authorization exists. Imported JSON rows are validated on the server. |
-| 5.6 | P0: Rate limiting and resource limits protect against abuse. | Implemented | Strict transport/security boundaries; lib/server and docs/operations/threat-model.md; automated abuse cases. |
-| 5.7 | P1: CORS is configured for specific allowed origins and credentials policies. | Implemented | Strict transport/security boundaries; lib/server and docs/operations/threat-model.md; automated abuse cases. |
+| 5.6 | P0: Rate limiting and resource limits protect against abuse. | Implemented | Strict transport/security boundaries; src/lib/server and docs/operations/threat-model.md; automated abuse cases. |
+| 5.7 | P1: CORS is configured for specific allowed origins and credentials policies. | Implemented | Strict transport/security boundaries; src/lib/server and docs/operations/threat-model.md; automated abuse cases. |
 | 5.8 | P1: CSRF protection is applied to vulnerable cookie-authenticated flows. | Not applicable | No cookie authentication. JSON mutations have strict origin checks. |
 | 5.9 | P1: Dependencies, containers and infrastructure are scanned for vulnerabilities. | Partial / external gate | Dependency audit and local container scan pass; image scanning also runs in CI. Live infrastructure does not exist yet. See docs/evidence/validation.md for scope and scan filters. |
-| 5.10 | P1: Security headers and safe error handling are configured where relevant. | Implemented | Strict transport/security boundaries; lib/server and docs/operations/threat-model.md; automated abuse cases. |
-| 5.11 | P1: Audit logs capture security-sensitive actions without leaking secrets. | Implemented | Strict transport/security boundaries; lib/server and docs/operations/threat-model.md; automated abuse cases. |
-| 5.12 | P1: Threat modeling has been performed for high-risk workflows. | Implemented | Strict transport/security boundaries; lib/server and docs/operations/threat-model.md; automated abuse cases. |
+| 5.10 | P1: Security headers and safe error handling are configured where relevant. | Implemented | Strict transport/security boundaries; src/lib/server and docs/operations/threat-model.md; automated abuse cases. |
+| 5.11 | P1: Audit logs capture security-sensitive actions without leaking secrets. | Implemented | Strict transport/security boundaries; src/lib/server and docs/operations/threat-model.md; automated abuse cases. |
+| 5.12 | P1: Threat modeling has been performed for high-risk workflows. | Implemented | Strict transport/security boundaries; src/lib/server and docs/operations/threat-model.md; automated abuse cases. |
 
 ## 6. Reliability and Resilience
 
@@ -114,10 +114,10 @@ Evidence: `tests/*.test.ts`, `tests/integration/firebase.test.ts`, `tests/browse
 
 | ID | Requirement | Status | Evidence / remaining action |
 | --- | --- | --- | --- |
-| 8.1 | P0: Unhandled failures are captured and alertable. | Implemented | Safe structured request/error/audit records plus admin per-process metrics; lib/server/observability.ts and hooks.ts. |
-| 8.2 | P0: Logs do not expose passwords, access tokens or sensitive personal information. | Implemented | Safe structured request/error/audit records plus admin per-process metrics; lib/server/observability.ts and hooks.ts. |
-| 8.3 | P1: Structured logs include request IDs or trace IDs. | Implemented | Safe structured request/error/audit records plus admin per-process metrics; lib/server/observability.ts and hooks.ts. |
-| 8.4 | P1: Metrics cover request volume, latency, error rates and resource saturation. | Implemented | Safe structured request/error/audit records plus admin per-process metrics; lib/server/observability.ts and hooks.ts. |
+| 8.1 | P0: Unhandled failures are captured and alertable. | Implemented | Safe structured request/error/audit records plus admin per-process metrics; src/lib/server/observability.ts and hooks.ts. |
+| 8.2 | P0: Logs do not expose passwords, access tokens or sensitive personal information. | Implemented | Safe structured request/error/audit records plus admin per-process metrics; src/lib/server/observability.ts and hooks.ts. |
+| 8.3 | P1: Structured logs include request IDs or trace IDs. | Implemented | Safe structured request/error/audit records plus admin per-process metrics; src/lib/server/observability.ts and hooks.ts. |
+| 8.4 | P1: Metrics cover request volume, latency, error rates and resource saturation. | Implemented | Safe structured request/error/audit records plus admin per-process metrics; src/lib/server/observability.ts and hooks.ts. |
 | 8.5 | P1: Distributed tracing covers critical cross-service operations. | Partial / external gate | Request IDs correlate current operations; distributed tracing exporter and live cross-service spans are not configured. |
 | 8.6 | P1: Alerts correspond to user impact and have actionable thresholds. | Partial / external gate | User-impact thresholds and response steps documented; actual alert delivery/recipients not configured. |
 | 8.7 | P1: Dashboards show service health and key business operations. | Partial / external gate | Admin metrics endpoint implemented; hosted Cloud Monitoring dashboards not deployed. |
@@ -157,12 +157,12 @@ Evidence: `tests/*.test.ts`, `tests/integration/firebase.test.ts`, `tests/browse
 
 | ID | Requirement | Status | Evidence / remaining action |
 | --- | --- | --- | --- |
-| 11.1 | P0: AI providers are called through a backend-controlled interface, not with exposed client-side secrets. | Implemented | Backend-only guarded CaptureAdapter; strict limits and normalized failures; lib/server/ai.ts. |
-| 11.2 | P0: Model inputs, outputs and usage are bounded by explicit application limits. | Implemented | Backend-only guarded CaptureAdapter; strict limits and normalized failures; lib/server/ai.ts. |
-| 11.3 | P0: The backend defines what happens when the model or provider is unavailable. | Implemented | Backend-only guarded CaptureAdapter; strict limits and normalized failures; lib/server/ai.ts. |
+| 11.1 | P0: AI providers are called through a backend-controlled interface, not with exposed client-side secrets. | Implemented | Backend-only guarded CaptureAdapter; strict limits and normalized failures; src/lib/server/ai.ts. |
+| 11.2 | P0: Model inputs, outputs and usage are bounded by explicit application limits. | Implemented | Backend-only guarded CaptureAdapter; strict limits and normalized failures; src/lib/server/ai.ts. |
+| 11.3 | P0: The backend defines what happens when the model or provider is unavailable. | Implemented | Backend-only guarded CaptureAdapter; strict limits and normalized failures; src/lib/server/ai.ts. |
 | 11.4 | P1: Model names, versions and inference configurations are centrally managed. | Partial / external gate | Application limits are centralized; actual Gemini model/version/inference configuration awaits integration. |
-| 11.5 | P1: Models can be changed without rewriting core business logic. | Implemented | Backend-only guarded CaptureAdapter; strict limits and normalized failures; lib/server/ai.ts. |
-| 11.6 | P1: Provider errors are normalized into internal error types. | Implemented | Backend-only guarded CaptureAdapter; strict limits and normalized failures; lib/server/ai.ts. |
+| 11.5 | P1: Models can be changed without rewriting core business logic. | Implemented | Backend-only guarded CaptureAdapter; strict limits and normalized failures; src/lib/server/ai.ts. |
+| 11.6 | P1: Provider errors are normalized into internal error types. | Implemented | Backend-only guarded CaptureAdapter; strict limits and normalized failures; src/lib/server/ai.ts. |
 | 11.7 | P1: Inference requests are correlated with application traces and relevant configuration versions. | Partial / external gate | Application request correlation exists; no live inference usage/model-config trace exporter. |
 | 11.8 | P1: Provider-specific data handling and retention settings are reviewed. | Pending integration | No provider receives data. Retention/training/data-processing terms must be reviewed before enabling a provider. |
 | 11.9 | P1: Changes to models or prompts require evaluation before release. | Partial / external gate | Local adapter/security evaluation is versioned and runs in CI. Real model/prompt regression criteria still need provider integration. |
@@ -231,15 +231,15 @@ Evidence: `tests/*.test.ts`, `tests/integration/firebase.test.ts`, `tests/browse
 | ID | Requirement | Status | Evidence / remaining action |
 | --- | --- | --- | --- |
 | 16.1 | P0: A representative evaluation dataset exists for important model use cases. | Partial / external gate | Synthetic local capture/security cases exist; a representative live Gemini semantic-quality dataset is still required. |
-| 16.2 | P0: Task success criteria are defined independently of the model's own judgment. | Implemented | Versioned synthetic local fixtures and independent action/order/schema assertions in tests/fixtures/capture-eval.v1.json and tests/ai.test.ts. |
+| 16.2 | P0: Task success criteria are defined independently of the model's own judgment. | Implemented | Versioned synthetic local fixtures and independent action/order/schema assertions in tests/fixtures/capture-eval.v1.json and tests/unit/ai.test.ts. |
 | 16.3 | P0: Regression tests detect unacceptable changes after prompt or model updates. | Partial / external gate | Local adapter regressions are automated; no live model/prompt regression baseline is claimed. |
 | 16.4 | P1: Evaluation includes factual accuracy, format compliance and task completion. | Partial / external gate | Local order/format/authority evaluated. Live factual accuracy and semantic task quality have not been measured. |
-| 16.5 | P1: Adversarial, ambiguous and out-of-scope inputs are tested. | Implemented | Versioned synthetic local fixtures and independent action/order/schema assertions in tests/fixtures/capture-eval.v1.json and tests/ai.test.ts. |
+| 16.5 | P1: Adversarial, ambiguous and out-of-scope inputs are tested. | Implemented | Versioned synthetic local fixtures and independent action/order/schema assertions in tests/fixtures/capture-eval.v1.json and tests/unit/ai.test.ts. |
 | 16.6 | P1: RAG tests evaluate retrieval accuracy as well as answer groundedness. | Not applicable | No RAG retrieval or grounded-answer pipeline exists. |
 | 16.7 | P1: Results are measured across different user groups and cases where fairness matters. | Pending integration | No real model/user-group evaluation dataset or fairness study. Worker rankings remain forbidden. |
 | 16.8 | P1: Human reviewers audit a sample of outputs for important workflows. | Pending integration | Human SOP approval exists; organizational model-quality sampling and audit procedures are not established. |
 | 16.9 | P1: Model quality and failure patterns are monitored over time. | Pending integration | No live model quality/failure monitoring without an enabled provider. |
-| 16.10 | P1: Evaluation datasets are versioned, protected and kept separate from training where appropriate. | Implemented | Versioned synthetic local fixtures and independent action/order/schema assertions in tests/fixtures/capture-eval.v1.json and tests/ai.test.ts. |
+| 16.10 | P1: Evaluation datasets are versioned, protected and kept separate from training where appropriate. | Implemented | Versioned synthetic local fixtures and independent action/order/schema assertions in tests/fixtures/capture-eval.v1.json and tests/unit/ai.test.ts. |
 
 ## 17. AI Privacy and Data Governance
 

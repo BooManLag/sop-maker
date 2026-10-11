@@ -4,7 +4,7 @@ import { JsonRepositoryProvider } from '../infrastructure/json-repository';
 import { FirestoreRepositoryProvider } from '../infrastructure/firestore-repository';
 import { firebaseTokenVerifier, firestoreDatabase } from '../infrastructure/firebase';
 import { GuardedCaptureAdapter, UnavailableCaptureAdapter } from './ai';
-import { DemoGeminiAdapter } from '../services';
+import { DemoGeminiAdapter } from '../infrastructure/demo-capture-adapter';
 import { createHttpHandler } from './http';
 import { AdmissionControl } from './limits';
 let runtime: ReturnType<typeof compose> | undefined;
