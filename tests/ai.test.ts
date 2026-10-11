@@ -189,3 +189,7 @@ test('AI usage is logged for success and failure with the fields the metrics ext
   assert.equal(failed.ok, false);
   assert.equal(typeof ok.durationMs, 'number');
 });
+test('a safety-blocked Gemini response (no text) fails closed without saving', async () => {
+  const blocked = new GuardedCaptureAdapter(new VertexGeminiAdapter(async () => undefined));
+  await assert.rejects(blocked.extract('Isolate live power before work.', false), /unavailable/);
+});
