@@ -1,13 +1,13 @@
 import { mkdtemp, mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
-import { Backend } from '../lib/application/backend';
-import { JsonRepositoryProvider } from '../lib/infrastructure/json-repository';
-import { initialStore } from '../lib/application/store';
-import { GuardedCaptureAdapter, UnavailableCaptureAdapter } from '../lib/server/ai';
-import { createHttpHandler } from '../lib/server/http';
-import { Observability } from '../lib/server/observability';
-import type { ServerConfig } from '../lib/server/config';
+import { Backend } from '../src/lib/application/backend';
+import { JsonRepositoryProvider } from '../src/lib/infrastructure/json-repository';
+import { initialStore } from '../src/lib/application/store';
+import { GuardedCaptureAdapter, UnavailableCaptureAdapter } from '../src/lib/server/ai';
+import { createHttpHandler } from '../src/lib/server/http';
+import { Observability } from '../src/lib/server/observability';
+import type { ServerConfig } from '../src/lib/server/config';
 async function main() {
   const directory = await mkdtemp(path.join(tmpdir(), 'ge-load-'));
   const repositories = new JsonRepositoryProvider(directory);

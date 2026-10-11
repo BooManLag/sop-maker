@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "node scripts/start.mjs",
     "typecheck": "next typegen && tsc --noEmit",
-    "test": "tsx --import ./tests/setup.ts --test tests/*.test.ts tests/*.test.tsx",
+    "test": "tsx --import ./tests/support/setup.ts --test tests/unit/*.test.ts tests/unit/*.test.tsx",
     "seed": "tsx scripts/seed.ts",
     "test:e2e": "playwright test",
     "demo:reset": "tsx scripts/seed.ts --reset",

@@ -3,13 +3,13 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { getApps, deleteApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
-import { readConfig } from '../../lib/server/config';
-import { firestoreDatabase, firebaseTokenVerifier } from '../../lib/infrastructure/firebase';
-import { FirestoreRepositoryProvider } from '../../lib/infrastructure/firestore-repository';
-import { Backend } from '../../lib/application/backend';
-import { GuardedCaptureAdapter, UnavailableCaptureAdapter } from '../../lib/server/ai';
-import { createHttpHandler } from '../../lib/server/http';
-import { Observability } from '../../lib/server/observability';
+import { readConfig } from '../../src/lib/server/config';
+import { firestoreDatabase, firebaseTokenVerifier } from '../../src/lib/infrastructure/firebase';
+import { FirestoreRepositoryProvider } from '../../src/lib/infrastructure/firestore-repository';
+import { Backend } from '../../src/lib/application/backend';
+import { GuardedCaptureAdapter, UnavailableCaptureAdapter } from '../../src/lib/server/ai';
+import { createHttpHandler } from '../../src/lib/server/http';
+import { Observability } from '../../src/lib/server/observability';
 // This suite is never allowed to connect to a real project or a non-loopback emulator.
 if (
   process.env.GOOGLE_CLOUD_PROJECT !== 'demo-good-exception' ||

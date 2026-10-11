@@ -5,7 +5,7 @@ import path from 'node:path';
 // Browser tests run their own server on a separate port against a throwaway store, never the local demo data.
 const dataDir = mkdtempSync(path.join(tmpdir(), 'good-exception-e2e-'));
 export default defineConfig({
-  testDir: 'tests/browser',
+  testDir: 'tests/e2e',
   workers: 1,
   use: { baseURL: 'http://127.0.0.1:3100', headless: true },
   webServer: {
