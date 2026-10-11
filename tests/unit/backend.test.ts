@@ -10,7 +10,8 @@ import {
   JsonRepositoryProvider,
 } from '../../src/lib/infrastructure/json-repository';
 import { GuardedCaptureAdapter } from '../../src/lib/server/ai';
-import { DemoGeminiAdapter, normalizeRecords } from '../../src/lib/services';
+import { DemoGeminiAdapter } from '../../src/lib/infrastructure/demo-capture-adapter';
+import { normalizeRecords } from '../../src/lib/application/evidence-engine';
 import { readConfig, type ServerConfig } from '../../src/lib/server/config';
 import { demoActor, type Actor } from '../../src/lib/server/auth';
 import { resolveEndpoint } from '../../src/lib/server/contracts';

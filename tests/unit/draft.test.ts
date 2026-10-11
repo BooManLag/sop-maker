@@ -7,7 +7,7 @@ import { randomUUID } from 'node:crypto';
 import { Backend } from '../../src/lib/application/backend';
 import { JsonRepositoryProvider } from '../../src/lib/infrastructure/json-repository';
 import { GuardedCaptureAdapter } from '../../src/lib/server/ai';
-import { DemoGeminiAdapter } from '../../src/lib/services';
+import { DemoGeminiAdapter } from '../../src/lib/infrastructure/demo-capture-adapter';
 import type { ServerConfig } from '../../src/lib/server/config';
 import type { Actor } from '../../src/lib/server/auth';
 import { resolveEndpoint } from '../../src/lib/server/contracts';
