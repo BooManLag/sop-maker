@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { GuardedCaptureAdapter, UnavailableCaptureAdapter } from '../lib/server/ai';
 import { DemoGeminiAdapter } from '../lib/services';
 import { VertexGeminiAdapter } from '../lib/server/gemini';
+import { metered } from '../lib/server/ai-usage';
 import type { ProcessStep } from '../lib/domain';
 const step: ProcessStep = {
   id: 'step_1',
@@ -156,4 +157,35 @@ test('Vertex adapter fails closed on non-JSON output and skips the model for the
   });
   assert.ok((await sample.extract('', true)).length > 0);
   assert.equal(calls, 0);
+});
+test('AI usage is logged for success and failure with the fields the metrics extract', async () => {
+  const lines: string[] = [];
+  const original = console.log;
+  console.log = (line: string) => lines.push(line);
+  try {
+    assert.equal(
+      await metered('capture_extract', 'm', async () => ({ value: 7, input: 120, output: 30 })),
+      7,
+    );
+    await assert.rejects(
+      metered('scan_agent', 'm', async () => {
+        throw new Error('down');
+      }),
+    );
+  } finally {
+    console.log = original;
+  }
+  const [ok, failed] = lines.map((l) => JSON.parse(l));
+  assert.deepEqual(
+    {
+      event: ok.event,
+      feature: ok.feature,
+      inputTokens: ok.inputTokens,
+      outputTokens: ok.outputTokens,
+      ok: ok.ok,
+    },
+    { event: 'ai_usage', feature: 'capture_extract', inputTokens: 120, outputTokens: 30, ok: true },
+  );
+  assert.equal(failed.ok, false);
+  assert.equal(typeof ok.durationMs, 'number');
 });
