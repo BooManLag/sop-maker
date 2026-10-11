@@ -12,6 +12,14 @@ const environment = z.object({
     .regex(/^[a-z][a-z0-9-]{4,61}[a-z0-9]$/)
     .optional(),
   FIRESTORE_DATABASE_ID: z.string().default('(default)'),
+  GOOD_EXCEPTION_GEMINI_MODEL: z
+    .string()
+    .regex(/^[a-z0-9.-]{3,64}$/)
+    .optional(),
+  GOOGLE_CLOUD_LOCATION: z
+    .string()
+    .regex(/^[a-z0-9-]{2,32}$/)
+    .default('global'),
   K_SERVICE: z.string().optional(),
   FIRESTORE_EMULATOR_HOST: z.string().optional(),
   FIREBASE_AUTH_EMULATOR_HOST: z.string().optional(),
@@ -22,6 +30,7 @@ export interface ServerConfig {
   allowedOrigins: string[];
   projectId?: string;
   databaseId: string;
+  gemini?: { model: string; location: string };
   pseudonymKey?: string;
   requireMfa: boolean;
   emulator: boolean;
@@ -65,6 +74,9 @@ export function readConfig(env: Record<string, string | undefined> = process.env
     allowedOrigins: origins,
     projectId: e.GOOGLE_CLOUD_PROJECT,
     databaseId: e.FIRESTORE_DATABASE_ID,
+    gemini: e.GOOD_EXCEPTION_GEMINI_MODEL
+      ? { model: e.GOOD_EXCEPTION_GEMINI_MODEL, location: e.GOOGLE_CLOUD_LOCATION }
+      : undefined,
     pseudonymKey: e.GOOD_EXCEPTION_PSEUDONYM_KEY,
     requireMfa: e.GOOD_EXCEPTION_REQUIRE_MFA === 'true',
     emulator: Boolean(e.FIRESTORE_EMULATOR_HOST),
@@ -88,7 +100,7 @@ export const LIMITS = Object.freeze({
   activeRequests: 32,
   waitingRequests: 64,
   requestTimeoutMs: 15_000,
-  aiTimeoutMs: 5000,
+  aiTimeoutMs: 30_000,
   aiOutputTokens: 2048,
   aiCallsPerHour: 20,
 });
