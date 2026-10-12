@@ -50,3 +50,8 @@ variable "monthly_budget_usd" {
   type    = number
   default = 20
 }
+variable "billing_cap_enabled" {
+  type        = bool
+  default     = true
+  description = "Unlink billing (stopping every service) when monthly cost reaches monthly_budget_usd. false = log only."
+}

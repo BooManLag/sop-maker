@@ -2,3 +2,4 @@
 *.tfstate*
 *.tfvars
 !*.tfvars.example
+.build/

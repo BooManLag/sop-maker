@@ -4,6 +4,7 @@ terraform {
     google      = { source = "hashicorp/google", version = "~> 6.0" }
     google-beta = { source = "hashicorp/google-beta", version = "~> 6.0" }
     random      = { source = "hashicorp/random", version = "~> 3.6" }
+    archive     = { source = "hashicorp/archive", version = "~> 2.6" }
   }
   # Bucket is supplied at init: terraform init -backend-config="bucket=<project_id>-tfstate"
   backend "gcs" {
