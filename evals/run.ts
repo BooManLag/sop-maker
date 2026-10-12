@@ -4,10 +4,10 @@
  *   GOOGLE_CLOUD_LOCATION (default global), GOOD_EXCEPTION_EMBEDDING_MODEL.
  * Exits non-zero when quality drops below the bar, so it can gate a model change.
  */
-import { VertexGeminiAdapter } from '../lib/server/gemini';
-import { GuardedCaptureAdapter } from '../lib/server/ai';
-import { adkDriver, vertexEmbedder } from '../lib/server/scan-agent';
-import { AnalysisToolkit, clusterSignals } from '../lib/application/analysis/toolkit';
+import { VertexGeminiAdapter } from '../src/lib/server/gemini';
+import { GuardedCaptureAdapter } from '../src/lib/server/ai';
+import { adkDriver, vertexEmbedder } from '../src/lib/server/scan-agent';
+import { AnalysisToolkit, clusterSignals } from '../src/lib/application/analysis/toolkit';
 import { extractionCases, scoreExtraction } from './extraction-cases';
 import { scanRecords, scanSteps, scoreScan } from './scan-cases';
 

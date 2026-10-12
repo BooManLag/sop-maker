@@ -11,6 +11,8 @@ permissions:
   id-token: write
 jobs:
   eval:
+    if: github.ref == 'refs/heads/main'
+    environment: model-evaluation
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

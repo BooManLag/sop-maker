@@ -5,3 +5,7 @@ docs
 package-lock.json
 next-env.d.ts
 tsconfig.json
+
+**/.terraform
+infra/.build
+**/package-lock.json

@@ -6,6 +6,8 @@ import jsxA11y from 'eslint-plugin-jsx-a11y';
 export default defineConfig([
   ...nextVitals,
   ...nextTypescript,
+  // The separately deployed Cloud Function uses the Functions Framework CommonJS entry point.
+  { files: ['infra/functions/**/*.js'], rules: { '@typescript-eslint/no-require-imports': 'off' } },
   { files: ['**/*.tsx'], rules: jsxA11y.flatConfigs.recommended.rules },
   {
     rules: {

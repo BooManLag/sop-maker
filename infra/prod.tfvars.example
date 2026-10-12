@@ -1,3 +1,7 @@
-project_id        = "sop-app-prod"
-github_repository = "BooManLag/sop-maker"
+project_id           = "your-project-id"
+github_repository    = "BooManLag/sop-maker"
+github_repository_id = "REPLACE_WITH_NUMERIC_REPOSITORY_ID"
+# Supply a verified app image already pushed to Artifact Registry (not the hello image).
+initial_image = "asia-northeast1-docker.pkg.dev/your-project-id/sop-app/app@sha256:REPLACE_WITH_64_HEX_DIGEST"
 # billing_account = "XXXXXX-XXXXXX-XXXXXX"
+# billing_cap_enabled = false # default: log only; explicit true can take the whole project offline.

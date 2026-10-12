@@ -1,5 +1,5 @@
-import type { Execution, ProcessStep } from '../lib/domain';
-import type { ProposedFinding } from '../lib/application/analysis/toolkit';
+import type { Execution, ProcessStep } from '../src/lib/domain/types';
+import type { ProposedFinding } from '../src/lib/application/analysis/toolkit';
 
 export const scanSteps: ProcessStep[] = [
   {

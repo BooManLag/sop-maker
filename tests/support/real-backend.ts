@@ -2,12 +2,12 @@ import assert from 'node:assert/strict';
 import { mkdtemp } from 'node:fs/promises';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
-import { Backend } from '../../lib/application/backend';
-import { JsonRepositoryProvider } from '../../lib/infrastructure/json-repository';
-import { GuardedCaptureAdapter } from '../../lib/server/ai';
-import { DemoGeminiAdapter } from '../../lib/services';
-import { createHttpHandler } from '../../lib/server/http';
-import type { ServerConfig } from '../../lib/server/config';
+import { Backend } from '../../src/lib/application/backend';
+import { JsonRepositoryProvider } from '../../src/lib/infrastructure/json-repository';
+import { GuardedCaptureAdapter } from '../../src/lib/server/ai';
+import { DemoGeminiAdapter } from '../../src/lib/infrastructure/demo-capture-adapter';
+import { createHttpHandler } from '../../src/lib/server/http';
+import type { ServerConfig } from '../../src/lib/server/config';
 
 export const sessionToken = 'test-session-token-for-tenant-a';
 
