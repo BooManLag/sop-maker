@@ -20,6 +20,7 @@ resource "google_iam_workload_identity_pool_provider" "github" {
 resource "google_service_account" "deployer" {
   account_id   = "${var.app_name}-deploy"
   display_name = "${var.app_name} GitHub deployer"
+  depends_on   = [google_project_service.apis]
 }
 resource "google_service_account_iam_member" "deployer_wif" {
   service_account_id = google_service_account.deployer.name
@@ -55,6 +56,7 @@ resource "google_service_account_iam_member" "deployer_acts_as_runtime" {
 resource "google_service_account" "eval" {
   account_id   = "${var.app_name}-eval"
   display_name = "${var.app_name} model evals"
+  depends_on   = [google_project_service.apis]
 }
 resource "google_service_account_iam_member" "eval_wif" {
   service_account_id = google_service_account.eval.name
