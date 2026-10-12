@@ -102,34 +102,42 @@ resource "google_monitoring_dashboard" "app" {
     displayName = "${var.app_name} — AI and service health"
     mosaicLayout = {
       columns = 12
-      tiles = [for i, t in local.tiles : {
-        xPos   = (i % 3) * 4
-        yPos   = floor(i / 3) * 4
-        width  = 4
-        height = 4
-        widget = {
-          title = t.title
-          xyChart = {
-            dataSets = [{
-              plotType = "LINE"
-              timeSeriesQuery = {
-                timeSeriesFilter = {
-                  filter = t.filter
-                  aggregation = {
-                    alignmentPeriod    = "300s"
-                    perSeriesAligner   = t.align
-                    crossSeriesReducer = t.reduce
-                    groupByFields      = t.group
+      # The API omits zero positions and adds targetAxis; mirror that so plans stay clean.
+      tiles = [for i, t in local.tiles : merge(
+        i % 3 == 0 ? {} : { xPos = (i % 3) * 4 },
+        i < 3 ? {} : { yPos = floor(i / 3) * 4 },
+        {
+          width  = 4
+          height = 4
+          widget = {
+            title = t.title
+            xyChart = {
+              dataSets = [{
+                plotType   = "LINE"
+                targetAxis = "Y1"
+                timeSeriesQuery = {
+                  timeSeriesFilter = {
+                    filter = t.filter
+                    aggregation = {
+                      alignmentPeriod    = "300s"
+                      perSeriesAligner   = t.align
+                      crossSeriesReducer = t.reduce
+                      groupByFields      = t.group
+                    }
                   }
                 }
-              }
-            }]
+              }]
+            }
           }
-        }
-      }]
+      })]
     }
   })
   depends_on = [google_logging_metric.ai_calls, google_logging_metric.ai_distribution, google_logging_metric.scan_analyses]
+  # The API adds etag/name to the stored JSON, which reads as a permanent diff.
+  # To roll out a dashboard edit: terraform apply -replace=google_monitoring_dashboard.app
+  lifecycle {
+    ignore_changes = [dashboard_json]
+  }
 }
 
 output "dashboard_url" {

@@ -1,6 +1,7 @@
 resource "google_service_account" "runtime" {
   account_id   = "${var.app_name}-run"
   display_name = "${var.app_name} Cloud Run runtime"
+  depends_on   = [google_project_service.apis]
 }
 
 # Least privilege: Firestore data, Gemini calls, telemetry. No admin or IAM roles.
@@ -93,6 +94,8 @@ resource "google_cloud_run_v2_service" "app" {
   lifecycle {
     ignore_changes = [
       template[0].containers[0].image,
+      # Service-level scaling is unset here; the API reports its defaults back.
+      scaling,
       client,
       client_version,
     ]

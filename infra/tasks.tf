@@ -26,6 +26,7 @@ resource "google_cloud_tasks_queue" "analysis" {
 resource "google_service_account" "tasks" {
   account_id   = "${var.app_name}-tasks"
   display_name = "${var.app_name} Cloud Tasks invoker"
+  depends_on   = [google_project_service.apis]
 }
 resource "google_cloud_tasks_queue_iam_member" "runtime_enqueue" {
   name     = google_cloud_tasks_queue.analysis.name

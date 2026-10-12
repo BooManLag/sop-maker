@@ -5,8 +5,9 @@ Terraform for the production stack in `asia-northeast1`: Cloud Run, Firestore, V
 ## First setup
 
 1. Create a GCP project in the console and link billing.
-2. Create the state bucket (once):
+2. Enable the bootstrap APIs Terraform needs before it can enable the rest, then create the state bucket (once):
    ```sh
+   gcloud services enable cloudresourcemanager.googleapis.com serviceusage.googleapis.com billingbudgets.googleapis.com --project <project_id>
    gcloud storage buckets create gs://<project_id>-tfstate --project <project_id> --location asia-northeast1 --uniform-bucket-level-access
    gcloud storage buckets update gs://<project_id>-tfstate --versioning
    ```
@@ -21,6 +22,14 @@ Terraform for the production stack in `asia-northeast1`: Cloud Run, Firestore, V
 5. In the Firebase console, enable the Authentication sign-in providers you want.
 
 Merging to `main` then builds the image, deploys a Cloud Run revision, and deploys rules, indexes and Hosting.
+
+## Running Terraform on Windows with Smart App Control
+
+Smart App Control blocks the provider plugins Terraform downloads. Run the official image in Docker instead, with a short-lived token from your `gcloud` login:
+
+```sh
+docker run --rm -v "$PWD:/work" -v sop-tfdata:/tfdata -w /work -e TF_DATA_DIR=/tfdata   -e GOOGLE_OAUTH_ACCESS_TOKEN="$(gcloud auth print-access-token)" hashicorp/terraform:1.16.5 plan -var-file=prod.tfvars
+```
 
 ## Notes
 
