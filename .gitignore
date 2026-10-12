@@ -14,3 +14,7 @@ ui-debug.log
 .firebase/
 *.tfstate*
 .terraform/
+
+gha-creds-*.json
+*.tfplan
+.firebase-deploy.json

@@ -10,8 +10,9 @@ resource "google_iam_workload_identity_pool_provider" "github" {
     "google.subject"       = "assertion.sub"
     "attribute.repository" = "assertion.repository"
     "attribute.ref"        = "assertion.ref"
+    "attribute.workflow"   = "assertion.workflow_ref"
   }
-  attribute_condition = "assertion.repository == '${var.github_repository}' && assertion.ref == 'refs/heads/main'"
+  attribute_condition = "assertion.repository == '${var.github_repository}' && assertion.repository_id == '${var.github_repository_id}' && assertion.ref == 'refs/heads/main'"
   oidc {
     issuer_uri = "https://token.actions.githubusercontent.com"
   }
@@ -25,7 +26,7 @@ resource "google_service_account" "deployer" {
 resource "google_service_account_iam_member" "deployer_wif" {
   service_account_id = google_service_account.deployer.name
   role               = "roles/iam.workloadIdentityUser"
-  member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github.name}/attribute.repository/${var.github_repository}"
+  member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github.name}/attribute.workflow/${var.github_repository}/.github/workflows/deploy.yml@refs/heads/main"
 }
 resource "google_project_iam_member" "deployer" {
   for_each = toset([
@@ -61,7 +62,7 @@ resource "google_service_account" "eval" {
 resource "google_service_account_iam_member" "eval_wif" {
   service_account_id = google_service_account.eval.name
   role               = "roles/iam.workloadIdentityUser"
-  member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github.name}/attribute.repository/${var.github_repository}"
+  member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github.name}/attribute.workflow/${var.github_repository}/.github/workflows/eval.yml@refs/heads/main"
 }
 resource "google_project_iam_member" "eval" {
   for_each = toset(["roles/aiplatform.user", "roles/serviceusage.serviceUsageConsumer"])

@@ -14,7 +14,7 @@ Only the minimal health endpoints and CORS preflight are unauthenticated. `/heal
 - Capture creation: `{id,processId,kind,createdAt}`. Raw text and expert references are omitted.
 - Scan creation: `{id,processId,demo,status,recordCount,createdAt}`. Raw records are never returned.
 - Extraction: `{steps,questions,demo,notice}`; candidate steps only, never authoritative evidence or approvals.
-- Findings, trials and changes retain their domain shapes in `lib/domain.ts`, within the caller's organization. Source IDs are evidence references, not worker scorecards.
+- Findings, trials and changes retain their domain shapes in `src/lib/domain/types.ts`, within the caller's organization. Source IDs are evidence references, not worker scorecards.
 - Collection GETs: `{items,nextCursor,total}`. `limit` defaults to 50, maximum 100; `cursor` is an offset, `sort` sorts by ID, and `status` is an exact filter. Offsets are not snapshot-consistent across concurrent mutations.
 - `/workspace` caps each collection at 50 and includes `hasMore` flags; clients use collection endpoints beyond that.
 - Error: `{error:string,code:string,requestId:string}`. Codes distinguish invalid input, authentication, authorization, conflict, capacity/rate limits, unavailable integrations and internal failure. No provider messages or stack traces are returned.

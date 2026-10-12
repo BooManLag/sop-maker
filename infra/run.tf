@@ -8,6 +8,8 @@ resource "google_service_account" "runtime" {
 resource "google_project_iam_member" "runtime" {
   for_each = toset([
     "roles/datastore.user",
+    "roles/firebaseauth.viewer",
+    "roles/serviceusage.serviceUsageConsumer",
     "roles/aiplatform.user",
     "roles/logging.logWriter",
     "roles/monitoring.metricWriter",
@@ -27,11 +29,11 @@ resource "google_cloud_run_v2_service" "app" {
   name                = var.app_name
   location            = var.region
   ingress             = "INGRESS_TRAFFIC_ALL"
-  deletion_protection = false
+  deletion_protection = true
 
   template {
     service_account                  = google_service_account.runtime.email
-    max_instance_request_concurrency = 80
+    max_instance_request_concurrency = 16
     # Scan analysis runs inside a Cloud Tasks request for up to four minutes.
     timeout = "300s"
     scaling {
@@ -39,13 +41,28 @@ resource "google_cloud_run_v2_service" "app" {
       max_instance_count = var.max_instances
     }
     containers {
-      # Placeholder until CI deploys the first real image; CI owns the image afterwards.
-      image = "us-docker.pkg.dev/cloudrun/container/hello"
+      # First apply requires a verified app image; CI owns subsequent revisions.
+      image = var.initial_image
       ports { container_port = 8080 }
       resources {
         limits            = { cpu = "1", memory = "1Gi" }
         cpu_idle          = true
         startup_cpu_boost = true
+      }
+      startup_probe {
+        http_get { path = "/api/v1/health/ready" }
+        period_seconds    = 10
+        timeout_seconds   = 6
+        failure_threshold = 24
+      }
+      liveness_probe {
+        http_get { path = "/api/v1/health/live" }
+        period_seconds  = 30
+        timeout_seconds = 5
+      }
+      env {
+        name  = "GOOD_EXCEPTION_MODE"
+        value = "production"
       }
       env {
         name  = "GOOGLE_CLOUD_PROJECT"
