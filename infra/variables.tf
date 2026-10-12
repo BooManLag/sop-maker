@@ -8,7 +8,7 @@ variable "region" {
 }
 variable "app_name" {
   type        = string
-  default     = "good-exception"
+  default     = "sop-app"
   description = "Prefix for resource names. Settle it before the first apply; Cloud Run services cannot be renamed."
   validation {
     condition     = can(regex("^[a-z][a-z0-9-]{2,27}[a-z0-9]$", var.app_name))
