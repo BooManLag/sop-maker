@@ -1,0 +1,7 @@
+{
+  "name": "billing-cap",
+  "private": true,
+  "main": "index.js",
+  "engines": { "node": "22" },
+  "dependencies": { "@google-cloud/functions-framework": "5.0.5" }
+}
