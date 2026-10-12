@@ -1,3 +1,3 @@
-project_id        = "your-project-id"
+project_id        = "sop-app-prod"
 github_repository = "BooManLag/sop-maker"
 # billing_account = "XXXXXX-XXXXXX-XXXXXX"

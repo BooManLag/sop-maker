@@ -24,6 +24,6 @@ Merging to `main` then builds the image, deploys a Cloud Run revision, and deplo
 
 ## Notes
 
-- `app_name` and `region` cannot change after the first apply without recreating the service. Firestore's location is permanent.
+- `app_name` (default `sop-app`, deliberately brand-neutral) and `region` cannot change after the first apply without recreating the service. Rebrand through UI text and a custom Hosting domain instead. Firestore's location is permanent.
 - The generated pseudonym key is stored in Terraform state, so the state bucket must stay private.
 - Cloud Run scales to zero; the first request after idle has a cold start.
