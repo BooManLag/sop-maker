@@ -85,8 +85,9 @@ function ReviewForm({ draft }: { draft: ProcessDto }) {
     },
   });
   const { fields } = useFieldArray({ control: form.control, name: 'steps' });
-  const publish = useWorkspaceMutation((values: ReviewValues) =>
-    api.publish(draft.id, reviewedSteps(steps, values)),
+  const publish = useWorkspaceMutation(
+    (values: ReviewValues) => api.publish(draft.id, reviewedSteps(steps, values)),
+    () => router.push(`/processes/${draft.id}/published`),
   );
 
   return (
@@ -99,13 +100,7 @@ function ReviewForm({ draft }: { draft: ProcessDto }) {
         action={<ExportButton data={{ ...draft, steps }} fileName="sop-draft.json" />}
       />
       <Form {...form}>
-        <form
-          onSubmit={form.handleSubmit((values) =>
-            publish.mutate(values, {
-              onSuccess: () => router.push(`/processes/${draft.id}/published`),
-            }),
-          )}
-        >
+        <form onSubmit={form.handleSubmit((values) => publish.mutate(values))}>
           <WithSideRail>
             <Card>
               {fields.map((field, i) => (

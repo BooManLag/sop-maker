@@ -1,9 +1,8 @@
 {
+  "firestore": { "rules": "firestore.rules", "indexes": "firestore.indexes.json" },
   "hosting": {
     "public": "public",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
-    "rewrites": [
-      { "source": "**", "run": { "serviceId": "good-exception", "region": "us-central1" } }
-    ]
+    "rewrites": [{ "source": "**", "run": { "serviceId": "sop-app", "region": "asia-northeast1" } }]
   }
 }

@@ -131,3 +131,25 @@ test('dismissed findings are left out of scans and can be restored', async () =>
     testGroup: 'Eligible jobs',
   });
 });
+test('a scan needs a valid timestamp on every job before later jobs can be held out', () => {
+  const rows = (timestamp: (i: number) => string) =>
+    Array.from({ length: 40 }, (_, i) => ({
+      job_id: `job-${i}`,
+      technician_id: `tech-${i % 4}`,
+      equipment_model: 'V-200',
+      job_type: 'valve',
+      timestamp: timestamp(i),
+      checklist_values: 'seal=ok',
+      callback_within_30_days: i % 5 === 0 ? 'yes' : 'no',
+    }));
+  const engine = new EvidenceEngine();
+  const dated = engine.readiness(
+    normalizeRecords(rows((i) => new Date(Date.UTC(2026, 0, 1 + i)).toISOString())),
+  );
+  assert.deepEqual(dated.missing, []);
+  for (const bad of ['', 'not a date']) {
+    const undated = engine.readiness(normalizeRecords(rows((i) => (i === 7 ? bad : '2026-01-01'))));
+    assert.equal(undated.eligible, false);
+    assert.ok(undated.missing.some((m) => /timestamp/i.test(m)));
+  }
+});

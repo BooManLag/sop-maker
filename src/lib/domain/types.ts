@@ -194,8 +194,10 @@ export interface Scan {
   demo: boolean;
   records: Execution[];
   readiness?: Readiness;
-  status: 'uploaded' | 'ready' | 'complete';
+  status: 'uploaded' | 'ready' | 'analyzing' | 'failed' | 'complete';
   findingIds: ID[];
+  /** Live scans only: jobs reviewed through to practices that held on later jobs. */
+  funnel?: number[];
   createdAt?: string;
   expiresAt?: string;
 }

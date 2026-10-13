@@ -2,7 +2,7 @@ name: Backend verification
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, feat/gcp-infra]
 permissions:
   contents: read
 concurrency:
@@ -24,10 +24,14 @@ jobs:
           java-version: '21'
       - run: npm ci
       - run: npm run format:check
+      - run: npm run lint
       - run: npm run api:check
       - run: npm run typecheck
       - run: npm test
+      - run: npm audit --omit=dev --audit-level=moderate
+      # Dev-only advisories are reported but do not block; they never ship in the image.
       - run: npm audit --audit-level=moderate
+        continue-on-error: true
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e

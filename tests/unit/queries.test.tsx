@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import type { ReactNode } from 'react';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useWorkspace, useWorkspaceMutation } from '../../src/lib/client/queries';
+import { queryKeys, useWorkspace, useWorkspaceMutation } from '../../src/lib/client/queries';
 import { api } from '../../src/lib/client/browser';
 import { realBackendFetch } from '../support/real-backend';
 
@@ -24,8 +24,18 @@ test('after a write, pages showing workspace data refresh without a reload', asy
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
+  let committedBeforeRefresh = false;
   const { result, unmount } = renderHook(
-    () => ({ workspace: useWorkspace(), dismiss: useWorkspaceMutation(api.dismissFinding) }),
+    () => ({
+      workspace: useWorkspace(),
+      dismiss: useWorkspaceMutation(api.dismissFinding, () => {
+        const cached = queryClient.getQueryData<Awaited<ReturnType<typeof api.workspace>>>(
+          queryKeys.workspace,
+        );
+        assert.equal(cached?.findings.find((f) => f.id === 'finding-31')?.status, 'candidate');
+        committedBeforeRefresh = true;
+      }),
+    }),
     { wrapper },
   );
   const statusOf = (id: string) =>
@@ -34,6 +44,7 @@ test('after a write, pages showing workspace data refresh without a reload', asy
   await waitFor(() => assert.equal(statusOf('finding-31'), 'candidate'));
   await act(() => result.current.dismiss.mutateAsync('finding-31'));
   await waitFor(() => assert.equal(statusOf('finding-31'), 'dismissed'));
+  assert.equal(committedBeforeRefresh, true);
 
   unmount();
   queryClient.clear();

@@ -19,8 +19,13 @@ export const useProcess = (id: string) =>
   useQuery({ queryKey: queryKeys.process(id), queryFn: () => api.process(id) });
 export const useCapture = (id: string) =>
   useQuery({ queryKey: queryKeys.capture(id), queryFn: () => api.capture(id) });
+/** Polls while a live scan is being analyzed in the background. */
 export const useScan = (id: string) =>
-  useQuery({ queryKey: queryKeys.scan(id), queryFn: () => api.scan(id) });
+  useQuery({
+    queryKey: queryKeys.scan(id),
+    queryFn: () => api.scan(id),
+    refetchInterval: (query) => (query.state.data?.status === 'analyzing' ? 3000 : false),
+  });
 export const useFinding = (id: string) =>
   useQuery({ queryKey: queryKeys.finding(id), queryFn: () => api.finding(id) });
 export const useTrial = (id: string) =>
@@ -31,10 +36,16 @@ export const useChangeRequest = (id: string) =>
 /** A write that refreshes every cached read once it succeeds; the workspace is small. */
 export function useWorkspaceMutation<TInput, TResult>(
   mutationFn: (input: TInput) => Promise<TResult>,
+  onCommitted?: (result: TResult) => void,
 ) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn,
-    onSuccess: () => queryClient.invalidateQueries(),
+    onSuccess: async (result) => {
+      // A refresh can unmount the writer (for example, a draft becomes published).
+      // Run essential navigation here before invalidation, not in mutate's observer callback.
+      onCommitted?.(result);
+      await queryClient.invalidateQueries();
+    },
   });
 }

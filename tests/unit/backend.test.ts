@@ -16,6 +16,7 @@ import { readConfig, type ServerConfig } from '../../src/lib/server/config';
 import { demoActor, type Actor } from '../../src/lib/server/auth';
 import { resolveEndpoint } from '../../src/lib/server/contracts';
 import { initialStore } from '../../src/lib/application/store';
+import type { AnalysisQueue } from '../../src/lib/application/analysis/worker';
 const actor = (organizationId = 'tenant_a', role: Actor['role'] = 'admin'): Actor => ({
   userId: `user_${role}`,
   organizationId,
@@ -24,7 +25,7 @@ const actor = (organizationId = 'tenant_a', role: Actor['role'] = 'admin'): Acto
   mfa: true,
   demo: false,
 });
-async function harness() {
+async function harness(analysis?: AnalysisQueue) {
   const directory = await mkdtemp(path.join(tmpdir(), 'ge-backend-'));
   const config: ServerConfig = {
     mode: 'production',
@@ -41,6 +42,7 @@ async function harness() {
     repositories,
     config,
     new GuardedCaptureAdapter(new DemoGeminiAdapter()),
+    analysis,
   );
   return { backend, repositories, directory, config };
 }
@@ -413,4 +415,76 @@ test('draft fingerprint detects concurrent changes while extraction runs', async
       ?.versions[0].steps.length,
     0,
   );
+});
+
+test('Cloud Tasks configuration fails closed before starting Cloud Run AI workers', () => {
+  const base = {
+    GOOD_EXCEPTION_MODE: 'production',
+    GOOGLE_CLOUD_PROJECT: 'demo-project',
+    GOOD_EXCEPTION_ALLOWED_ORIGINS: 'https://app.example.test',
+    GOOD_EXCEPTION_PSEUDONYM_KEY: 'x'.repeat(32),
+  };
+  assert.throws(
+    () =>
+      readConfig({
+        ...base,
+        GOOD_EXCEPTION_TASKS_QUEUE: 'projects/demo-project/locations/us-central1/queues/analysis',
+      }),
+    /configured together/,
+  );
+  assert.throws(
+    () => readConfig({ ...base, K_SERVICE: 'app', GOOD_EXCEPTION_GEMINI_MODEL: 'gemini-test' }),
+    /durable Cloud Tasks/,
+  );
+  assert.throws(
+    () =>
+      readConfig({
+        ...base,
+        FIRESTORE_EMULATOR_HOST: '127.0.0.1:8085',
+        FIREBASE_AUTH_EMULATOR_HOST: '127.0.0.1:9099',
+        GOOD_EXCEPTION_GEMINI_MODEL: 'gemini-test',
+      }),
+    /forbidden during emulator/,
+  );
+  const tasks = {
+    GOOD_EXCEPTION_TASKS_QUEUE: 'projects/demo-project/locations/us-central1/queues/analysis',
+    GOOD_EXCEPTION_WORKER_URL: 'https://app.run.app/api/v1/internal/analysis',
+    GOOD_EXCEPTION_TASKS_INVOKER: 'tasks@demo-project.iam.gserviceaccount.com',
+  };
+  assert.ok(
+    readConfig({ ...base, ...tasks, K_SERVICE: 'app', GOOD_EXCEPTION_GEMINI_MODEL: 'gemini-test' })
+      .tasks,
+  );
+  assert.throws(
+    () =>
+      readConfig({
+        ...base,
+        ...tasks,
+        GOOD_EXCEPTION_WORKER_URL: tasks.GOOD_EXCEPTION_WORKER_URL + '?query=1',
+      }),
+    /exact HTTPS/,
+  );
+});
+test('a scan is queued for analysis once, not again while it is already analyzing', async () => {
+  const queued: string[] = [];
+  const { backend, repositories } = await harness({
+    enqueue: async (job) => void queued.push(job.scanId),
+  });
+  await repositories.forTenant('tenant_a').transact((s) => {
+    s.processes = [{ ...initialStore().processes[0], organizationId: 'tenant_a' }];
+    s.scans = [
+      {
+        id: 'scan-1',
+        processId: 'valve-replacement',
+        demo: false,
+        records: [],
+        readiness: { eligible: true } as never,
+        status: 'ready',
+        findingIds: [],
+      },
+    ];
+  });
+  await execute(backend, 'POST', 'scans/scan-1/run');
+  await execute(backend, 'POST', 'scans/scan-1/run');
+  assert.deepEqual(queued, ['scan-1']);
 });
