@@ -110,6 +110,8 @@ export class Backend {
       captureFingerprint = digest(snapshot.process);
       extraction = await this.capture.extract(snapshot.capture.text ?? '', body.sample);
     }
+    /** Work to start only after this request's own change commits. */
+    const effects = { analysisStarted: false };
     const response = await repository.transact((s) => {
       pruneExpired(s);
       const cached = replay(s);
@@ -133,6 +135,7 @@ export class Backend {
         id,
         input,
         context,
+        effects,
         extraction,
         captureFingerprint,
       );
@@ -150,7 +153,7 @@ export class Backend {
         s.idempotency.push({ key, fingerprint, response, expiresAt: Date.now() + 86400_000 });
       return response;
     });
-    if (endpoint.operation === 'scanRun' && this.analysis && response?.status === 'analyzing')
+    if (effects.analysisStarted && this.analysis)
       await this.enqueueAnalysis(repository, context.actor.organizationId, id!);
     return response;
   }
@@ -223,6 +226,7 @@ export class Backend {
     id: string | undefined,
     input: unknown,
     ctx: RequestContext,
+    effects: { analysisStarted: boolean },
     extraction?: Awaited<ReturnType<GuardedCaptureAdapter['extract']>>,
     expected?: string,
   ): unknown {
@@ -268,8 +272,11 @@ export class Backend {
         );
       case 'scanReadiness':
         return evidence.checkReadiness(s, id!);
-      case 'scanRun':
-        return evidence.runScan(s, id!, Boolean(this.analysis));
+      case 'scanRun': {
+        const { started, ...scan } = evidence.runScan(s, id!, Boolean(this.analysis));
+        effects.analysisStarted = started;
+        return scan;
+      }
       case 'findingDismiss':
         return evidence.dismissFinding(s, id!);
       case 'findingRestore':
