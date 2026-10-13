@@ -183,3 +183,39 @@ test('jobs without a valid timestamp never enter the time-ordered evaluation', (
   assert.equal(result.jobs, 100);
   assert.equal(result.practiceRate, 0);
 });
+/**
+ * Technician A rarely gets callbacks and usually follows the practice; technician B often gets
+ * callbacks and rarely follows it. Within each technician the practice changes nothing (5% and
+ * 40% either way), so it only looks effective when the two are pooled.
+ */
+function confounded(): Execution[] {
+  const group = (tech: string, practice: boolean, jobs: number, [hits, of]: [number, number]) =>
+    Array.from({ length: jobs }, (_, i) => ({ tech, practice, callback: i % of < hits }));
+  const groups = [
+    group('tech-a', true, 160, [1, 20]),
+    group('tech-a', false, 40, [1, 20]),
+    group('tech-b', true, 20, [2, 5]),
+    group('tech-b', false, 180, [2, 5]),
+  ];
+  const jobs = groups.flatMap((g) => g).sort((a, b) => Number(a.callback) - Number(b.callback));
+  const interleaved = Array.from({ length: jobs.length }, (_, i) => jobs[(i * 7) % jobs.length]);
+  return interleaved.map((job, i) => ({
+    id: `job-${i}`,
+    technicianId: job.tech,
+    assetId: `a-${i}`,
+    equipmentModel: 'V-200',
+    jobType: 'valve',
+    timestamp: new Date(Date.UTC(2026, 0, 1) + i * 3600_000).toISOString(),
+    checklistValues: '',
+    partsUsed: '',
+    notes: job.practice ? 'Rechecked the seal after 30 seconds' : '',
+    callback: job.callback,
+  }));
+}
+test('a practice is compared only within the same technician, equipment and job type', () => {
+  const all = confounded();
+  const ids = new Set(all.filter((r) => r.notes.startsWith('Rechecked')).map((r) => r.id));
+  const result = evaluatePractice(all, ids);
+  assert.equal(result.grade, null);
+  assert.equal(result.practiceRate, result.baselineRate);
+});
