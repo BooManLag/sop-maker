@@ -81,7 +81,29 @@ jobs:
       - name: Deploy Firestore rules, indexes and Hosting
         run: npx --yes firebase-tools@15.33.0 deploy --config .firebase-deploy.json --only firestore,hosting --project "$GCP_PROJECT_ID" --non-interactive
       - name: Promote the verified revision
-        run: >
-          gcloud run services update-traffic "$APP_NAME"
-          --to-revisions "$REVISION=100" --remove-tags candidate
-          --region "$GCP_REGION" --project "$GCP_PROJECT_ID" --quiet
+        run: |
+          PREVIOUS=$(gcloud run services describe "$APP_NAME" --region "$GCP_REGION" --project "$GCP_PROJECT_ID" \
+            --format=json | jq -er '[.status.traffic[] | select(.percent > 0)] | max_by(.percent) | .revisionName')
+          echo "PREVIOUS=$PREVIOUS" >> "$GITHUB_ENV"
+          gcloud run services update-traffic "$APP_NAME" \
+            --to-revisions "$REVISION=100" --remove-tags candidate \
+            --region "$GCP_REGION" --project "$GCP_PROJECT_ID" --quiet
+      - name: Verify the live service
+        id: live
+        run: |
+          SERVICE_URL=$(gcloud run services describe "$APP_NAME" --region "$GCP_REGION" \
+            --project "$GCP_PROJECT_ID" --format='value(status.url)')
+          for attempt in 1 2 3 4 5; do
+            if curl --fail --silent --show-error --max-time 30 "$SERVICE_URL/api/v1/health/ready" &&
+              [ "$(curl --silent --max-time 30 -o /dev/null -w '%{http_code}' "$SERVICE_URL/api/v1/workspace")" = 401 ]; then
+              exit 0
+            fi
+            sleep 10
+          done
+          exit 1
+      - name: Roll back to the previous revision
+        if: failure() && steps.live.outcome == 'failure' && env.PREVIOUS != ''
+        run: |
+          gcloud run services update-traffic "$APP_NAME" --to-revisions "$PREVIOUS=100" \
+            --region "$GCP_REGION" --project "$GCP_PROJECT_ID" --quiet
+          echo "::error::Live checks failed; traffic returned to $PREVIOUS."

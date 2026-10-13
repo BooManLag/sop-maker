@@ -31,11 +31,39 @@ Every provider in `infra/tests/safety.tftest.hcl` is mocked, including its simul
 4. Review a full `terraform plan -var-file=prod.tfvars`, including IAM and database changes, before applying. The runtime requires Firebase user-read access for revoked/disabled-token checks. Application startup explicitly selects production mode, refuses incomplete Cloud Tasks configuration and uses HTTP startup/liveness probes. Existing installations should supply the currently verified app image as `initial_image`; Terraform leaves subsequent image changes to CI.
 5. Set up Firebase Authentication, trusted organization/role claims and MFA. **The frontend still needs a production sign-in integration.** Verify tenant isolation and the complete authenticated workflow before allowing customer traffic. Configure backups, retention scheduling and real alert recipients separately.
 6. Copy `github_variables` outputs to repository variables. Create a protected `production` GitHub environment with the appropriate reviewers and branch restrictions; create `model-evaluation` separately for paid manual evals. Workload federation checks the numeric repository ID and `main`, with distinct workflow-specific bindings for the deployer and eval identities.
-7. Set repository variable `DEPLOY_ENABLED=true` only after the prerequisites are complete. Leaving it absent or false skips automatic deployment. Merging this branch alone does not enable releases.
+7. Enable infrastructure CI/CD (see below).
+8. Set repository variable `DEPLOY_ENABLED=true` only after the prerequisites are complete. Leaving it absent or false skips automatic deployment. Merging this branch alone does not enable releases.
+
+## Infrastructure CI/CD
+
+`.github/workflows/infra.yml` replaces manual applies after a one-time bootstrap:
+
+- **Every PR touching `infra/`:** format, validate, mocked `terraform test`, Trivy config scan, then `terraform plan` against the real project as the read-only planner (`-lock=false`). The plan is posted as one PR comment, updated on each push. Fork PRs get no credentials.
+- **Merge to `main`:** plan again, encrypt the saved plan, and pause the apply job for `production` approval. The applier applies exactly that plan; Terraform refuses it if state changed since planning. Applies share the `deploy-production` concurrency group with app releases.
+- **Daily:** a scheduled plan fails if live infrastructure drifted from `main`.
+
+Identities (all short-lived via Workload Identity Federation, no keys):
+
+| Identity | Trusted workflow | Access |
+|---|---|---|
+| `<app>-tf-plan` | `infra.yml`, any ref, via the `github-infra-plan` provider | `roles/viewer`, `roles/iam.securityReviewer`, state bucket read, `roles/billing.viewer` |
+| `<app>-tf-apply` | `infra.yml` on `main` only | `roles/owner`, `roles/billing.costsManager` when `billing_account` is set |
+
+The planner provider maps only `attribute.infra_plan`, so its tokens can never match the deployer, eval or applier bindings (tested in `tests/safety.tftest.hcl`).
+
+**One-time bootstrap:**
+
+1. Apply this configuration once locally as a project owner who is also a billing account administrator, so the CI identities exist.
+2. Copy the new `github_variables` outputs (`WIF_INFRA_PLAN_PROVIDER`, `TF_PLANNER_SA`, `TF_APPLIER_SA`) to repository variables.
+3. Mirror `prod.tfvars` into repository variables: `TF_INITIAL_IMAGE`, and `TF_BILLING_ACCOUNT` / `TF_BILLING_CAP_ENABLED` if used. Any other non-default variable needs a matching `TF_VAR_*` entry in `infra.yml`, or CI plans will show it as a change.
+4. Create a random repository secret `TF_PLAN_KEY` (for example `openssl rand -base64 32`). Saved plans contain state values, so they are encrypted as artifacts.
+5. Set `INFRA_CD_ENABLED=true`. From then on, change infrastructure only through PRs.
+
+**Known risk:** the planner can read state, which contains the generated HMAC secret, so any same-repository PR could expose it through a modified workflow. That is acceptable while only trusted collaborators can push branches. The long-term fix is to generate that key outside Terraform state.
 
 ## Release and recovery
 
-After `Backend verification` succeeds for a push to `main`, the opted-in release job checks that the source is still the latest main revision, builds and scans an image **before** creating temporary cloud credentials, pushes it, and deploys its digest with no production traffic. It checks readiness and verifies that an unauthenticated workspace request returns 401. It generates Hosting rewrites from `APP_NAME` and `GCP_REGION`, deploys rules/indexes/Hosting, and then sends traffic to the verified revision. A failing pre-promotion check leaves existing revision traffic unchanged. These smoke checks do not replace an authenticated user acceptance test.
+After `Backend verification` succeeds for a push to `main`, the opted-in release job checks that the source is still the latest main revision, builds and scans an image **before** creating temporary cloud credentials, pushes it, and deploys its digest with no production traffic. It checks readiness and verifies that an unauthenticated workspace request returns 401. It generates Hosting rewrites from `APP_NAME` and `GCP_REGION`, deploys rules/indexes/Hosting, and then sends traffic to the verified revision. A failing pre-promotion check leaves existing revision traffic unchanged. After promotion, the live URL is checked again; if readiness or the 401 check fails, traffic returns to the previously serving revision and the job fails. These smoke checks do not replace an authenticated user acceptance test.
 
 A production environment approval is a GitHub configuration requirement; adding `environment: production` alone does not create reviewers. Branch protection and environment protection must be configured in GitHub. Workload Identity Federation permission changes must be applied before the revised workflows can authenticate.
 
