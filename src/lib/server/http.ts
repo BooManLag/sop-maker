@@ -1,4 +1,6 @@
 import { randomUUID } from 'node:crypto';
+import { z } from 'zod';
+import type { AnalysisWorker } from '../application/analysis/worker';
 import type { Backend } from '../application/backend';
 import { authenticate, authorize, type TokenVerifier, type Actor } from './auth';
 import { ApiError, safeError } from './errors';
@@ -14,7 +16,14 @@ export interface HttpDependencies {
   verifier: TokenVerifier;
   admission?: AdmissionControl;
   observability?: Observability;
+  /** Present when scans are analyzed through Cloud Tasks. */
+  analysisTasks?: { worker: AnalysisWorker; verify: (request: Request) => Promise<boolean> };
 }
+/** Cloud Tasks retries a failed delivery; the last attempt records the failure on the scan. */
+export const ANALYSIS_MAX_ATTEMPTS = 3;
+const jobSchema = z
+  .object({ organizationId: z.string().min(1).max(128), scanId: z.string().uuid() })
+  .strict();
 export function createHttpHandler(dependencies: HttpDependencies) {
   const { backend, config, verifier } = dependencies;
   const admission = dependencies.admission ?? new AdmissionControl();
@@ -82,6 +91,17 @@ export function createHttpHandler(dependencies: HttpDependencies) {
         status = 200;
         return new Response(JSON.stringify({ status: 'ok' }), { status, headers });
       }
+      if (path.join('/') === 'internal/analysis' && request.method === 'POST') {
+        route = 'internal/analysis';
+        const tasks = dependencies.analysisTasks;
+        if (!tasks || !(await tasks.verify(request))) throw new ApiError(403, 'Forbidden.');
+        const job = jobSchema.safeParse(await readJson(request));
+        if (!job.success) throw new ApiError(400, 'Invalid analysis job.');
+        const retries = Number(request.headers.get('x-cloudtasks-taskretrycount') ?? 0);
+        await tasks.worker.process(job.data, retries + 1 >= ANALYSIS_MAX_ATTEMPTS);
+        status = 204;
+        return new Response(null, { status, headers });
+      }
       actor = await authenticate(request, config, verifier);
       admission.rate(`actor:${actor.organizationId}:${actor.userId}`);
       if (path.length === 1 && path[0] === 'metrics' && request.method === 'GET') {
@@ -115,7 +135,12 @@ export function createHttpHandler(dependencies: HttpDependencies) {
         () => releaseExecution?.(),
         () => releaseExecution?.(),
       );
-      const result = await withDeadline(execution, LIMITS.requestTimeoutMs);
+      const result = await withDeadline(
+        execution,
+        resolved.endpoint.operation === 'captureAnalyze'
+          ? LIMITS.aiTimeoutMs + LIMITS.requestTimeoutMs
+          : LIMITS.requestTimeoutMs,
+      );
       const serialized = JSON.stringify(result);
       if (Buffer.byteLength(serialized) > LIMITS.responseBytes)
         throw new ApiError(413, 'Response is too large. Use the paginated collection endpoints.');

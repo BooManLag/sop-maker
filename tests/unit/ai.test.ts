@@ -2,6 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { GuardedCaptureAdapter, UnavailableCaptureAdapter } from '../../src/lib/server/ai';
 import { DemoGeminiAdapter } from '../../src/lib/infrastructure/demo-capture-adapter';
+import { VertexGeminiAdapter } from '../../src/lib/server/gemini';
+import { metered } from '../../src/lib/server/ai-usage';
 import type { ProcessStep } from '../../src/lib/domain/types';
 const step: ProcessStep = {
   id: 'step_1',
@@ -102,4 +104,92 @@ test('provider timeout aborts the adapter and never returns a draft', async () =
   });
   await assert.rejects(adapter.extract('A walkthrough', false), /timed out/);
   assert.equal(signal?.aborted, true);
+});
+test('Vertex adapter shapes model JSON into guarded, renumbered steps', async () => {
+  const prompts: string[] = [];
+  const adapter = new GuardedCaptureAdapter(
+    new VertexGeminiAdapter(async ({ prompt }) => {
+      prompts.push(prompt);
+      return prompts.length === 1
+        ? JSON.stringify({
+            steps: [
+              { action: ' Isolate power ', required: true, warning: 'Lockout first' },
+              {
+                action: 'Wait 30 seconds',
+                required: false,
+                rationale: '',
+                id: 'x',
+                source: 'baseline',
+              },
+            ],
+          })
+        : JSON.stringify({ questions: ['Why wait 30 seconds?'] });
+    }),
+  );
+  const result = await adapter.extract('Isolate power, then wait.', false);
+  assert.deepEqual(result.steps, [
+    {
+      id: 'step-1',
+      sequence: 1,
+      action: 'Isolate power',
+      required: true,
+      warning: 'Lockout first',
+      source: 'expert_walkthrough',
+    },
+    {
+      id: 'step-2',
+      sequence: 2,
+      action: 'Wait 30 seconds',
+      required: false,
+      source: 'expert_walkthrough',
+    },
+  ]);
+  assert.deepEqual(result.questions, ['Why wait 30 seconds?']);
+  assert.match(prompts[0], /"""\nIsolate power, then wait\.\n"""/);
+});
+test('Vertex adapter fails closed on non-JSON output and skips the model for the sample', async () => {
+  const broken = new GuardedCaptureAdapter(new VertexGeminiAdapter(async () => 'not json'));
+  await assert.rejects(broken.extract('A walkthrough', false), /unavailable/);
+  let calls = 0;
+  const sample = new VertexGeminiAdapter(async () => {
+    calls++;
+    return JSON.stringify({ questions: ['Why?'] });
+  });
+  assert.ok((await sample.extract('', true)).length > 0);
+  assert.equal(calls, 0);
+});
+test('AI usage is logged for success and failure with the fields the metrics extract', async () => {
+  const lines: string[] = [];
+  const original = console.log;
+  console.log = (line: string) => lines.push(line);
+  try {
+    assert.equal(
+      await metered('capture_extract', 'm', async () => ({ value: 7, input: 120, output: 30 })),
+      7,
+    );
+    await assert.rejects(
+      metered('scan_agent', 'm', async () => {
+        throw new Error('down');
+      }),
+    );
+  } finally {
+    console.log = original;
+  }
+  const [ok, failed] = lines.map((l) => JSON.parse(l));
+  assert.deepEqual(
+    {
+      event: ok.event,
+      feature: ok.feature,
+      inputTokens: ok.inputTokens,
+      outputTokens: ok.outputTokens,
+      ok: ok.ok,
+    },
+    { event: 'ai_usage', feature: 'capture_extract', inputTokens: 120, outputTokens: 30, ok: true },
+  );
+  assert.equal(failed.ok, false);
+  assert.equal(typeof ok.durationMs, 'number');
+});
+test('a safety-blocked Gemini response (no text) fails closed without saving', async () => {
+  const blocked = new GuardedCaptureAdapter(new VertexGeminiAdapter(async () => undefined));
+  await assert.rejects(blocked.extract('Isolate live power before work.', false), /unavailable/);
 });

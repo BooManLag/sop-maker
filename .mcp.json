@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "firebase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "firebase-tools@15.33.0",
+        "mcp",
+        "--tools",
+        "firebase_get_project,firebase_get_environment,firebase_get_security_rules,firebase_validate_security_rules,firebase_deploy_status,firestore_get_database,firestore_list_databases,firestore_list_collections,firestore_list_documents,firestore_get_document,firestore_query_collection,firestore_list_indexes,firestore_get_index,firestore_list_backups,firestore_list_backup_schedules"
+      ]
+    }
+  }
+}

@@ -12,6 +12,28 @@ const environment = z.object({
     .regex(/^[a-z][a-z0-9-]{4,61}[a-z0-9]$/)
     .optional(),
   FIRESTORE_DATABASE_ID: z.string().default('(default)'),
+  GOOD_EXCEPTION_GEMINI_MODEL: z
+    .string()
+    .regex(/^[a-z0-9.-]{3,64}$/)
+    .optional(),
+  GOOD_EXCEPTION_AGENT_MODEL: z
+    .string()
+    .regex(/^[a-z0-9.-]{3,64}$/)
+    .optional(),
+  GOOD_EXCEPTION_EMBEDDING_MODEL: z
+    .string()
+    .regex(/^[a-z0-9.-]{3,64}$/)
+    .default('gemini-embedding-001'),
+  GOOD_EXCEPTION_TASKS_QUEUE: z
+    .string()
+    .regex(/^projects\/[a-z0-9-]+\/locations\/[a-z0-9-]+\/queues\/[A-Za-z0-9-]+$/)
+    .optional(),
+  GOOD_EXCEPTION_WORKER_URL: z.string().url().startsWith('https://').optional(),
+  GOOD_EXCEPTION_TASKS_INVOKER: z.string().email().optional(),
+  GOOGLE_CLOUD_LOCATION: z
+    .string()
+    .regex(/^[a-z0-9-]{2,32}$/)
+    .default('global'),
   K_SERVICE: z.string().optional(),
   FIRESTORE_EMULATOR_HOST: z.string().optional(),
   FIREBASE_AUTH_EMULATOR_HOST: z.string().optional(),
@@ -22,6 +44,8 @@ export interface ServerConfig {
   allowedOrigins: string[];
   projectId?: string;
   databaseId: string;
+  gemini?: { model: string; agentModel: string; embeddingModel: string; location: string };
+  tasks?: { queue: string; workerUrl: string; invokerEmail: string };
   pseudonymKey?: string;
   requireMfa: boolean;
   emulator: boolean;
@@ -59,12 +83,50 @@ export function readConfig(env: Record<string, string | undefined> = process.env
     );
   if (e.K_SERVICE && (e.FIRESTORE_EMULATOR_HOST || e.FIREBASE_AUTH_EMULATOR_HOST))
     throw new Error('Emulator connections are forbidden on Cloud Run.');
+  const taskFields = [
+    e.GOOD_EXCEPTION_TASKS_QUEUE,
+    e.GOOD_EXCEPTION_WORKER_URL,
+    e.GOOD_EXCEPTION_TASKS_INVOKER,
+  ];
+  if (taskFields.some(Boolean) && !taskFields.every(Boolean))
+    throw new Error('Cloud Tasks queue, worker URL and invoker must be configured together.');
+  if (e.K_SERVICE && e.GOOD_EXCEPTION_GEMINI_MODEL && !taskFields.every(Boolean))
+    throw new Error('Cloud Run AI analysis requires durable Cloud Tasks configuration.');
+  if (e.FIRESTORE_EMULATOR_HOST && e.GOOD_EXCEPTION_GEMINI_MODEL)
+    throw new Error('Live AI models are forbidden during emulator validation.');
+  if (e.GOOD_EXCEPTION_WORKER_URL) {
+    const worker = new URL(e.GOOD_EXCEPTION_WORKER_URL);
+    if (
+      worker.username ||
+      worker.password ||
+      worker.search ||
+      worker.hash ||
+      worker.pathname !== '/api/v1/internal/analysis'
+    )
+      throw new Error('Worker URL must name the exact HTTPS analysis endpoint.');
+  }
   return {
     mode: e.GOOD_EXCEPTION_MODE,
     dataDir: e.GOOD_EXCEPTION_DATA_DIR ?? path.join(process.cwd(), '.demo-data'),
     allowedOrigins: origins,
     projectId: e.GOOGLE_CLOUD_PROJECT,
     databaseId: e.FIRESTORE_DATABASE_ID,
+    gemini: e.GOOD_EXCEPTION_GEMINI_MODEL
+      ? {
+          model: e.GOOD_EXCEPTION_GEMINI_MODEL,
+          agentModel: e.GOOD_EXCEPTION_AGENT_MODEL ?? e.GOOD_EXCEPTION_GEMINI_MODEL,
+          embeddingModel: e.GOOD_EXCEPTION_EMBEDDING_MODEL,
+          location: e.GOOGLE_CLOUD_LOCATION,
+        }
+      : undefined,
+    tasks:
+      e.GOOD_EXCEPTION_TASKS_QUEUE && e.GOOD_EXCEPTION_WORKER_URL && e.GOOD_EXCEPTION_TASKS_INVOKER
+        ? {
+            queue: e.GOOD_EXCEPTION_TASKS_QUEUE,
+            workerUrl: e.GOOD_EXCEPTION_WORKER_URL,
+            invokerEmail: e.GOOD_EXCEPTION_TASKS_INVOKER,
+          }
+        : undefined,
     pseudonymKey: e.GOOD_EXCEPTION_PSEUDONYM_KEY,
     requireMfa: e.GOOD_EXCEPTION_REQUIRE_MFA === 'true',
     emulator: Boolean(e.FIRESTORE_EMULATOR_HOST),
@@ -88,7 +150,7 @@ export const LIMITS = Object.freeze({
   activeRequests: 32,
   waitingRequests: 64,
   requestTimeoutMs: 15_000,
-  aiTimeoutMs: 5000,
+  aiTimeoutMs: 30_000,
   aiOutputTokens: 2048,
   aiCallsPerHour: 20,
 });

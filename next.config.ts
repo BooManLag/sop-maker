@@ -2,7 +2,7 @@ import type { NextConfig } from 'next';
 const config: NextConfig = {
   output: 'standalone',
   distDir: process.env.GOOD_EXCEPTION_NEXT_DIR || '.next',
-  serverExternalPackages: ['firebase-admin', 'proper-lockfile'],
+  serverExternalPackages: ['firebase-admin', 'proper-lockfile', '@google/adk'],
   poweredByHeader: false,
   async headers() {
     return [

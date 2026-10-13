@@ -79,7 +79,7 @@ test('insufficient uploaded records do not produce findings', async ({ page }) =
   await expect(
     page.getByRole('heading', { name: 'Not enough evidence for a reliable scan.' }),
   ).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Run sample scan' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Run scan', exact: true })).toBeDisabled();
 });
 
 test('on a phone the layout fits and the menu navigates', async ({ page }) => {
