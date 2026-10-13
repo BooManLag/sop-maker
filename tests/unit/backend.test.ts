@@ -16,6 +16,7 @@ import { readConfig, type ServerConfig } from '../../src/lib/server/config';
 import { demoActor, type Actor } from '../../src/lib/server/auth';
 import { resolveEndpoint } from '../../src/lib/server/contracts';
 import { initialStore } from '../../src/lib/application/store';
+import type { AnalysisQueue } from '../../src/lib/application/analysis/worker';
 const actor = (organizationId = 'tenant_a', role: Actor['role'] = 'admin'): Actor => ({
   userId: `user_${role}`,
   organizationId,
@@ -24,7 +25,7 @@ const actor = (organizationId = 'tenant_a', role: Actor['role'] = 'admin'): Acto
   mfa: true,
   demo: false,
 });
-async function harness() {
+async function harness(analysis?: AnalysisQueue) {
   const directory = await mkdtemp(path.join(tmpdir(), 'ge-backend-'));
   const config: ServerConfig = {
     mode: 'production',
@@ -41,6 +42,7 @@ async function harness() {
     repositories,
     config,
     new GuardedCaptureAdapter(new DemoGeminiAdapter()),
+    analysis,
   );
   return { backend, repositories, directory, config };
 }
@@ -462,4 +464,27 @@ test('Cloud Tasks configuration fails closed before starting Cloud Run AI worker
       }),
     /exact HTTPS/,
   );
+});
+test('a scan is queued for analysis once, not again while it is already analyzing', async () => {
+  const queued: string[] = [];
+  const { backend, repositories } = await harness({
+    enqueue: async (job) => void queued.push(job.scanId),
+  });
+  await repositories.forTenant('tenant_a').transact((s) => {
+    s.processes = [{ ...initialStore().processes[0], organizationId: 'tenant_a' }];
+    s.scans = [
+      {
+        id: 'scan-1',
+        processId: 'valve-replacement',
+        demo: false,
+        records: [],
+        readiness: { eligible: true } as never,
+        status: 'ready',
+        findingIds: [],
+      },
+    ];
+  });
+  await execute(backend, 'POST', 'scans/scan-1/run');
+  await execute(backend, 'POST', 'scans/scan-1/run');
+  assert.deepEqual(queued, ['scan-1']);
 });

@@ -114,7 +114,7 @@ export function checkReadiness(s: Store, id: string) {
 export function runScan(s: Store, id: string, liveAnalysis: boolean) {
   const scan = getScan(s, id);
   if (scan.status === 'analyzing' || (scan.status === 'complete' && !scan.demo))
-    return { id: scan.id, demo: false, status: scan.status };
+    return { id: scan.id, demo: false, status: scan.status, started: false };
   requireCondition(scan.readiness?.eligible, 'Not enough evidence to run a reliable scan.', 422);
   requireCondition(
     !scan.expiresAt || Date.parse(scan.expiresAt) > Date.now(),
@@ -128,13 +128,19 @@ export function runScan(s: Store, id: string, liveAnalysis: boolean) {
         'Live evidence analysis is not connected. Your data has not been replaced with sample findings.',
       );
     scan.status = 'analyzing';
-    return { id: scan.id, demo: false, status: scan.status };
+    return { id: scan.id, demo: false, status: scan.status, started: true };
   }
   scan.status = 'complete';
   scan.findingIds = s.findings
     .filter((f) => f.processId === scan.processId && f.status !== 'dismissed')
     .map((f) => f.id);
-  return { id: scan.id, demo: true, status: scan.status, funnel: sampleFunnel(scan) };
+  return {
+    id: scan.id,
+    demo: true,
+    status: scan.status,
+    funnel: sampleFunnel(scan),
+    started: false,
+  };
 }
 /** Snapshot the worker analyzes outside any transaction; undefined when there is nothing to do. */
 export function analysisInput(s: Store, id: string) {
