@@ -87,3 +87,67 @@ run "invalid_limits" {
   }
   expect_failures = [var.app_name, var.max_instances, var.monthly_budget_usd]
 }
+run "planner_trusts_only_infra_workflow" {
+  command = apply
+  assert {
+    condition     = strcontains(google_iam_workload_identity_pool_provider.infra_plan.attribute_condition, "assertion.repository_id == '123456'") && strcontains(google_iam_workload_identity_pool_provider.infra_plan.attribute_condition, "assertion.workflow_ref.startsWith('example/repository/.github/workflows/infra.yml@')")
+    error_message = "The planner provider must accept only this repository's infra workflow."
+  }
+  assert {
+    condition     = google_service_account_iam_member.planner_wif.member == "principalSet://iam.googleapis.com/projects/123456789012/locations/global/workloadIdentityPools/github/attribute.infra_plan/example/repository"
+    error_message = "The planner must trust only the attribute that the planner provider alone maps."
+  }
+}
+run "planner_is_read_only" {
+  command = apply
+  variables { billing_account = "ABCDEF-ABCDEF-ABCDEF" }
+  assert {
+    condition     = toset(keys(google_project_iam_member.planner)) == toset(["roles/viewer", "roles/iam.securityReviewer"])
+    error_message = "The planner may only read project resources and IAM policies."
+  }
+  assert {
+    condition     = google_storage_bucket_iam_member.planner_state.bucket == "demo-infra-test-tfstate" && google_storage_bucket_iam_member.planner_state.role == "roles/storage.objectViewer"
+    error_message = "The planner reads state but never writes it (plans run with -lock=false)."
+  }
+  assert {
+    condition     = google_billing_account_iam_member.planner[0].role == "roles/billing.viewer"
+    error_message = "Planning budget resources needs read access to the billing account and nothing more."
+  }
+}
+run "applier_trusts_only_infra_workflow_on_main" {
+  command = apply
+  assert {
+    condition     = google_service_account_iam_member.applier_wif.member == "principalSet://iam.googleapis.com/projects/123456789012/locations/global/workloadIdentityPools/github/attribute.workflow/example/repository/.github/workflows/infra.yml@refs/heads/main"
+    error_message = "Only infra.yml on main may apply infrastructure."
+  }
+}
+run "applier_owns_project_without_billing" {
+  command = apply
+  assert {
+    condition     = google_project_iam_member.applier.role == "roles/owner" && google_project_iam_member.applier.member == google_service_account.applier.member
+    error_message = "The applier manages every project resource, including IAM."
+  }
+  assert {
+    condition     = length(google_billing_account_iam_member.applier) == 0
+    error_message = "No billing account access without a configured billing account."
+  }
+}
+run "applier_manages_budgets_with_billing" {
+  command = apply
+  variables { billing_account = "ABCDEF-ABCDEF-ABCDEF" }
+  assert {
+    condition     = google_billing_account_iam_member.applier[0].billing_account_id == "ABCDEF-ABCDEF-ABCDEF" && google_billing_account_iam_member.applier[0].role == "roles/billing.costsManager"
+    error_message = "Budgets live on the billing account, outside project ownership."
+  }
+}
+run "pull_requests_cannot_reach_privileged_identities" {
+  command = apply
+  assert {
+    condition     = endswith(google_iam_workload_identity_pool_provider.github.attribute_condition, "&& assertion.ref == 'refs/heads/main'")
+    error_message = "The deploy provider must only accept main."
+  }
+  assert {
+    condition     = !contains(keys(google_iam_workload_identity_pool_provider.infra_plan.attribute_mapping), "attribute.workflow")
+    error_message = "Planner tokens must never match deployer, eval or applier bindings."
+  }
+}

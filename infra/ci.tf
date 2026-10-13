@@ -70,3 +70,69 @@ resource "google_project_iam_member" "eval" {
   role     = each.value
   member   = google_service_account.eval.member
 }
+
+# Terraform plans run from any infra.yml run (PRs, drift checks) with read-only access.
+# Only this provider maps attribute.infra_plan, so tokens from the deploy provider can never match it.
+resource "google_iam_workload_identity_pool_provider" "infra_plan" {
+  workload_identity_pool_id          = google_iam_workload_identity_pool.github.workload_identity_pool_id
+  workload_identity_pool_provider_id = "github-infra-plan"
+  attribute_mapping = {
+    "google.subject"       = "assertion.sub"
+    "attribute.infra_plan" = "assertion.repository"
+  }
+  attribute_condition = "assertion.repository == '${var.github_repository}' && assertion.repository_id == '${var.github_repository_id}' && assertion.workflow_ref.startsWith('${var.github_repository}/.github/workflows/infra.yml@')"
+  oidc {
+    issuer_uri = "https://token.actions.githubusercontent.com"
+  }
+}
+resource "google_service_account" "planner" {
+  account_id   = "${var.app_name}-tf-plan"
+  display_name = "${var.app_name} Terraform planner"
+  depends_on   = [google_project_service.apis]
+}
+resource "google_service_account_iam_member" "planner_wif" {
+  service_account_id = google_service_account.planner.name
+  role               = "roles/iam.workloadIdentityUser"
+  member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github.name}/attribute.infra_plan/${var.github_repository}"
+}
+resource "google_project_iam_member" "planner" {
+  for_each = toset(["roles/viewer", "roles/iam.securityReviewer"])
+  project  = var.project_id
+  role     = each.value
+  member   = google_service_account.planner.member
+}
+# The state bucket is bootstrapped outside Terraform (see README); its name follows that convention.
+resource "google_storage_bucket_iam_member" "planner_state" {
+  bucket = "${var.project_id}-tfstate"
+  role   = "roles/storage.objectViewer"
+  member = google_service_account.planner.member
+}
+resource "google_billing_account_iam_member" "planner" {
+  count              = var.billing_account == "" ? 0 : 1
+  billing_account_id = var.billing_account
+  role               = "roles/billing.viewer"
+  member             = google_service_account.planner.member
+}
+
+# Terraform applies run only from infra.yml on main, after production approval.
+resource "google_service_account" "applier" {
+  account_id   = "${var.app_name}-tf-apply"
+  display_name = "${var.app_name} Terraform applier"
+  depends_on   = [google_project_service.apis]
+}
+resource "google_service_account_iam_member" "applier_wif" {
+  service_account_id = google_service_account.applier.name
+  role               = "roles/iam.workloadIdentityUser"
+  member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github.name}/attribute.workflow/${var.github_repository}/.github/workflows/infra.yml@refs/heads/main"
+}
+resource "google_project_iam_member" "applier" {
+  project = var.project_id
+  role    = "roles/owner"
+  member  = google_service_account.applier.member
+}
+resource "google_billing_account_iam_member" "applier" {
+  count              = var.billing_account == "" ? 0 : 1
+  billing_account_id = var.billing_account
+  role               = "roles/billing.costsManager"
+  member             = google_service_account.applier.member
+}
