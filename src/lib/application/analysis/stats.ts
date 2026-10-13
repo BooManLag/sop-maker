@@ -38,11 +38,15 @@ function zScore(practice: GroupRate, baseline: GroupRate) {
   return se ? (baseline.rate - practice.rate) / se : 0;
 }
 
+/** Observed, validly dated jobs, oldest first. Undated jobs cannot be placed, so they are left out. */
 export function chronological(records: Execution[]) {
-  const observed = records.filter((r) => r.callback !== null);
-  return [...observed].sort(
-    (a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp) || a.id.localeCompare(b.id),
-  );
+  const dated = records
+    .filter((r) => r.callback !== null)
+    .map((record) => ({ record, at: Date.parse(record.timestamp) }))
+    .filter(({ at }) => !Number.isNaN(at));
+  return dated
+    .sort((a, b) => a.at - b.at || a.record.id.localeCompare(b.record.id))
+    .map(({ record }) => record);
 }
 
 /** Scores the jobs that followed a practice against all other jobs. Every number on a finding comes from here. */

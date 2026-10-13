@@ -173,3 +173,13 @@ test('a failing analysis retries, then marks the scan failed on the last attempt
   await worker.process(job, true);
   assert.equal(store.scans.at(-1)!.status, 'failed');
 });
+test('jobs without a valid timestamp never enter the time-ordered evaluation', () => {
+  const dated = records();
+  const undated = dated.map((r) => ({ ...r, id: `x-${r.id}`, timestamp: '', callback: true }));
+  const ids = new Set(
+    [...dated, ...undated].filter((r) => r.notes.startsWith('Rechecked')).map((r) => r.id),
+  );
+  const result = evaluatePractice([...dated, ...undated], ids);
+  assert.equal(result.jobs, 100);
+  assert.equal(result.practiceRate, 0);
+});
