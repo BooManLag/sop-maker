@@ -1,4 +1,5 @@
 import { createApiClient } from './api';
+import { currentToken } from './auth';
 
-/** Browser API client. Production sign-in will supply `getToken`; the loopback demo needs none. */
-export const api = createApiClient();
+/** Browser API client. Sends the signed-in person's ID token; the loopback demo has none. */
+export const api = createApiClient({ getToken: currentToken });
