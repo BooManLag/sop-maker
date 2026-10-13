@@ -3,6 +3,7 @@ import { LIMITS } from './config';
 import { ApiError } from './errors';
 import type { Permission } from './auth';
 import { idSchema, proseText as prose, shortText as short } from '../domain/validation';
+import { mediaContentTypes } from '../domain/types';
 export { idSchema };
 const optionalProse = z.string().trim().max(2000).optional();
 export const stepSchema = z
@@ -19,6 +20,13 @@ export const stepSchema = z
     durationMaxSeconds: z.number().int().min(0).max(86400).optional(),
     source: z.enum(['expert_walkthrough', 'baseline', 'validated_field_practice']),
     evidenceLinks: z.array(idSchema).max(20).optional(),
+    frameObjectPath: z.string().max(512).optional(),
+    frameAtMs: z
+      .number()
+      .int()
+      .min(0)
+      .max(LIMITS.mediaSeconds * 1000)
+      .optional(),
   })
   .strict()
   .superRefine((step, context) => {
@@ -47,6 +55,36 @@ export const rowSchema = z
     callback_within_30_days: cell.optional(),
   })
   .strict();
+/** Model transcription of one recording; frame and segment times must fall inside it. */
+export const transcriptionSchema = (recordingMs: number) => {
+  const ms = z.number().int().min(0).max(recordingMs);
+  return z
+    .object({
+      segments: z
+        .array(
+          z
+            .object({ startMs: ms, endMs: ms, text: prose })
+            .strict()
+            .refine(
+              (segment) => segment.startMs <= segment.endMs,
+              'A segment ends before it starts.',
+            ),
+        )
+        .min(1)
+        .max(LIMITS.steps * 10)
+        .refine(
+          (segments) =>
+            segments.every((segment, i) => !i || segments[i - 1].endMs <= segment.startMs),
+          'Segments must be in order and must not overlap.',
+        ),
+      steps: z
+        .array(z.object({ action: short, frameAtMs: ms }).strict())
+        .min(1)
+        .max(LIMITS.steps),
+      audioSeconds: z.number().min(0),
+    })
+    .strict();
+};
 export const extractionSchema = z
   .object({
     steps: z
@@ -86,6 +124,23 @@ export const schemas = {
       expertReference: idSchema,
       text: z.string().max(LIMITS.captureCharacters).optional(),
       fileName: z.string().max(255).optional(),
+    })
+    .strict(),
+  uploadRequest: z
+    .object({
+      kind: z.literal('audio'),
+      expertReference: idSchema,
+      contentType: z.enum(mediaContentTypes),
+      bytes: z.number().int().positive().max(LIMITS.mediaBytes),
+      durationSeconds: z.number().positive().max(LIMITS.mediaSeconds),
+    })
+    .strict(),
+  frameRequest: z
+    .object({
+      captureId: idSchema,
+      stepId: idSchema,
+      atMs: z.number().int().min(0),
+      bytes: z.number().int().positive().max(LIMITS.frameBytes),
     })
     .strict(),
   captureAnalyze: z.object({ captureId: idSchema, sample: z.boolean().default(false) }).strict(),
@@ -153,6 +208,20 @@ export const endpoints: Endpoint[] = [
     operation: 'captureCreate',
     method: 'POST',
     path: 'processes/:id/captures',
+    permission: 'write',
+    create: true,
+  },
+  {
+    operation: 'uploadRequest',
+    method: 'POST',
+    path: 'processes/:id/uploads',
+    permission: 'write',
+    create: true,
+  },
+  {
+    operation: 'frameRequest',
+    method: 'POST',
+    path: 'processes/:id/frames',
     permission: 'write',
     create: true,
   },
