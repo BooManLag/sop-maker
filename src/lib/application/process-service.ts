@@ -1,5 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import type { Store } from './store';
+/** Raw capture content (walkthrough text, recordings, transcripts) expires after 30 days. */
+const rawContentRetentionMs = 30 * 86400_000;
+import type { ProcessStep } from '../domain/types';
 import type { Actor } from '../server/auth';
 import { requireCondition } from '../server/errors';
 import type { schemas } from '../server/contracts';
@@ -54,10 +57,46 @@ export function createCapture(s: Store, id: string, body: Input<'captureCreate'>
     processId: p.id,
     ...body,
     createdAt: new Date().toISOString(),
-    expiresAt: new Date(Date.now() + 30 * 86400_000).toISOString(),
+    expiresAt: new Date(Date.now() + rawContentRetentionMs).toISOString(),
   };
   s.captures.push(capture);
   return capture;
+}
+export function createMediaCapture(
+  s: Store,
+  id: string,
+  upload: { uploadId: string; objectPath: string },
+  body: Input<'uploadRequest'>,
+) {
+  const p = getProcess(s, id);
+  requireDraft(p);
+  s.captures.push({
+    id: upload.uploadId,
+    processId: p.id,
+    kind: body.kind,
+    expertReference: body.expertReference,
+    media: {
+      objectPath: upload.objectPath,
+      contentType: body.contentType,
+      declaredSeconds: body.durationSeconds,
+    },
+    status: 'awaiting_upload',
+    createdAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + rawContentRetentionMs).toISOString(),
+  });
+}
+export function getFrameStep(s: Store, id: string, body: Input<'frameRequest'>) {
+  const p = getProcess(s, id);
+  requireDraft(p);
+  const capture = s.captures.find((c) => c.id === body.captureId && c.processId === p.id);
+  requireCondition(capture?.media, 'Recording not found.', 404);
+  requireCondition(
+    body.atMs <= capture.media.declaredSeconds * 1000,
+    'The frame time is outside the recording.',
+  );
+  const step = p.versions[0].steps.find((step) => step.id === body.stepId);
+  requireCondition(step, 'Step not found.', 404);
+  return step;
 }
 export function createClarification(s: Store, id: string, body: Input<'clarificationCreate'>) {
   const p = getProcess(s, id);
@@ -88,10 +127,18 @@ export function createClarification(s: Store, id: string, body: Input<'clarifica
   s.clarifications.push(result);
   return result;
 }
+/** Frame objects are linked only by `frameRequest`; client-sent paths are discarded. */
+function withServerFrames(current: ProcessStep[], incoming: ProcessStep[]): ProcessStep[] {
+  const frames = new Map(current.map((step) => [step.id, step.frameObjectPath]));
+  return incoming.map(({ frameObjectPath: _, ...step }, i) => {
+    const frameObjectPath = frames.get(step.id);
+    return { ...step, sequence: i + 1, ...(frameObjectPath ? { frameObjectPath } : {}) };
+  });
+}
 export function saveDraftSteps(s: Store, id: string, body: Input<'processDraftSave'>) {
   const p = getProcess(s, id);
   requireDraft(p);
-  p.versions[0].steps = body.steps.map((step, i) => ({ ...step, sequence: i + 1 }));
+  p.versions[0].steps = withServerFrames(p.versions[0].steps, body.steps);
   return p;
 }
 export function publishProcess(s: Store, id: string, body: Input<'processPublish'>, actor: Actor) {
@@ -104,7 +151,7 @@ export function publishProcess(s: Store, id: string, body: Input<'processPublish
   );
   p.versions[0] = {
     ...p.versions[0],
-    steps: body.steps.map((step, i) => ({ ...step, sequence: i + 1 })),
+    steps: withServerFrames(p.versions[0].steps, body.steps),
     status: 'published',
     approvedBy: actor.userId,
   };
@@ -133,6 +180,7 @@ export function captureDraftDto(s: Store, id?: string) {
   return {
     id: capture.id,
     processId: capture.processId,
+    ...(capture.status ? { status: capture.status, segments: capture.segments ?? [] } : {}),
     questions: capture.questions ?? [],
     answers: s.clarifications
       .filter((c) => c.captureId === capture.id)

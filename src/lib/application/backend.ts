@@ -1,14 +1,15 @@
 import { createHash, randomUUID } from 'node:crypto';
-import type { Repository, RepositoryProvider } from './ports';
+import type { Repository, RepositoryProvider, UploadSigner } from './ports';
 import type { AnalysisQueue } from './analysis/worker';
 import type { Store } from './store';
-import { consumeQuota, pruneExpired } from './store';
+import { consumeQuota, pruneExpired, reserveMediaSeconds } from './store';
 import { authorize, type RequestContext } from '../server/auth';
 import { LIMITS, type ServerConfig } from '../server/config';
 import { type Endpoint, type ListQuery, parseInput } from '../server/contracts';
 import { ApiError, requireCondition } from '../server/errors';
 import type { GuardedCaptureAdapter } from '../server/ai';
 import * as processes from './process-service';
+import { mediaPaths } from './media-paths';
 import * as evidence from './evidence-service';
 function canonical(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
@@ -37,12 +38,30 @@ export function page<T>(items: T[], query: ListQuery) {
     total: filtered.length,
   };
 }
+/** A signed, single-object upload slot; the browser PUTs bytes straight to storage. */
+export interface SignedUpload {
+  uploadId: string;
+  objectPath: string;
+  url: string;
+  contentType: string;
+  maxBytes: number;
+}
+const uploadTarget = (upload: SignedUpload) => ({
+  uploadId: upload.uploadId,
+  method: 'PUT',
+  url: upload.url,
+  headers: {
+    'content-type': upload.contentType,
+    'x-goog-content-length-range': `0,${upload.maxBytes}`,
+  },
+});
 export class Backend {
   constructor(
     readonly repositories: RepositoryProvider,
     readonly config: ServerConfig,
     private capture: GuardedCaptureAdapter,
     private analysis?: AnalysisQueue,
+    private uploads?: UploadSigner,
   ) {}
   async execute(
     endpoint: Endpoint,
@@ -110,6 +129,29 @@ export class Backend {
       captureFingerprint = digest(snapshot.process);
       extraction = await this.capture.extract(snapshot.capture.text ?? '', body.sample);
     }
+    const organizationId = context.actor.organizationId;
+    let upload: SignedUpload | undefined;
+    if (endpoint.operation === 'uploadRequest') {
+      const body = parseInput('uploadRequest', input);
+      await repository.transact((s) => {
+        processes.requireDraft(processes.getProcess(s, id));
+        reserveMediaSeconds(s, Math.ceil(body.durationSeconds));
+      });
+      upload = await this.signUpload(
+        (uploadId) => mediaPaths.recording(organizationId, id!, uploadId),
+        body.contentType,
+        body.bytes,
+      );
+    }
+    if (endpoint.operation === 'frameRequest') {
+      const body = parseInput('frameRequest', input);
+      await repository.query((s) => processes.getFrameStep(s, id!, body));
+      upload = await this.signUpload(
+        (uploadId) => mediaPaths.frame(organizationId, id!, uploadId),
+        'image/jpeg',
+        body.bytes,
+      );
+    }
     /** Work to start only after this request's own change commits. */
     const effects = { analysisStarted: false };
     const response = await repository.transact((s) => {
@@ -138,6 +180,7 @@ export class Backend {
         effects,
         extraction,
         captureFingerprint,
+        upload,
       );
       const response = JSON.parse(JSON.stringify(result));
       s.auditEvents.push({
@@ -156,6 +199,17 @@ export class Backend {
     if (effects.analysisStarted && this.analysis)
       await this.enqueueAnalysis(repository, context.actor.organizationId, id!);
     return response;
+  }
+  private async signUpload(
+    objectPathFor: (uploadId: string) => string,
+    contentType: string,
+    maxBytes: number,
+  ): Promise<SignedUpload> {
+    requireCondition(this.uploads, 'Media upload is not configured.', 503);
+    const uploadId = randomUUID();
+    const objectPath = objectPathFor(uploadId);
+    const { url } = await this.uploads.sign({ objectPath, contentType, maxBytes });
+    return { uploadId, objectPath, url, contentType, maxBytes };
   }
   private async enqueueAnalysis(repository: Repository, organizationId: string, scanId: string) {
     try {
@@ -229,6 +283,7 @@ export class Backend {
     effects: { analysisStarted: boolean },
     extraction?: Awaited<ReturnType<GuardedCaptureAdapter['extract']>>,
     expected?: string,
+    upload?: SignedUpload,
   ): unknown {
     switch (operation) {
       case 'processCreate':
@@ -238,6 +293,18 @@ export class Backend {
       case 'captureCreate': {
         const c = processes.createCapture(s, id!, parseInput(operation, input));
         return { id: c.id, processId: c.processId, kind: c.kind, createdAt: c.createdAt };
+      }
+      case 'uploadRequest': {
+        const body = parseInput(operation, input);
+        processes.createMediaCapture(s, id!, upload!, body);
+        return uploadTarget(upload!);
+      }
+      case 'frameRequest': {
+        const body = parseInput(operation, input);
+        const step = processes.getFrameStep(s, id!, body);
+        step.frameAtMs = body.atMs;
+        step.frameObjectPath = upload!.objectPath;
+        return uploadTarget(upload!);
       }
       case 'captureAnalyze': {
         const p = processes.getProcess(s, id);
@@ -295,9 +362,16 @@ export class Backend {
         let captures = 0,
           scans = 0;
         for (const c of s.captures)
-          if (c.expiresAt && Date.parse(c.expiresAt) <= Date.now() && c.text) {
+          if (
+            c.expiresAt &&
+            Date.parse(c.expiresAt) <= Date.now() &&
+            (c.text || c.segments || c.media?.sha256)
+          ) {
             delete c.text;
             delete c.fileName;
+            delete c.segments;
+            delete c.suggestedSteps;
+            if (c.media) delete c.media.sha256;
             captures++;
           }
         for (const scan of s.scans)

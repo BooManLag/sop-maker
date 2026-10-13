@@ -1,5 +1,12 @@
 import type { Store } from './store';
-import type { Execution, ProcessStep, Readiness } from '../domain/types';
+import type {
+  Execution,
+  MediaContentType,
+  ProcessStep,
+  Readiness,
+  SuggestedStep,
+  TranscriptSegment,
+} from '../domain/types';
 export type ReadOperation<T> = (store: Store) => T;
 export interface Repository {
   read(): Promise<Store>;
@@ -17,6 +24,32 @@ export interface CaptureAdapter {
     options?: { signal: AbortSignal; maxOutputTokens: number },
   ): Promise<ProcessStep[]>;
   questions(steps: ProcessStep[]): Promise<string[]>;
+}
+export interface UploadSigner {
+  sign(request: {
+    objectPath: string;
+    contentType: string;
+    maxBytes: number;
+  }): Promise<{ url: string }>;
+}
+export interface MediaStorage {
+  read(objectPath: string): Promise<Uint8Array>;
+  /** Moves an inspected object out of quarantine. Idempotent: a finished move is a no-op. */
+  promote(from: string, to: string): Promise<void>;
+  remove(objectPath: string): Promise<void>;
+}
+export interface Transcription {
+  segments: TranscriptSegment[];
+  steps: SuggestedStep[];
+  /** Audio length the model was billed for. */
+  audioSeconds: number;
+}
+export interface MediaTranscriber {
+  transcribe(
+    objectPath: string,
+    contentType: MediaContentType,
+    options?: { signal: AbortSignal },
+  ): Promise<Transcription>;
 }
 export interface AnalyticsService {
   readiness(records: Execution[]): Readiness;
