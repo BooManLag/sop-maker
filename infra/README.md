@@ -44,10 +44,10 @@ Every provider in `infra/tests/safety.tftest.hcl` is mocked, including its simul
 
 Identities (all short-lived via Workload Identity Federation, no keys):
 
-| Identity | Trusted workflow | Access |
-|---|---|---|
-| `<app>-tf-plan` | `infra.yml`, any ref, via the `github-infra-plan` provider | `roles/viewer`, `roles/iam.securityReviewer`, state bucket read, `roles/billing.viewer` |
-| `<app>-tf-apply` | `infra.yml` on `main` only | `roles/owner`, `roles/billing.costsManager` when `billing_account` is set |
+| Identity         | Trusted workflow                                           | Access                                                                                  |
+| ---------------- | ---------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `<app>-tf-plan`  | `infra.yml`, any ref, via the `github-infra-plan` provider | `roles/viewer`, `roles/iam.securityReviewer`, state bucket read, `roles/billing.viewer` |
+| `<app>-tf-apply` | `infra.yml` on `main` only                                 | `roles/owner`, `roles/billing.costsManager` when `billing_account` is set               |
 
 The planner provider maps only `attribute.infra_plan`, so its tokens can never match the deployer, eval or applier bindings (tested in `tests/safety.tftest.hcl`).
 
