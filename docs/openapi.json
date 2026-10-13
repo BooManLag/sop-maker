@@ -750,6 +750,366 @@
         }
       }
     },
+    "/processes/{id}/uploads": {
+      "post": {
+        "operationId": "uploadRequest",
+        "summary": "uploadRequest",
+        "description": "Requires write permission. Tenant comes only from verified Firebase custom claims. Review/admin writes require recent MFA by default.",
+        "security": [
+          {
+            "firebaseBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,128}$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Required in production, scoped to actor and tenant; retained for 24 hours. Reusing with different input returns 409.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{16,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "audio"
+                  },
+                  "expertReference": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_-]{1,128}$"
+                  },
+                  "contentType": {
+                    "type": "string",
+                    "enum": [
+                      "audio/webm",
+                      "audio/mp4"
+                    ]
+                  },
+                  "bytes": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 10000000
+                  },
+                  "durationSeconds": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "maximum": 600
+                  }
+                },
+                "required": [
+                  "kind",
+                  "expertReference",
+                  "contentType",
+                  "bytes",
+                  "durationSeconds"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success. Private identity claims and raw uploaded records are omitted. Collection endpoints return {items,nextCursor,total}. See docs/API.md for response shapes."
+          },
+          "400": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/processes/{id}/frames": {
+      "post": {
+        "operationId": "frameRequest",
+        "summary": "frameRequest",
+        "description": "Requires write permission. Tenant comes only from verified Firebase custom claims. Review/admin writes require recent MFA by default.",
+        "security": [
+          {
+            "firebaseBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,128}$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Required in production, scoped to actor and tenant; retained for 24 hours. Reusing with different input returns 409.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{16,128}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "captureId": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_-]{1,128}$"
+                  },
+                  "stepId": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_-]{1,128}$"
+                  },
+                  "atMs": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "bytes": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 500000
+                  }
+                },
+                "required": [
+                  "captureId",
+                  "stepId",
+                  "atMs",
+                  "bytes"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success. Private identity claims and raw uploaded records are omitted. Collection endpoints return {items,nextCursor,total}. See docs/API.md for response shapes."
+          },
+          "400": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Standard error; no stack, token, prompt or infrastructure details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/captures/{id}": {
       "get": {
         "operationId": "captureGet",
@@ -1322,6 +1682,15 @@
                             "type": "string",
                             "pattern": "^[A-Za-z0-9_-]{1,128}$"
                           }
+                        },
+                        "frameObjectPath": {
+                          "type": "string",
+                          "maxLength": 512
+                        },
+                        "frameAtMs": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 600000
                         }
                       },
                       "required": [
@@ -1558,6 +1927,15 @@
                             "type": "string",
                             "pattern": "^[A-Za-z0-9_-]{1,128}$"
                           }
+                        },
+                        "frameObjectPath": {
+                          "type": "string",
+                          "maxLength": 512
+                        },
+                        "frameAtMs": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 600000
                         }
                       },
                       "required": [
