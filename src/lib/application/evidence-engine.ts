@@ -16,6 +16,8 @@ export class EvidenceEngine implements AnalyticsService {
       missing.push('Technician references are needed for within-technician comparisons.');
     if (checklists.length < records.length * 0.8)
       missing.push('Checklist values are needed for at least 80% of jobs.');
+    if (records.some((r) => Number.isNaN(Date.parse(r.timestamp))))
+      missing.push('Every job needs a valid timestamp so later jobs can be held out for checking.');
     if (records.some((r) => !r.equipmentModel || !r.jobType))
       missing.push('Equipment model and job type are required for comparable groups.');
     return {
