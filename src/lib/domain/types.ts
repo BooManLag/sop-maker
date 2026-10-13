@@ -21,6 +21,9 @@ export interface ProcessStep {
   durationMaxSeconds?: number;
   source: 'expert_walkthrough' | 'baseline' | 'validated_field_practice';
   evidenceLinks?: ID[];
+  /** Suggested video frame for this step, in milliseconds from the recording start. */
+  frameAtMs?: number;
+  frameObjectPath?: string;
 }
 export interface ProcessVersion {
   id: ID;
@@ -50,8 +53,32 @@ export interface ExpertCapture {
   text?: string;
   fileName?: string;
   questions?: string[];
+  media?: {
+    objectPath: string;
+    /** Set once the recording has passed inspection and left quarantine. */
+    cleanPath?: string;
+    /** SHA-256 of the recording, so identical uploads reuse one transcription. */
+    sha256?: string;
+    contentType: MediaContentType;
+    declaredSeconds: number;
+  };
+  status?: 'awaiting_upload' | 'transcribed' | 'rejected' | 'failed';
+  segments?: TranscriptSegment[];
+  /** Steps as the model suggested them, kept apart from the expert's later edits. */
+  suggestedSteps?: SuggestedStep[];
   createdAt?: string;
   expiresAt?: string;
+}
+export const mediaContentTypes = ['audio/webm', 'audio/mp4'] as const;
+export type MediaContentType = (typeof mediaContentTypes)[number];
+export interface SuggestedStep {
+  action: string;
+  frameAtMs: number;
+}
+export interface TranscriptSegment {
+  startMs: number;
+  endMs: number;
+  text: string;
 }
 export interface Clarification {
   id: ID;

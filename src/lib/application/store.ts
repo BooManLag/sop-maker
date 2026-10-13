@@ -210,15 +210,18 @@ export function pruneExpired(s: Store, now = Date.now()) {
   s.auditEvents = retained;
   return s;
 }
+const activeQuota = (s: Store, key: string, now: number) =>
+  s.quotas.find((q) => q.key === key && q.expiresAt > now);
 export function consumeQuota(
   s: Store,
   key: string,
   limit: number,
   windowMs: number,
   now = Date.now(),
+  amount = 1,
 ) {
-  let quota = s.quotas.find((q) => q.key === key && q.expiresAt > now);
-  if (quota && quota.count >= limit)
+  let quota = activeQuota(s, key, now);
+  if (quota && quota.count + amount > limit)
     throw new ApiError(
       429,
       'The request quota has been reached. Try again later.',
@@ -230,5 +233,18 @@ export function consumeQuota(
     quota = { key, count: 0, expiresAt: now + windowMs };
     s.quotas.push(quota);
   }
-  quota.count++;
+  quota.count += amount;
+}
+const mediaQuotaKey = 'media:tenant:seconds';
+const mediaQuotaWindowMs = 30 * 86400_000;
+/** Reserves recording seconds against the tenant's monthly allowance before an upload. */
+export function reserveMediaSeconds(s: Store, seconds: number, now = Date.now()) {
+  consumeQuota(s, mediaQuotaKey, LIMITS.mediaSecondsPerMonth, mediaQuotaWindowMs, now, seconds);
+}
+/** Corrects a reservation once the real cost is known (refund if negative); never refuses. */
+export function adjustMediaSeconds(s: Store, delta: number, now = Date.now()) {
+  const quota = activeQuota(s, mediaQuotaKey, now);
+  if (quota) quota.count = Math.max(0, quota.count + delta);
+  else if (delta > 0)
+    s.quotas.push({ key: mediaQuotaKey, count: delta, expiresAt: now + mediaQuotaWindowMs });
 }
