@@ -14,7 +14,8 @@ test('an expert walkthrough becomes a published baseline, surviving a mid-flow r
   await page.getByRole('button', { name: 'Use sample walkthrough' }).click();
   await page.getByRole('button', { name: 'Analyze walkthrough' }).click();
 
-  await expect(page).toHaveURL(/\/captures\/[^/]+\/steps\?sample=1$/);
+  // The first draft compiles several dev routes on demand; slower machines need more than 5s.
+  await expect(page).toHaveURL(/\/captures\/[^/]+\/steps\?sample=1$/, { timeout: 30_000 });
   await page.getByRole('button', { name: 'Clarify the know-how' }).click();
   await expect(page).toHaveURL(/\/clarify\?sample=1$/);
   await useSampleExplanation(page, 'Next question');

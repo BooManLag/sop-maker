@@ -99,7 +99,9 @@ export class MediaWorker {
     const candidate = earlier
       ? { segments: earlier.segments, steps: earlier.suggestedSteps, audioSeconds: 0 }
       : await this.transcriber
-          .transcribe(clean, recording.media.contentType)
+          .transcribe(clean, recording.media.contentType, {
+            durationSeconds: recording.media.declaredSeconds,
+          })
           .catch(() => undefined);
     const recordingMs = Math.ceil(recording.media.declaredSeconds * 1000);
     const parsed = transcriptionSchema(recordingMs).safeParse(candidate);

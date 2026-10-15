@@ -306,6 +306,9 @@ export class Backend {
         step.frameObjectPath = upload!.objectPath;
         return uploadTarget(upload!);
       }
+      case 'transcriptSave':
+        processes.saveTranscript(s, id!, parseInput(operation, input));
+        return processes.captureDraftDto(s, id);
       case 'captureAnalyze': {
         const p = processes.getProcess(s, id);
         processes.requireDraft(p);

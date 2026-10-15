@@ -143,6 +143,22 @@ export const schemas = {
       bytes: z.number().int().positive().max(LIMITS.frameBytes),
     })
     .strict(),
+  transcriptSave: z
+    .object({
+      segments: z
+        .array(
+          z
+            .object({
+              startMs: z.number().int().min(0),
+              endMs: z.number().int().min(0),
+              text: prose,
+            })
+            .strict(),
+        )
+        .min(1)
+        .max(LIMITS.steps * 10),
+    })
+    .strict(),
   captureAnalyze: z.object({ captureId: idSchema, sample: z.boolean().default(false) }).strict(),
   clarificationCreate: z
     .object({
@@ -226,6 +242,12 @@ export const endpoints: Endpoint[] = [
     create: true,
   },
   { operation: 'captureGet', method: 'GET', path: 'captures/:id', permission: 'read' },
+  {
+    operation: 'transcriptSave',
+    method: 'POST',
+    path: 'captures/:id/transcript',
+    permission: 'write',
+  },
   {
     operation: 'captureAnalyze',
     method: 'POST',
