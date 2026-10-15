@@ -6,16 +6,12 @@ import { draftPath } from '@/features/capture/paths';
 export default async function ClarifyPage(
   props: PageProps<'/processes/[processId]/captures/[captureId]/clarify'>,
 ) {
-  const [{ processId, captureId }, { sample }] = await Promise.all([
-    props.params,
-    props.searchParams,
-  ]);
-  const isSample = sample === '1';
+  const { processId, captureId } = await props.params;
   return (
     <>
-      <BackLink href={draftPath(processId, captureId, 'steps', isSample)} />
+      <BackLink href={draftPath(processId, captureId, 'steps')} />
       <FlowSteps items={createFlow} current={1} />
-      <Clarify processId={processId} captureId={captureId} sample={isSample} />
+      <Clarify processId={processId} captureId={captureId} />
     </>
   );
 }

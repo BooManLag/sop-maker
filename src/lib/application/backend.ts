@@ -3,7 +3,7 @@ import type { Repository, RepositoryProvider, UploadSigner } from './ports';
 import type { AnalysisQueue } from './analysis/worker';
 import type { Store } from './store';
 import { consumeQuota, pruneExpired, reserveMediaSeconds } from './store';
-import { authorize, type RequestContext } from '../server/auth';
+import { authorize, type Actor, type RequestContext } from '../server/auth';
 import { LIMITS, type ServerConfig } from '../server/config';
 import { type Endpoint, type ListQuery, parseInput } from '../server/contracts';
 import { ApiError, requireCondition } from '../server/errors';
@@ -74,9 +74,7 @@ export class Backend {
     const input = parseInput(endpoint.operation, raw);
     const repository = this.repositories.forTenant(context.actor.organizationId);
     if (endpoint.method === 'GET')
-      return repository.query((s) =>
-        this.read(s, endpoint.operation, id, query, context.actor.demo),
-      );
+      return repository.query((s) => this.read(s, endpoint.operation, id, query, context.actor));
     if (this.config.mode === 'production' && !context.idempotencyKey)
       throw new ApiError(400, 'Idempotency-Key is required for state-changing requests.');
     if (context.idempotencyKey && !/^[A-Za-z0-9_-]{16,128}$/.test(context.idempotencyKey))
@@ -224,7 +222,7 @@ export class Backend {
     operation: Endpoint['operation'],
     id: string | undefined,
     q: ListQuery,
-    demo: boolean,
+    actor: Actor,
   ): unknown {
     switch (operation) {
       case 'workspace':
@@ -233,7 +231,9 @@ export class Backend {
           findings: s.findings.slice(0, 50),
           trials: s.trials.slice(0, 50),
           changes: s.changes.slice(0, 50),
-          demo,
+          demo: actor.demo,
+          organization: actor.organizationId,
+          role: actor.role,
           hasMore: {
             processes: s.processes.length > 50,
             findings: s.findings.length > 50,
@@ -352,7 +352,7 @@ export class Backend {
       case 'findingRestore':
         return evidence.restoreFinding(s, id!);
       case 'findingExplain':
-        return evidence.explainFinding(s, id!, ctx.actor);
+        return evidence.explainFinding(s, id!, parseInput(operation, input));
       case 'trialCreate':
         return evidence.createTrial(s, parseInput(operation, input), ctx.actor);
       case 'trialResults':
