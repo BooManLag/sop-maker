@@ -9,7 +9,6 @@ COPY . .
 RUN npm run build
 FROM node:24-bookworm-slim AS runtime
 RUN --mount=type=secret,id=npm_ca,mode=0444 \
-    sed -i 's|http://deb.debian.org|https://deb.debian.org|g' /etc/apt/sources.list.d/debian.sources && \
     if [ -f /run/secrets/npm_ca ]; then \
       export https_proxy="${HTTPS_PROXY:-}"; \
       printf 'Acquire::https::CaInfo "/run/secrets/npm_ca";\n' > /etc/apt/apt.conf.d/99-build-ca; \
