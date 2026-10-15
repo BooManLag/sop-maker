@@ -16,9 +16,9 @@ const config: NextConfig = {
           {
             key: 'Content-Security-Policy',
             value:
-              "default-src 'self'; script-src 'self' 'unsafe-inline'" +
+              "default-src 'self'; script-src 'self' 'unsafe-inline' https://apis.google.com" +
               (process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : '') +
-              "; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://storage.googleapis.com; media-src 'self' blob:; font-src 'self'; connect-src 'self' https://storage.googleapis.com; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
+              "; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://storage.googleapis.com https://lh3.googleusercontent.com; media-src 'self' blob:; font-src 'self'; connect-src 'self' https://storage.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com; frame-src https://*.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
           },
         ],
       },
