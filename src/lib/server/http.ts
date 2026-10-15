@@ -10,6 +10,7 @@ import { AdmissionControl, readJson } from './limits';
 import { Observability } from './observability';
 import { withDeadline } from './deadline';
 import { localRequestOrigin } from './origin';
+import type { LocalMediaUploads } from '../infrastructure/local-media';
 export interface HttpDependencies {
   backend: Backend;
   config: ServerConfig;
@@ -18,6 +19,8 @@ export interface HttpDependencies {
   observability?: Observability;
   /** Present when scans are analyzed through Cloud Tasks. */
   analysisTasks?: { worker: AnalysisWorker; verify: (request: Request) => Promise<boolean> };
+  /** Loopback demo only: receives uploads addressed by locally signed URLs. */
+  mediaUploads?: LocalMediaUploads;
 }
 /** Cloud Tasks retries a failed delivery; the last attempt records the failure on the scan. */
 export const ANALYSIS_MAX_ATTEMPTS = 3;
@@ -99,6 +102,15 @@ export function createHttpHandler(dependencies: HttpDependencies) {
         if (!job.success) throw new ApiError(400, 'Invalid analysis job.');
         const retries = Number(request.headers.get('x-cloudtasks-taskretrycount') ?? 0);
         await tasks.worker.process(job.data, retries + 1 >= ANALYSIS_MAX_ATTEMPTS);
+        status = 204;
+        return new Response(null, { status, headers });
+      }
+      if (path.join('/') === 'internal/media-upload' && request.method === 'PUT') {
+        route = 'internal/media-upload';
+        // The signed grant authorizes the write, as a Cloud Storage signed URL would.
+        if (!dependencies.mediaUploads || !localOrigin)
+          throw new ApiError(404, 'Endpoint not found.');
+        await dependencies.mediaUploads.receive(request);
         status = 204;
         return new Response(null, { status, headers });
       }

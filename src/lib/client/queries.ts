@@ -17,8 +17,13 @@ export const useWorkspace = () =>
   useQuery({ queryKey: queryKeys.workspace, queryFn: api.workspace });
 export const useProcess = (id: string) =>
   useQuery({ queryKey: queryKeys.process(id), queryFn: () => api.process(id) });
+/** Polls while a recording is still waiting to be inspected and transcribed. */
 export const useCapture = (id: string) =>
-  useQuery({ queryKey: queryKeys.capture(id), queryFn: () => api.capture(id) });
+  useQuery({
+    queryKey: queryKeys.capture(id),
+    queryFn: () => api.capture(id),
+    refetchInterval: (query) => (query.state.data?.status === 'awaiting_upload' ? 2000 : false),
+  });
 /** Polls while a live scan is being analyzed in the background. */
 export const useScan = (id: string) =>
   useQuery({

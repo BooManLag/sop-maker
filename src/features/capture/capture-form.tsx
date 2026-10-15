@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Eyebrow } from '@/components/common/eyebrow';
 import { ErrorBanner } from '@/components/common/error-banner';
-import { UploadArea, megabytes } from '@/components/common/upload-area';
+import { RecordingInput } from './recording-input';
 import { FormActions, TwoFields, WithSideRail, sideRailClass } from '@/components/common/layouts';
 import {
   Form,
@@ -28,6 +28,14 @@ import { api } from '@/lib/client/browser';
 import { useWorkspaceMutation } from '@/lib/client/queries';
 import { identifierPattern, shortText } from '@/lib/domain/validation';
 import { draftPath } from './paths';
+import {
+  maxRecordingSeconds,
+  recordingSeconds,
+  recordingType,
+  rememberRecording,
+  useRecorder,
+  type Recording,
+} from './recording';
 
 const sampleWalkthrough =
   'Sample expert walkthrough: isolate supply, replace valve, test pressure, wait 3–5 minutes, test again, close job.';
@@ -41,15 +49,28 @@ const captureSchema = z
       .regex(identifierPattern, 'Use letters, digits, hyphens or underscores only.'),
     walkthrough: z.string().max(20_000),
     sample: z.boolean(),
+    recorded: z.boolean(),
   })
-  .refine((v) => v.sample || v.walkthrough.trim(), {
+  .refine((v) => v.sample || v.recorded || v.walkthrough.trim(), {
     path: ['walkthrough'],
-    message: 'Paste a walkthrough or choose the sample.',
+    message: 'Record or upload audio, paste a walkthrough, or choose the sample.',
   });
 type CaptureValues = z.infer<typeof captureSchema>;
 
-async function startDraft(values: CaptureValues) {
+async function startDraft({ recording, ...values }: CaptureValues & { recording?: Recording }) {
   const process = await api.createProcess({ title: values.title, equipment: values.equipment });
+  if (recording) {
+    const target = await api.requestUpload(process.id, {
+      kind: 'audio',
+      expertReference: values.expertReference,
+      contentType: recording.contentType,
+      bytes: recording.blob.size,
+      durationSeconds: Math.min(Math.ceil(recording.seconds), maxRecordingSeconds),
+    });
+    rememberRecording(target.uploadId, recording.blob);
+    await api.upload(target, recording.blob);
+    return draftPath(process.id, target.uploadId, 'transcript', false);
+  }
   const capture = await api.createCapture(process.id, {
     kind: 'text',
     expertReference: values.expertReference,
@@ -61,7 +82,8 @@ async function startDraft(values: CaptureValues) {
 
 export function CaptureForm() {
   const router = useRouter();
-  const [mediaFile, setMediaFile] = useState<string>();
+  const [recording, setRecording] = useState<Recording>();
+  const [fileError, setFileError] = useState<string>();
   const form = useForm<CaptureValues>({
     resolver: zodResolver(captureSchema),
     defaultValues: {
@@ -70,16 +92,44 @@ export function CaptureForm() {
       expertReference: 'expert_01',
       walkthrough: '',
       sample: false,
+      recorded: false,
     },
   });
   const analyze = useWorkspaceMutation(startDraft);
   const sample = useWatch({ control: form.control, name: 'sample' });
 
+  function applyRecording(next?: Recording) {
+    setRecording(next);
+    setFileError(undefined);
+    form.setValue('recorded', !!next);
+    if (next) {
+      form.setValue('sample', false);
+      form.setValue('walkthrough', '');
+      form.clearErrors('walkthrough');
+    }
+  }
+  const recorder = useRecorder(applyRecording);
+  const notice = fileError ?? (recorder.state.phase === 'error' ? recorder.state.message : '');
+
+  async function chooseFile(file: File) {
+    const contentType = recordingType(file.type);
+    if (!contentType)
+      return setFileError('Choose a WebM or M4A audio recording, or paste the walkthrough.');
+    try {
+      const seconds = await recordingSeconds(file);
+      if (seconds > maxRecordingSeconds)
+        return setFileError('Recordings can be up to 10 minutes long.');
+      applyRecording({ blob: file, name: file.name, contentType, seconds });
+    } catch {
+      setFileError('This recording could not be read. Try another file.');
+    }
+  }
+
   function chooseSample() {
     form.setValue('title', 'Valve Replacement', { shouldValidate: true });
     form.setValue('walkthrough', sampleWalkthrough);
     form.setValue('sample', true);
-    setMediaFile(undefined);
+    applyRecording(undefined);
   }
 
   return (
@@ -91,7 +141,10 @@ export function CaptureForm() {
             <form
               className="grid gap-6"
               onSubmit={form.handleSubmit((values) =>
-                analyze.mutate(values, { onSuccess: (path) => router.push(path) }),
+                analyze.mutate(
+                  { ...values, recording: values.recorded ? recording : undefined },
+                  { onSuccess: (path) => router.push(path) },
+                ),
               )}
             >
               <TwoFields>
@@ -139,26 +192,16 @@ export function CaptureForm() {
                 )}
               />
 
-              <UploadArea
-                title={mediaFile ?? 'Add an expert walkthrough'}
-                hint="Video, audio, document, or checklist · up to 20 MB"
-                accept="video/*,audio/*,.pdf,.txt,.docx"
-                limit={{
-                  bytes: megabytes(20),
-                  onExceeded: () =>
-                    form.setError('walkthrough', {
-                      message: 'Please choose a file smaller than 20 MB.',
-                    }),
-                }}
-                onFile={(file) => {
-                  setMediaFile(file.name);
-                  form.setValue('sample', false);
-                }}
+              <RecordingInput
+                recording={recording}
+                recorder={recorder}
+                onFile={(file) => void chooseFile(file)}
+                onRemove={() => applyRecording(undefined)}
+                onTooLarge={() => setFileError('Choose a recording smaller than 10 MB.')}
               />
-              {mediaFile && (
-                <Alert className="my-0">
-                  Media extraction is not connected yet. Choose the sample below to explore the
-                  flow, or paste your walkthrough.
+              {notice && (
+                <Alert variant="warning" className="my-0">
+                  {notice}
                 </Alert>
               )}
 
@@ -176,7 +219,7 @@ export function CaptureForm() {
                         onChange={(e) => {
                           field.onChange(e);
                           form.setValue('sample', false);
-                          setMediaFile(undefined);
+                          if (recording) applyRecording(undefined);
                         }}
                       />
                     </FormControl>
@@ -186,7 +229,13 @@ export function CaptureForm() {
               />
               <FormActions>
                 <Button type="submit" disabled={analyze.isPending}>
-                  {analyze.isPending ? 'Preparing draft…' : 'Analyze walkthrough'}
+                  {analyze.isPending
+                    ? recording
+                      ? 'Uploading and transcribing…'
+                      : 'Preparing draft…'
+                    : recording
+                      ? 'Transcribe recording'
+                      : 'Analyze walkthrough'}
                   <ArrowRight size={16} aria-hidden />
                 </Button>
               </FormActions>
@@ -223,7 +272,8 @@ export function CaptureForm() {
             Nothing is published until a person reviews and approves it.
           </p>
           <p className="text-xs! text-brand-400">
-            Demo extraction adapter. Real Gemini processing is not connected.
+            Demo extraction and transcription. Recordings stay on this computer and receive a sample
+            transcript; real Gemini and speech processing are not connected.
           </p>
         </aside>
       </WithSideRail>

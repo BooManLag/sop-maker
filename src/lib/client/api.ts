@@ -23,11 +23,29 @@ export type Workspace = {
   changes: ChangeRequest[];
   demo: boolean;
 };
+export type TranscriptSegment = { startMs: number; endMs: number; text: string };
 export type DraftCapture = {
   id: string;
   processId: string;
   questions: string[];
   answers: { question: string; answer: string }[];
+  /** Present for recordings only. */
+  status?: 'awaiting_upload' | 'transcribed' | 'rejected' | 'failed';
+  segments?: TranscriptSegment[];
+  durationMs?: number;
+};
+export type UploadTarget = {
+  uploadId: string;
+  method: 'PUT';
+  url: string;
+  headers: Record<string, string>;
+};
+export type RecordingUpload = {
+  kind: 'audio';
+  expertReference: string;
+  contentType: 'audio/webm' | 'audio/mp4';
+  bytes: number;
+  durationSeconds: number;
 };
 export type Extraction = { steps: ProcessStep[]; questions: string[]; notice: string };
 export type ScanDetail = {
@@ -106,6 +124,27 @@ export function createApiClient({
     analyzeCapture: (processId: string, body: { captureId: string; sample: boolean }) =>
       post<Extraction>(`processes/${processId}/analyze-capture`, body),
     capture: (id: string) => get<DraftCapture>(`captures/${id}`),
+    requestUpload: (processId: string, body: RecordingUpload) =>
+      post<UploadTarget>(`processes/${processId}/uploads`, body),
+    /** PUTs the bytes to the signed target; storage, not the API, receives them. */
+    async upload(target: UploadTarget, file: Blob) {
+      const response = await send(target.url, {
+        method: target.method,
+        headers: target.headers,
+        body: file,
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new ApiRequestError(
+          payload.error ?? 'The recording could not be uploaded. Try again.',
+          response.status,
+          payload.code,
+          payload.requestId,
+        );
+      }
+    },
+    saveTranscript: (captureId: string, segments: TranscriptSegment[]) =>
+      post<DraftCapture>(`captures/${captureId}/transcript`, { segments }),
     saveDraft: (processId: string, steps: ProcessStep[]) =>
       post<ProcessDto>(`processes/${processId}/draft`, { steps }),
     answerClarification: (
