@@ -11,6 +11,14 @@ import { AdmissionControl } from './limits';
 import { AnalysisWorker, InlineAnalysisQueue } from '../application/analysis/worker';
 import { adkDriver, vertexEmbedder } from './scan-agent';
 import { CloudTasksQueue, cloudTasksVerifier } from './cloud-tasks';
+import { MediaWorker } from '../application/media-worker';
+import {
+  LocalMediaStore,
+  LocalMediaUploads,
+  LocalUploadSigner,
+} from '../infrastructure/local-media';
+import { DemoTranscriber } from '../infrastructure/demo-transcriber';
+import path from 'node:path';
 let runtime: ReturnType<typeof compose> | undefined;
 function compose() {
   const config = readConfig();
@@ -34,6 +42,16 @@ function compose() {
       ? new CloudTasksQueue(config.tasks)
       : new InlineAnalysisQueue(worker)
     : undefined;
+  // The loopback demo keeps media on local disk and transcribes with a labelled sample.
+  const media =
+    config.mode === 'demo'
+      ? (() => {
+          const signer = new LocalUploadSigner();
+          const store = new LocalMediaStore(path.join(config.dataDir, 'media'));
+          const worker = new MediaWorker(repositories, store, new DemoTranscriber());
+          return { signer, uploads: new LocalMediaUploads(signer, store, worker) };
+        })()
+      : undefined;
   const backend = new Backend(
     repositories,
     config,
@@ -45,6 +63,7 @@ function compose() {
           : new UnavailableCaptureAdapter(),
     ),
     queue,
+    media?.signer,
   );
   const admission = new AdmissionControl();
   return {
@@ -57,6 +76,7 @@ function compose() {
       admission,
       analysisTasks:
         worker && config.tasks ? { worker, verify: cloudTasksVerifier(config.tasks) } : undefined,
+      mediaUploads: media?.uploads,
     }),
   };
 }
