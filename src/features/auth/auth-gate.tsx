@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,11 @@ type GateState =
   | { phase: 'open' }
   | { phase: 'signed_out'; auth: AuthService }
   | { phase: 'signed_in'; auth: AuthService; user: AuthUser };
+
+/** The signed-in person and sign-out; null in the loopback demo, where sign-in is off. */
+export type Session = { user: AuthUser; signOut: () => Promise<void> } | null;
+const SessionContext = createContext<Session>(null);
+export const useSession = () => useContext(SessionContext);
 
 /**
  * Shows the workspace only to signed-in people. `load` resolves to null when sign-in is not
@@ -46,10 +51,9 @@ export function AuthGate({
   if (state.phase === 'signed_out') return <SignIn auth={state.auth} />;
   if (state.phase === 'signed_in')
     return (
-      <>
-        <AccountBar auth={state.auth} user={state.user} />
+      <SessionContext.Provider value={{ user: state.user, signOut: () => state.auth.signOut() }}>
         {children}
-      </>
+      </SessionContext.Provider>
     );
   return <>{children}</>;
 }
@@ -112,17 +116,5 @@ function CodeForm({ onSubmit }: { onSubmit: (code: string) => Promise<void> }) {
       />
       <Button type="submit">Verify</Button>
     </form>
-  );
-}
-
-/** Who is signed in, and sign-out. */
-function AccountBar({ auth, user }: { auth: AuthService; user: AuthUser }) {
-  return (
-    <div className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-2 text-sm">
-      <span className="text-muted-foreground">{user.email}</span>
-      <Button variant="ghost" className="ml-auto" onClick={() => void auth.signOut()}>
-        Sign out
-      </Button>
-    </div>
   );
 }

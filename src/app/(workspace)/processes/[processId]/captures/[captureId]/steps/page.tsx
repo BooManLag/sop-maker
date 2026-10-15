@@ -6,10 +6,7 @@ import { DraftSteps } from '@/features/capture/draft-steps';
 export default async function DraftStepsPage(
   props: PageProps<'/processes/[processId]/captures/[captureId]/steps'>,
 ) {
-  const [{ processId, captureId }, { sample }] = await Promise.all([
-    props.params,
-    props.searchParams,
-  ]);
+  const { processId, captureId } = await props.params;
   return (
     <>
       <BackLink href="/processes/new" />
@@ -19,7 +16,7 @@ export default async function DraftStepsPage(
         title="Here's the process we captured."
         description="Put the steps in order. Add anything the walkthrough missed."
       />
-      <DraftSteps processId={processId} captureId={captureId} sample={sample === '1'} />
+      <DraftSteps processId={processId} captureId={captureId} />
     </>
   );
 }

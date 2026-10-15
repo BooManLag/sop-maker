@@ -34,7 +34,11 @@ export async function loadFirebaseAuth(): Promise<AuthService | null> {
   };
   return {
     onChange: (listener) =>
-      firebase.onAuthStateChanged(auth, (user) => listener(user && { email: user.email })),
+      firebase.onAuthStateChanged(auth, (user) =>
+        listener(
+          user && { email: user.email, displayName: user.displayName, photoURL: user.photoURL },
+        ),
+      ),
     async signIn() {
       try {
         await firebase.signInWithPopup(auth, new firebase.GoogleAuthProvider());

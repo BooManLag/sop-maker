@@ -11,7 +11,7 @@ export default function OverviewPage() {
       <PathCards />
       <FeaturedFinding />
       <LivingStandards />
-      <Principle aside="Sample data throughout">
+      <Principle>
         Evidence opens the conversation. <strong>Your people approve the change.</strong>
       </Principle>
     </>

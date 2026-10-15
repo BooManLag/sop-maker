@@ -31,7 +31,7 @@ export function WithDraft({
   );
 }
 
-export function DraftSteps(props: { processId: string; captureId: string; sample: boolean }) {
+export function DraftSteps(props: { processId: string; captureId: string }) {
   return (
     <WithDraft processId={props.processId}>
       {(draft) => <StepEditor {...props} initialSteps={draft.versions[0].steps} />}

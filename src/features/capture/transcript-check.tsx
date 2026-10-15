@@ -140,7 +140,7 @@ function TranscriptForm({
             disabled={blank || save.isPending}
             onClick={() =>
               save.mutate(segments, {
-                onSuccess: () => router.push(draftPath(processId, captureId, 'steps', false)),
+                onSuccess: () => router.push(draftPath(processId, captureId, 'steps')),
               })
             }
           >
