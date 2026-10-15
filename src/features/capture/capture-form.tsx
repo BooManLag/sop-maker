@@ -2,14 +2,13 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm, useWatch } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ArrowRight, ArrowUpRight, Check, FileText, ShieldCheck } from 'lucide-react';
+import { ArrowRight, ShieldCheck } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Eyebrow } from '@/components/common/eyebrow';
 import { ErrorBanner } from '@/components/common/error-banner';
 import { RecordingInput } from './recording-input';
 import { FormActions, TwoFields, WithSideRail, sideRailClass } from '@/components/common/layouts';
@@ -25,7 +24,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { api } from '@/lib/client/browser';
-import { useWorkspaceMutation } from '@/lib/client/queries';
+import { useWorkspace, useWorkspaceMutation } from '@/lib/client/queries';
 import { identifierPattern, shortText } from '@/lib/domain/validation';
 import { draftPath } from './paths';
 import {
@@ -37,9 +36,6 @@ import {
   type Recording,
 } from './recording';
 
-const sampleWalkthrough =
-  'Sample expert walkthrough: isolate supply, replace valve, test pressure, wait 3–5 minutes, test again, close job.';
-
 const captureSchema = z
   .object({
     title: shortText,
@@ -48,12 +44,11 @@ const captureSchema = z
       .string()
       .regex(identifierPattern, 'Use letters, digits, hyphens or underscores only.'),
     walkthrough: z.string().max(20_000),
-    sample: z.boolean(),
     recorded: z.boolean(),
   })
-  .refine((v) => v.sample || v.recorded || v.walkthrough.trim(), {
+  .refine((v) => v.recorded || v.walkthrough.trim(), {
     path: ['walkthrough'],
-    message: 'Record or upload audio, paste a walkthrough, or choose the sample.',
+    message: 'Record or upload audio, or paste a walkthrough.',
   });
 type CaptureValues = z.infer<typeof captureSchema>;
 
@@ -69,15 +64,15 @@ async function startDraft({ recording, ...values }: CaptureValues & { recording?
     });
     rememberRecording(target.uploadId, recording.blob);
     await api.upload(target, recording.blob);
-    return draftPath(process.id, target.uploadId, 'transcript', false);
+    return draftPath(process.id, target.uploadId, 'transcript');
   }
   const capture = await api.createCapture(process.id, {
     kind: 'text',
     expertReference: values.expertReference,
-    text: values.sample ? sampleWalkthrough : values.walkthrough,
+    text: values.walkthrough,
   });
-  await api.analyzeCapture(process.id, { captureId: capture.id, sample: values.sample });
-  return draftPath(process.id, capture.id, 'steps', values.sample);
+  await api.analyzeCapture(process.id, { captureId: capture.id });
+  return draftPath(process.id, capture.id, 'steps');
 }
 
 export function CaptureForm() {
@@ -88,22 +83,20 @@ export function CaptureForm() {
     resolver: zodResolver(captureSchema),
     defaultValues: {
       title: '',
-      equipment: 'Valve assembly X',
+      equipment: '',
       expertReference: 'expert_01',
       walkthrough: '',
-      sample: false,
       recorded: false,
     },
   });
   const analyze = useWorkspaceMutation(startDraft);
-  const sample = useWatch({ control: form.control, name: 'sample' });
+  const demo = useWorkspace().data?.demo;
 
   function applyRecording(next?: Recording) {
     setRecording(next);
     setFileError(undefined);
     form.setValue('recorded', !!next);
     if (next) {
-      form.setValue('sample', false);
       form.setValue('walkthrough', '');
       form.clearErrors('walkthrough');
     }
@@ -123,13 +116,6 @@ export function CaptureForm() {
     } catch {
       setFileError('This recording could not be read. Try another file.');
     }
-  }
-
-  function chooseSample() {
-    form.setValue('title', 'Valve Replacement', { shouldValidate: true });
-    form.setValue('walkthrough', sampleWalkthrough);
-    form.setValue('sample', true);
-    applyRecording(undefined);
   }
 
   return (
@@ -168,7 +154,7 @@ export function CaptureForm() {
                     <FormItem>
                       <FormLabel>Equipment / job type</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input placeholder="e.g. Valve assembly X" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -218,7 +204,6 @@ export function CaptureForm() {
                         {...field}
                         onChange={(e) => {
                           field.onChange(e);
-                          form.setValue('sample', false);
                           if (recording) applyRecording(undefined);
                         }}
                       />
@@ -244,37 +229,16 @@ export function CaptureForm() {
         </Card>
 
         <aside className={sideRailClass}>
-          <Card tone="sample">
-            <Eyebrow>TRY THE COMPLETE LOOP</Eyebrow>
-            <FileText size={29} aria-hidden className="mt-6 text-brand-400" />
-            <h3 className="text-xl! leading-[1.3]">
-              Valve replacement,
-              <br />
-              from the field.
-            </h3>
-            <p>
-              An expert replaces a valve, waits for pressure to settle, and checks it again.
-              Let&apos;s capture the why.
-            </p>
-            <Button variant="secondary" onClick={chooseSample}>
-              Use sample walkthrough
-              <ArrowUpRight size={15} aria-hidden />
-            </Button>
-            {sample && (
-              <small className="flex! items-center gap-2 text-xs! text-brand-600!">
-                <Check size={14} aria-hidden />
-                Sample selected
-              </small>
-            )}
-          </Card>
           <p className="mt-5.5 flex gap-2.5 text-xs! leading-[1.7] text-brand-400">
             <ShieldCheck size={18} aria-hidden className="mt-1 shrink-0" />
             Nothing is published until a person reviews and approves it.
           </p>
-          <p className="text-xs! text-brand-400">
-            Demo extraction and transcription. Recordings stay on this computer and receive a sample
-            transcript; real Gemini and speech processing are not connected.
-          </p>
+          {demo && (
+            <p className="text-xs! text-brand-400">
+              Demo extraction and transcription. Recordings stay on this computer and receive a
+              sample transcript; real Gemini and speech processing are not connected.
+            </p>
+          )}
         </aside>
       </WithSideRail>
     </>

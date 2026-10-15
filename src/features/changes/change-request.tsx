@@ -123,8 +123,7 @@ function ProposalForm({ change }: { change: ChangeRequestDetail }) {
                 <ArrowRight size={15} aria-hidden />
               </Button>
               <small>
-                Demo review queue. No notification is sent. Version 1 remains the published
-                standard.
+                The published standard stays in place until your organization approves this change.
               </small>
             </Card>
           </WithSideRail>

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, ArrowUpRight, Check, Download, Search } from 'lucide-react';
+import { ArrowRight, Check, Download, FileSpreadsheet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -24,18 +24,10 @@ import type { ProcessDto, ServiceRecord } from '@/lib/client/api';
 import { useWorkspace, useWorkspaceMutation } from '@/lib/client/queries';
 import { readServiceRecords } from '@/lib/domain/records';
 
-/** Only the seeded demo baseline has a sample scenario. */
-const sampleProcessId = 'valve-replacement';
+type Evidence = { fileName: string; rows: ServiceRecord[] } | null;
 
-type Evidence =
-  { kind: 'sample' } | { kind: 'records'; fileName: string; rows: ServiceRecord[] } | null;
-
-async function checkEvidence(processId: string, evidence: Exclude<Evidence, null>) {
-  const scan = await api.createScan(
-    evidence.kind === 'sample'
-      ? { processId, demo: true }
-      : { processId, demo: false, rows: evidence.rows },
-  );
+async function checkEvidence(processId: string, rows: ServiceRecord[]) {
+  const scan = await api.createScan({ processId, demo: false, rows });
   await api.checkReadiness(scan.id);
   return scan.id;
 }
@@ -64,32 +56,20 @@ function ScanSetupForm({
   const initialProcess =
     baselines.find((p) => p.id === requestedProcessId)?.id ?? baselines[0]?.id ?? '';
   const [processId, setProcessId] = useState(initialProcess);
-  const [evidence, setEvidence] = useState<Evidence>(
-    initialProcess === sampleProcessId && !requestedProcessId ? { kind: 'sample' } : null,
-  );
+  const [evidence, setEvidence] = useState<Evidence>(null);
   const [importError, setImportError] = useState<Error | null>(null);
-  const check = useWorkspaceMutation(
-    (input: { processId: string; evidence: Exclude<Evidence, null> }) =>
-      checkEvidence(input.processId, input.evidence),
+  const check = useWorkspaceMutation((input: { processId: string; rows: ServiceRecord[] }) =>
+    checkEvidence(input.processId, input.rows),
   );
   const goToReadiness = (scanId: string) => router.push(`/scans/${scanId}`);
 
   async function importRecords(file: File) {
     setImportError(null);
     try {
-      setEvidence({ kind: 'records', fileName: file.name, rows: await readServiceRecords(file) });
+      setEvidence({ fileName: file.name, rows: await readServiceRecords(file) });
     } catch (error) {
       setImportError(error instanceof Error ? error : new Error('This file could not be read.'));
     }
-  }
-
-  function chooseSample() {
-    setProcessId(sampleProcessId);
-    setEvidence({ kind: 'sample' });
-    check.mutate(
-      { processId: sampleProcessId, evidence: { kind: 'sample' } },
-      { onSuccess: goToReadiness },
-    );
   }
 
   const error = check.error ?? importError;
@@ -106,13 +86,7 @@ function ScanSetupForm({
         <Card className="grid gap-6">
           <div className="flex flex-col gap-2 text-xs text-foreground-soft">
             <Label htmlFor="baseline">Baseline SOP</Label>
-            <Select
-              value={processId}
-              onValueChange={(next) => {
-                setProcessId(next);
-                if (next !== sampleProcessId && evidence?.kind === 'sample') setEvidence(null);
-              }}
-            >
+            <Select value={processId} onValueChange={setProcessId}>
               <SelectTrigger id="baseline">
                 <SelectValue placeholder="Publish a baseline SOP first" />
               </SelectTrigger>
@@ -142,14 +116,12 @@ function ScanSetupForm({
           </div>
 
           <UploadArea
-            title={
-              evidence?.kind === 'records' ? evidence.fileName : 'Upload historical service records'
-            }
+            title={evidence ? evidence.fileName : 'Upload historical service records'}
             hint="CSV or XLSX · up to 4 MB"
             accept=".csv,.xlsx"
             onFile={(file) => void importRecords(file)}
           />
-          {evidence?.kind === 'records' && (
+          {evidence && (
             <p className="m-0 flex items-center gap-2 text-xs text-brand-600">
               <Check size={15} aria-hidden />
               {evidence.rows.length} jobs imported. Technician IDs will be pseudonymized.
@@ -166,19 +138,14 @@ function ScanSetupForm({
               30-day observation window. Remove names and personal details from notes before
               importing.
             </p>
-            <Button variant="link" asChild>
-              <a href="/sample-jobs.csv" download>
-                Download CSV format
-                <Download size={14} aria-hidden />
-              </a>
-            </Button>
           </Disclosure>
 
           <FormActions>
             <Button
               disabled={check.isPending || !processId || !evidence}
               onClick={() =>
-                evidence && check.mutate({ processId, evidence }, { onSuccess: goToReadiness })
+                evidence &&
+                check.mutate({ processId, rows: evidence.rows }, { onSuccess: goToReadiness })
               }
             >
               {check.isPending ? 'Checking data…' : 'Check data'}
@@ -187,31 +154,17 @@ function ScanSetupForm({
           </FormActions>
         </Card>
 
-        <Card tone="sample" className={sideRailClass}>
-          <Eyebrow>A COHERENT SAMPLE SCENARIO</Eyebrow>
-          <Search size={29} aria-hidden className="mt-6 text-brand-400" />
-          <h3 className="text-xl! leading-[1.3]">
-            One valve.
-            <br />A better second check.
-          </h3>
-          <p>
-            Explore a sample of 47,219 jobs. Follow a promising field practice through a controlled
-            trial.
-          </p>
-          <Button variant="secondary" disabled={check.isPending} onClick={chooseSample}>
-            Use sample service records
-            <ArrowUpRight size={15} aria-hidden />
+        <Card className={sideRailClass}>
+          <Eyebrow>NEED A TEMPLATE?</Eyebrow>
+          <FileSpreadsheet size={29} aria-hidden className="mt-6 text-brand-400" />
+          <h3 className="text-xl! leading-[1.3]">Start from the example file.</h3>
+          <p>It has every required column. Replace its rows with your own service records.</p>
+          <Button variant="secondary" asChild>
+            <a href="/sample-jobs.csv" download>
+              Download example file
+              <Download size={15} aria-hidden />
+            </a>
           </Button>
-          {evidence?.kind === 'sample' && (
-            <small className="flex! items-center gap-2 text-xs! text-brand-600!">
-              <Check size={14} aria-hidden />
-              Sample scenario selected
-            </small>
-          )}
-          <p className="mt-4 text-xs! text-brand-400">
-            All sample outcomes are illustrative. Uploaded data is never substituted with these
-            findings.
-          </p>
         </Card>
       </WithSideRail>
     </>

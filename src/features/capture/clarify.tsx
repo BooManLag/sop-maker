@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ArrowRight, ArrowUpRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -30,13 +30,9 @@ import { proseText } from '@/lib/domain/validation';
 import { WithDraft } from './draft-steps';
 import { draftPath } from './paths';
 
-const sampleAnswers = [
-  'Pressure can look stable immediately after replacement, then drift as the assembly settles.',
-  'After valve replacement, especially on older valve assemblies.',
-];
 const answerSchema = z.object({ answer: proseText });
 
-type ClarifyProps = { processId: string; captureId: string; sample: boolean };
+type ClarifyProps = { processId: string; captureId: string };
 
 export function Clarify(props: ClarifyProps) {
   const capture = useCapture(props.captureId);
@@ -56,7 +52,6 @@ export function Clarify(props: ClarifyProps) {
 function QuestionForm({
   processId,
   captureId,
-  sample,
   draft,
   capture,
 }: ClarifyProps & { draft: ProcessDto; capture: DraftCapture }) {
@@ -77,7 +72,7 @@ function QuestionForm({
     if (!isLast) return;
     const answers = [...capture.answers.map((a) => a.answer), answer];
     await api.saveDraft(processId, applyClarifications(steps, answers));
-    router.push(draftPath(processId, captureId, 'review', sample));
+    router.push(draftPath(processId, captureId, 'review'));
   });
 
   if (!question)
@@ -87,7 +82,7 @@ function QuestionForm({
         description="Review the draft before publishing it as the baseline."
         action={
           <Button asChild>
-            <Link href={draftPath(processId, captureId, 'review', sample)}>
+            <Link href={draftPath(processId, captureId, 'review')}>
               Review the draft
               <ArrowRight size={16} aria-hidden />
             </Link>
@@ -122,18 +117,6 @@ function QuestionForm({
               </FormItem>
             )}
           />
-          {sample && sampleAnswers[index] && (
-            <Button
-              variant="link"
-              className="mt-4"
-              onClick={() =>
-                form.setValue('answer', sampleAnswers[index], { shouldValidate: true })
-              }
-            >
-              Use sample expert explanation
-              <ArrowUpRight size={14} aria-hidden />
-            </Button>
-          )}
           <FormActions>
             <Button type="submit" disabled={submit.isPending}>
               {submit.isPending ? 'Saving…' : isLast ? 'Build SOP draft' : 'Next question'}

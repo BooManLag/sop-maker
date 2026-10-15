@@ -22,6 +22,9 @@ export type Workspace = {
   trials: ValidationTrial[];
   changes: ChangeRequest[];
   demo: boolean;
+  /** The signed-in person's organization and role, as the server decided them. */
+  organization: string;
+  role: 'viewer' | 'expert' | 'reviewer' | 'admin';
 };
 export type TranscriptSegment = { startMs: number; endMs: number; text: string };
 export type DraftCapture = {
@@ -121,7 +124,7 @@ export function createApiClient({
       processId: string,
       body: { kind: 'text'; expertReference: string; text: string },
     ) => post<{ id: string }>(`processes/${processId}/captures`, body),
-    analyzeCapture: (processId: string, body: { captureId: string; sample: boolean }) =>
+    analyzeCapture: (processId: string, body: { captureId: string }) =>
       post<Extraction>(`processes/${processId}/analyze-capture`, body),
     capture: (id: string) => get<DraftCapture>(`captures/${id}`),
     requestUpload: (processId: string, body: RecordingUpload) =>
@@ -166,8 +169,8 @@ export function createApiClient({
     finding: (id: string) => get<Finding>(`findings/${id}`),
     dismissFinding: (id: string) => post<Finding>(`findings/${id}/dismiss`),
     restoreFinding: (id: string) => post<Finding>(`findings/${id}/restore`),
-    requestExplanation: (id: string) =>
-      post<TechnicianResponse>(`findings/${id}/request-explanation`),
+    recordExplanation: (id: string, body: Omit<TechnicianResponse, 'id' | 'findingId'>) =>
+      post<TechnicianResponse>(`findings/${id}/request-explanation`, body),
 
     trial: (id: string) => get<TrialDetail>(`trials/${id}`),
     createTrial: (body: { findingId: string; equipment: string; testGroup: string }) =>

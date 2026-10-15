@@ -1,4 +1,4 @@
-import type { Finding, Process, ProcessStep, TechnicianResponse } from './types';
+import type { Finding, Process, ProcessStep } from './types';
 export const baselineSteps: ProcessStep[] = [
   'Isolate pressure supply',
   'Confirm zero pressure',
@@ -104,11 +104,3 @@ export const demoFindings: Finding[] = [
     },
   },
 ];
-export const demoResponse: Omit<TechnicianResponse, 'id' | 'findingId'> = {
-  reason:
-    'Pressure can look stable immediately after replacement, then drift as the assembly settles.',
-  condition: 'After valve replacement, especially on older assemblies.',
-  warning: 'Never wait on an unsafe or actively leaking system. Follow the isolation procedure.',
-  equipment: 'Valve assembly X, especially older units',
-  doNotUse: 'Equipment where the manufacturer specifies a different test procedure.',
-};

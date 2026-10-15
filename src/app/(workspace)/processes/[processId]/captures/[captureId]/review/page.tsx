@@ -6,13 +6,10 @@ import { draftPath } from '@/features/capture/paths';
 export default async function ReviewPage(
   props: PageProps<'/processes/[processId]/captures/[captureId]/review'>,
 ) {
-  const [{ processId, captureId }, { sample }] = await Promise.all([
-    props.params,
-    props.searchParams,
-  ]);
+  const { processId, captureId } = await props.params;
   return (
     <>
-      <BackLink href={draftPath(processId, captureId, 'clarify', sample === '1')} />
+      <BackLink href={draftPath(processId, captureId, 'clarify')} />
       <FlowSteps items={createFlow} current={2} />
       <Review processId={processId} />
     </>

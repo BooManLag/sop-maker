@@ -16,6 +16,7 @@ import { readConfig, type ServerConfig } from '../../src/lib/server/config';
 import { demoActor, type Actor } from '../../src/lib/server/auth';
 import { resolveEndpoint } from '../../src/lib/server/contracts';
 import { initialStore } from '../../src/lib/application/store';
+import { demoFindings, demoProcess } from '../../src/lib/domain/demo-data';
 import type { AnalysisQueue } from '../../src/lib/application/analysis/worker';
 const actor = (organizationId = 'tenant_a', role: Actor['role'] = 'admin'): Actor => ({
   userId: `user_${role}`,
@@ -487,4 +488,47 @@ test('a scan is queued for analysis once, not again while it is already analyzin
   await execute(backend, 'POST', 'scans/scan-1/run');
   await execute(backend, 'POST', 'scans/scan-1/run');
   assert.deepEqual(queued, ['scan-1']);
+});
+test("the workspace names the caller's organization and role", async () => {
+  const { backend } = await harness();
+  const workspace = (await execute(
+    backend,
+    'GET',
+    'workspace',
+    {},
+    actor('public', 'reviewer'),
+  )) as {
+    organization: string;
+    role: string;
+  };
+  assert.equal(workspace.organization, 'public');
+  assert.equal(workspace.role, 'reviewer');
+});
+test("a reviewer records the technicians' explanation on a finding, replacing the last one", async () => {
+  const { backend, repositories } = await harness();
+  const [finding] = structuredClone(demoFindings);
+  await repositories.forTenant('tenant_a').transact((s) => {
+    s.processes.push({ ...structuredClone(demoProcess), organizationId: 'tenant_a' });
+    s.findings.push(finding);
+  });
+  const url = `findings/${finding.id}/request-explanation`;
+  await assert.rejects(execute(backend, 'POST', url, {}), /reason|Required|expected/i);
+  const first = (await execute(backend, 'POST', url, { reason: 'Pressure drifts.' })) as {
+    id: string;
+    reason: string;
+    warning: string;
+  };
+  assert.equal(first.reason, 'Pressure drifts.');
+  assert.equal(first.warning, '');
+  const second = (await execute(backend, 'POST', url, { reason: 'Seals settle.' })) as {
+    id: string;
+  };
+  assert.equal(second.id, first.id);
+  const stored = await repositories.forTenant('tenant_a').query((s) => s.responses);
+  assert.deepEqual(
+    stored.map((r) => r.reason),
+    ['Seals settle.'],
+  );
+  const updated = (await execute(backend, 'GET', `findings/${finding.id}`)) as { status: string };
+  assert.equal(updated.status, 'investigate');
 });
