@@ -1,6 +1,8 @@
 /** The signed-in person, as far as the browser needs to know. */
 export interface AuthUser {
   email: string | null;
+  displayName?: string | null;
+  photoURL?: string | null;
 }
 export type SignInResult =
   | { status: 'signed_in' }

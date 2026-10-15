@@ -2,7 +2,7 @@ import { cleanupDom } from '../support/dom';
 import { after, afterEach, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { AuthGate } from '../../src/features/auth/auth-gate';
+import { AuthGate, useSession } from '../../src/features/auth/auth-gate';
 import type { AuthService, AuthUser } from '../../src/lib/client/auth';
 import { api } from '../../src/lib/client/browser';
 
@@ -89,9 +89,11 @@ test('without sign-in configured, as in the loopback demo, the workspace opens d
   render(
     <AuthGate load={async () => null}>
       <p>Workspace</p>
+      <Account />
     </AuthGate>,
   );
   await screen.findByText('Workspace');
+  assert.ok(screen.getByText('No session'));
 });
 test('an account with an authenticator app is asked for its code before the workspace opens', async () => {
   const { service } = fakeAuth(null, '123456');
@@ -110,14 +112,24 @@ test('an account with an authenticator app is asked for its code before the work
   fireEvent.click(screen.getByRole('button', { name: /verify/i }));
   await screen.findByText('Workspace');
 });
-test('a signed-in person sees their email and can sign out', async () => {
+function Account() {
+  const session = useSession();
+  return session ? (
+    <button type="button" onClick={() => void session.signOut()}>
+      Sign out {session.user.email}
+    </button>
+  ) : (
+    <p>No session</p>
+  );
+}
+test('a signed-in person is shared with the workspace, which can sign them out', async () => {
   const { service } = fakeAuth({ email: 'admin@example.com' });
   render(
     <AuthGate load={async () => service}>
-      <p>Workspace</p>
+      <Account />
     </AuthGate>,
   );
-  await screen.findByText('admin@example.com');
+  await screen.findByText(/admin@example\.com/);
   fireEvent.click(screen.getByRole('button', { name: /sign out/i }));
   await screen.findByRole('button', { name: /sign in with google/i });
 });

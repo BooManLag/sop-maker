@@ -2,17 +2,10 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import {
-  ChevronDown,
-  FileText,
-  FlaskConical,
-  Layers,
-  Leaf,
-  MoreHorizontal,
-  Search,
-} from 'lucide-react';
-import { toast } from 'sonner';
+import { FileText, FlaskConical, Layers, Leaf, LogOut, Search } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { useSession } from '@/features/auth/auth-gate';
+import type { Workspace } from '@/lib/client/api';
 import { useWorkspace } from '@/lib/client/queries';
 import { cn } from '@/lib/utils';
 import { sectionFor, sectionLabels, type Section } from './sections';
@@ -37,6 +30,7 @@ function useNavCounts(): Partial<Record<Section, number>> {
 export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const active = sectionFor(usePathname());
   const counts = useNavCounts();
+  const account = useAccount();
   return (
     <div className="flex h-full flex-col px-6 pt-9 max-lg:sm:px-4">
       <Link
@@ -60,15 +54,9 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       </div>
       <div className="flex items-center gap-2 text-xs leading-normal">
         <span className="grid size-7 place-items-center rounded-lg border border-border-strong bg-background text-lead font-semibold">
-          N
+          {account.workspace.charAt(0).toUpperCase()}
         </span>
-        <span className="flex-1 font-semibold">
-          Northfield Services
-          <small className="block text-tiny font-normal text-muted-foreground">
-            Operations workspace
-          </small>
-        </span>
-        <ChevronDown size={14} aria-hidden />
+        <span className="min-w-0 flex-1 truncate font-semibold">{account.workspace}</span>
       </div>
 
       <nav aria-label="Main navigation" className="mt-8 grid gap-1.5">
@@ -104,36 +92,102 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             <span className="text-muted-foreground">Never worker rankings.</span>
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() =>
-            toast.success(
-              'You are exploring the local demo workspace. Authentication is not connected.',
-            )
-          }
-          className="flex w-full items-center gap-2.5 border-t border-border py-5.5 text-left text-xs"
-        >
-          <Avatar initials="AL" />
-          <span className="flex-1">
-            Alex Lee
-            <small className="block text-tiny text-muted-foreground">Operations lead</small>
-          </span>
-          <MoreHorizontal size={17} aria-hidden />
-        </button>
+        <UserCard account={account} />
       </div>
     </div>
   );
 }
 
-export function Avatar({ initials, small = false }: { initials: string; small?: boolean }) {
+const roleLabels: Record<Workspace['role'], string> = {
+  viewer: 'Viewer',
+  expert: 'Expert',
+  reviewer: 'Reviewer',
+  admin: 'Admin',
+};
+
+/** Who is signed in, as Google and the server describe them; a placeholder in the local demo. */
+export function useAccount() {
+  const session = useSession();
+  const { data } = useWorkspace();
+  const name = session
+    ? session.user.displayName || session.user.email || 'Signed in'
+    : 'Local demo';
+  return {
+    name,
+    initials: initialsOf(name),
+    photo: session?.user.photoURL ?? undefined,
+    role: data ? roleLabels[data.role] : '',
+    workspace: !session
+      ? 'Local demo'
+      : !data
+        ? ''
+        : data.organization === 'public'
+          ? 'Shared workspace'
+          : data.organization,
+    signOut: session?.signOut,
+  };
+}
+
+function initialsOf(name: string) {
+  const words = name.split(/[\s@._-]+/).filter(Boolean);
+  return (
+    words.length > 1 ? words[0][0] + words[1][0] : (words[0] ?? '?').slice(0, 2)
+  ).toUpperCase();
+}
+
+/** The signed-in person; clicking signs out. */
+function UserCard({ account }: { account: ReturnType<typeof useAccount> }) {
+  const content = (
+    <>
+      <Avatar initials={account.initials} photo={account.photo} />
+      <span className="min-w-0 flex-1">
+        <span className="block truncate">{account.name}</span>
+        <small className="block text-tiny text-muted-foreground">{account.role}</small>
+      </span>
+      {account.signOut && <LogOut size={16} aria-hidden />}
+    </>
+  );
+  const className =
+    'flex w-full items-center gap-2.5 border-t border-border py-5.5 text-left text-xs';
+  const { signOut } = account;
+  return signOut ? (
+    <button
+      type="button"
+      title="Sign out"
+      aria-label={`Sign out ${account.name}`}
+      onClick={() => void signOut()}
+      className={className}
+    >
+      {content}
+    </button>
+  ) : (
+    <div className={className}>{content}</div>
+  );
+}
+
+export function Avatar({
+  initials,
+  photo,
+  small = false,
+}: {
+  initials: string;
+  photo?: string;
+  small?: boolean;
+}) {
   return (
     <span
       className={cn(
-        'grid shrink-0 place-items-center rounded-full border-[3px] border-brand-100 bg-accent font-semibold text-brand-600',
+        'grid shrink-0 place-items-center overflow-hidden rounded-full border-[3px] border-brand-100 bg-accent font-semibold text-brand-600',
         small ? 'size-7 text-2xs' : 'size-8 text-tiny',
       )}
     >
-      {initials}
+      {photo ? (
+        // Google profile photos are small, external and already sized; next/image adds nothing.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={photo} alt="" referrerPolicy="no-referrer" className="size-full object-cover" />
+      ) : (
+        initials
+      )}
     </span>
   );
 }

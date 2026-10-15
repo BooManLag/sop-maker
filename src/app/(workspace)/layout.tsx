@@ -17,7 +17,7 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
         <footer className="mx-auto flex max-w-[1490px] justify-between gap-4 border-t border-border px-5 py-5 text-2xs text-subtle-foreground sm:px-6 lg:px-11.5">
           <span className="font-semibold text-brand-400">good exception.</span>
           <span className="max-md:hidden">Create the standard. Improve it with evidence.</span>
-          <span>Demo · Human approval, always</span>
+          <span>Human approval, always</span>
         </footer>
       </div>
       <BusyIndicator />

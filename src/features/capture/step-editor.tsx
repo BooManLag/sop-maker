@@ -9,7 +9,7 @@ import { Card } from '@/components/ui/card';
 import { ErrorBanner } from '@/components/common/error-banner';
 import { FormActions } from '@/components/common/layouts';
 import { api } from '@/lib/client/browser';
-import { useWorkspaceMutation } from '@/lib/client/queries';
+import { useWorkspace, useWorkspaceMutation } from '@/lib/client/queries';
 import type { ProcessStep } from '@/lib/domain/types';
 import { addStep, mergeWithNext, moveStep, removeStep } from '@/lib/domain/steps';
 import { draftPath } from './paths';
@@ -21,14 +21,13 @@ export function StepEditor({
   processId,
   captureId,
   initialSteps,
-  sample,
 }: {
   processId: string;
   captureId: string;
   initialSteps: ProcessStep[];
-  sample: boolean;
 }) {
   const router = useRouter();
+  const demo = useWorkspace().data?.demo;
   const [steps, setSteps] = useState(initialSteps);
   const save = useWorkspaceMutation(() => api.saveDraft(processId, steps));
   const canContinue = steps.length > 0 && steps.every((s) => s.action.trim());
@@ -40,8 +39,9 @@ export function StepEditor({
     <>
       <ErrorBanner error={save.error} onDismiss={save.reset} />
       <Alert>
-        {sample ? 'Sample extraction' : 'Rule-based text extraction'} · Review carefully. Gemini is
-        not connected.
+        {demo
+          ? 'Rule-based text extraction · Review carefully. Gemini is not connected.'
+          : 'Model-generated candidate steps · Review carefully before continuing.'}
       </Alert>
       <Card>
         <ol>
@@ -110,7 +110,7 @@ export function StepEditor({
           disabled={!canContinue || save.isPending}
           onClick={() =>
             save.mutate(undefined, {
-              onSuccess: () => router.push(draftPath(processId, captureId, 'clarify', sample)),
+              onSuccess: () => router.push(draftPath(processId, captureId, 'clarify')),
             })
           }
         >

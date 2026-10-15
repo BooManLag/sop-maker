@@ -88,12 +88,11 @@ function PlanForm({ finding }: { finding: Finding }) {
               />
               <ReadOnlyField label="Control" value={`Current SOP — ${finding.standard}`} />
               <Alert className="my-0">
-                This creates a demo trial plan. No field jobs are assigned, and no live trial is
-                started.
+                This saves a trial plan. No field jobs are assigned automatically.
               </Alert>
               <div>
                 <Button type="submit" disabled={create.isPending}>
-                  Start demo validation
+                  Save trial plan
                   <ArrowRight size={16} aria-hidden />
                 </Button>
               </div>

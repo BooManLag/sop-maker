@@ -2,7 +2,6 @@ import { randomUUID } from 'node:crypto';
 import type { Store } from './store';
 import type { Actor } from '../server/auth';
 import { ApiError, requireCondition } from '../server/errors';
-import { demoResponse } from '../domain/demo-data';
 import { trialPrimaryOutcome, type Finding } from '../domain/types';
 import type { AnalysisOutcome } from './analysis/toolkit';
 import { DISCOVERY_SHARE } from './analysis/stats';
@@ -209,29 +208,20 @@ export function restoreFinding(s: Store, id: string) {
   f.status = 'candidate';
   return f;
 }
-export function explainFinding(s: Store, id: string, actor: Actor) {
+/** Records why the practice works, as told by the person reviewing the finding. */
+export function explainFinding(s: Store, id: string, body: Input<'findingExplain'>) {
   const f = getFinding(s, id);
   requireCondition(
     f.status !== 'dismissed',
-    'Restore this finding before requesting an explanation.',
+    'Restore this finding before recording an explanation.',
     409,
   );
-  requireCondition(
-    actor.demo && f.evidence.demonstration,
-    'Technician messaging is not connected.',
-    503,
-  );
   if (f.status === 'candidate') f.status = 'investigate';
-  let response = s.responses.find((x) => x.findingId === id);
-  if (!response) {
-    response = { id: randomUUID(), findingId: id, ...demoResponse };
-    s.responses.push(response);
-  }
-  return {
-    ...response,
-    demo: true,
-    notice: 'Sample response. No message was sent to technicians.',
-  };
+  const existing = s.responses.findIndex((x) => x.findingId === id);
+  const response = { id: s.responses[existing]?.id ?? randomUUID(), findingId: id, ...body };
+  if (existing >= 0) s.responses[existing] = response;
+  else s.responses.push(response);
+  return response;
 }
 export function createTrial(s: Store, body: Input<'trialCreate'>, actor: Actor) {
   const f = getFinding(s, body.findingId);

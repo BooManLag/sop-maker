@@ -192,7 +192,15 @@ export const schemas = {
   findingGet: empty,
   findingDismiss: empty,
   findingRestore: empty,
-  findingExplain: empty,
+  findingExplain: z
+    .object({
+      reason: prose,
+      condition: z.string().trim().max(2000).default(''),
+      warning: z.string().trim().max(2000).default(''),
+      equipment: z.string().trim().max(300).default(''),
+      doNotUse: z.string().trim().max(2000).default(''),
+    })
+    .strict(),
   trialCreate: z.object({ findingId: idSchema, equipment: short, testGroup: prose }).strict(),
   trialGet: empty,
   trialResults: z.object({ sample: z.literal(true) }).strict(),

@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import {
@@ -14,6 +15,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { DefinitionList } from '@/components/common/definition-list';
 import { Disclosure } from '@/components/common/disclosure';
 import { ErrorBanner } from '@/components/common/error-banner';
@@ -24,6 +27,8 @@ import { WithSideRail, sideRailClass } from '@/components/common/layouts';
 import { api } from '@/lib/client/browser';
 import { useFinding, useWorkspace, useWorkspaceMutation } from '@/lib/client/queries';
 import type { Finding, TechnicianResponse } from '@/lib/domain/types';
+
+type Explanation = Omit<TechnicianResponse, 'id' | 'findingId'>;
 import { relativeReduction } from '@/lib/domain/findings';
 import { OutcomeGrid } from './outcome-grid';
 
@@ -38,7 +43,10 @@ function FindingReview({ finding }: { finding: Finding }) {
   const processTitle = useWorkspace().data?.processes.find(
     (p) => p.id === finding.processId,
   )?.title;
-  const explain = useWorkspaceMutation(() => api.requestExplanation(finding.id));
+  const [explaining, setExplaining] = useState(false);
+  const explain = useWorkspaceMutation((body: Explanation) =>
+    api.recordExplanation(finding.id, body),
+  );
   const dismiss = useWorkspaceMutation(() => api.dismissFinding(finding.id));
   const strong = finding.grade === 'strong';
   const dismissed = finding.status === 'dismissed';
@@ -95,7 +103,17 @@ function FindingReview({ finding }: { finding: Finding }) {
             />
           </Card>
           <TrustPanel finding={finding} />
-          {explain.data && <ExpertResponse response={explain.data} />}
+          {explain.data ? (
+            <ExpertResponse response={explain.data} />
+          ) : (
+            explaining && (
+              <ExplanationForm
+                busy={explain.isPending}
+                onSubmit={(body) => explain.mutate(body)}
+                onCancel={() => setExplaining(false)}
+              />
+            )
+          )}
         </div>
 
         <Card className={`${sideRailClass} md:sticky md:top-6`}>
@@ -114,9 +132,9 @@ function FindingReview({ finding }: { finding: Finding }) {
           <Button
             variant="secondary"
             disabled={busy || dismissed}
-            onClick={() => explain.mutate(undefined)}
+            onClick={() => setExplaining(true)}
           >
-            Ask technicians why
+            Record why it works
             <ArrowUpRight size={15} aria-hidden />
           </Button>
           {strong && !dismissed ? (
@@ -215,24 +233,80 @@ function TrustPanel({ finding }: { finding: Finding }) {
 }
 
 function ExpertResponse({ response }: { response: TechnicianResponse }) {
+  const details: [string, string][] = [
+    ['Use when', response.condition],
+    ['Warning', response.warning],
+    ['Relevant equipment', response.equipment],
+    ['When not to use it', response.doNotUse],
+  ];
   return (
     <Card>
-      <Badge>Sample expert explanation</Badge>
+      <Badge>Expert explanation</Badge>
       <h2 className="mt-4 text-lg tracking-[-0.55px]">The why behind the practice.</h2>
       <blockquote className="my-5 font-serif text-md leading-[1.6] text-brand-500">
         “{response.reason}”
       </blockquote>
-      <DefinitionList
-        items={[
-          ['Use when', response.condition],
-          ['Warning', response.warning],
-          ['Relevant equipment', response.equipment],
-          ['When not to use it', response.doNotUse],
-        ]}
-      />
-      <small className="mt-4 block text-sm text-brand-400">
-        No message was sent. This is a sample response.
-      </small>
+      <DefinitionList items={details.filter(([, value]) => value)} />
+    </Card>
+  );
+}
+
+const explanationFields: { key: keyof Explanation; label: string }[] = [
+  { key: 'reason', label: 'Why does this practice work?' },
+  { key: 'condition', label: 'Use when' },
+  { key: 'warning', label: 'Warning' },
+  { key: 'equipment', label: 'Relevant equipment' },
+  { key: 'doNotUse', label: 'When not to use it' },
+];
+
+/** What the technicians said, recorded by the reviewer; nothing is sent from here. */
+function ExplanationForm({
+  busy,
+  onSubmit,
+  onCancel,
+}: {
+  busy: boolean;
+  onSubmit: (body: Explanation) => void;
+  onCancel: () => void;
+}) {
+  const [values, setValues] = useState<Explanation>({
+    reason: '',
+    condition: '',
+    warning: '',
+    equipment: '',
+    doNotUse: '',
+  });
+  return (
+    <Card>
+      <form
+        className="grid gap-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          onSubmit(values);
+        }}
+      >
+        <h2 className="text-lg tracking-[-0.55px]">The why behind the practice.</h2>
+        {explanationFields.map(({ key, label }) => (
+          <div key={key} className="flex flex-col gap-2 text-xs text-foreground-soft">
+            <Label htmlFor={`explanation-${key}`}>{label}</Label>
+            <Textarea
+              id={`explanation-${key}`}
+              rows={key === 'reason' ? 3 : 2}
+              required={key === 'reason'}
+              value={values[key]}
+              onChange={(event) => setValues({ ...values, [key]: event.target.value })}
+            />
+          </div>
+        ))}
+        <div className="flex gap-3">
+          <Button type="submit" disabled={busy || !values.reason.trim()}>
+            Save explanation
+          </Button>
+          <Button type="button" variant="ghost" onClick={onCancel}>
+            Cancel
+          </Button>
+        </div>
+      </form>
     </Card>
   );
 }

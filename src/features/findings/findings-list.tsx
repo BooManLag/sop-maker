@@ -31,15 +31,24 @@ export function FindingsList() {
             <div className="mb-5 flex justify-between gap-2.5 text-tiny text-brand-500 sm:text-xs">
               <span>{active.length} candidate practices</span>
               <span className="text-2xs text-brand-400 sm:text-xs">
-                Sample scenario{processTitles.filter(Boolean).map((t) => ` · ${t}`)}
+                {active.some((f) => f.evidence.demonstration) && 'Sample scenario'}
+                {processTitles.filter(Boolean).map((t) => ` · ${t}`)}
               </span>
             </div>
             {active.length ? (
               active.map((f) => <FindingCard key={f.id} finding={f} />)
             ) : (
               <EmptyState
-                title="No active findings."
-                description="Start a sample scan to explore the evidence workflow."
+                title="No findings yet."
+                description="Scan your service records to find field practices worth investigating."
+                action={
+                  <Button asChild>
+                    <Link href="/scans/new">
+                      Start a scan
+                      <ArrowRight size={16} aria-hidden />
+                    </Link>
+                  </Button>
+                }
               />
             )}
             {dismissed.length > 0 && (

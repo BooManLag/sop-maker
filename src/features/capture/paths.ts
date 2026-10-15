@@ -1,11 +1,6 @@
 export type DraftStage = 'transcript' | 'steps' | 'clarify' | 'review';
 
-/** URL of a create-SOP stage; `sample` keeps the guided sample answers available. */
-export function draftPath(
-  processId: string,
-  captureId: string,
-  stage: DraftStage,
-  sample: boolean,
-) {
-  return `/processes/${processId}/captures/${captureId}/${stage}${sample ? '?sample=1' : ''}`;
+/** URL of a create-SOP stage. */
+export function draftPath(processId: string, captureId: string, stage: DraftStage) {
+  return `/processes/${processId}/captures/${captureId}/${stage}`;
 }

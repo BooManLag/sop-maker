@@ -13,7 +13,7 @@ import { QueryState } from '@/components/common/query-state';
 import { OutcomeGrid } from '@/features/findings/outcome-grid';
 import { api } from '@/lib/client/browser';
 import type { TrialDetail as Trial } from '@/lib/client/api';
-import { useTrial, useWorkspaceMutation } from '@/lib/client/queries';
+import { useTrial, useWorkspace, useWorkspaceMutation } from '@/lib/client/queries';
 import type { Finding, TrialResult } from '@/lib/domain/types';
 
 export function TrialDetail({ trialId }: { trialId: string }) {
@@ -34,16 +34,17 @@ const panelClass = 'max-w-[850px] [&_h2]:mt-6 [&_h2]:text-xl [&_h2]:tracking-[-0
 
 function TrialPlan({ trial, finding }: { trial: Trial; finding: Finding }) {
   const load = useWorkspaceMutation(() => api.loadSampleResult(trial.id));
+  const demo = useWorkspace().data?.demo;
   return (
     <>
       <ErrorBanner error={load.error} onDismiss={load.reset} />
       <PageTitle
-        eyebrow="CONTROLLED TRIAL · SAMPLE SCENARIO"
+        eyebrow={demo ? 'CONTROLLED TRIAL · SAMPLE SCENARIO' : 'CONTROLLED TRIAL'}
         title="Your validation plan is ready."
-        description="The local demo saves the plan. Field execution and outcome ingestion are not connected."
+        description="The plan is saved. Field execution and outcome ingestion are not connected yet."
       />
       <Card className={panelClass}>
-        <Badge tone="amber">Demo trial · awaiting results</Badge>
+        <Badge tone="amber">{demo ? 'Demo trial · awaiting results' : 'Awaiting results'}</Badge>
         <h2>{finding.practice}</h2>
         <DefinitionList
           items={[
@@ -53,13 +54,18 @@ function TrialPlan({ trial, finding }: { trial: Trial; finding: Finding }) {
             ['Outcome', trial.primaryOutcome],
           ]}
         />
-        <Alert>
-          Explore an illustrative completed trial. These results are not measured from live jobs.
-        </Alert>
-        <Button disabled={load.isPending} onClick={() => load.mutate(undefined)}>
-          Load sample trial result
-          <ArrowRight size={16} aria-hidden />
-        </Button>
+        {demo && (
+          <>
+            <Alert>
+              Explore an illustrative completed trial. These results are not measured from live
+              jobs.
+            </Alert>
+            <Button disabled={load.isPending} onClick={() => load.mutate(undefined)}>
+              Load sample trial result
+              <ArrowRight size={16} aria-hidden />
+            </Button>
+          </>
+        )}
       </Card>
     </>
   );
