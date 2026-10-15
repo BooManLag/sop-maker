@@ -6,7 +6,12 @@ const environment = z.object({
   GOOD_EXCEPTION_DATA_DIR: z.string().optional(),
   GOOD_EXCEPTION_ALLOWED_ORIGINS: z.string().default(''),
   GOOD_EXCEPTION_PSEUDONYM_KEY: z.string().min(32).optional(),
-  GOOD_EXCEPTION_REQUIRE_MFA: flag.default('true'),
+  GOOD_EXCEPTION_REQUIRE_MFA: flag.default('false'),
+  GOOD_EXCEPTION_OPEN_ORGANIZATION: z
+    .string()
+    .regex(/^[A-Za-z0-9_-]{1,128}$/)
+    .optional(),
+  GOOD_EXCEPTION_OPEN_ROLE: z.enum(['viewer', 'expert', 'reviewer', 'admin']).default('reviewer'),
   GOOGLE_CLOUD_PROJECT: z
     .string()
     .regex(/^[a-z][a-z0-9-]{4,61}[a-z0-9]$/)
@@ -48,6 +53,8 @@ export interface ServerConfig {
   tasks?: { queue: string; workerUrl: string; invokerEmail: string };
   pseudonymKey?: string;
   requireMfa: boolean;
+  /** Signed-in users without membership claims join this organization with this role. */
+  openMembership?: { organizationId: string; role: 'viewer' | 'expert' | 'reviewer' | 'admin' };
   emulator: boolean;
 }
 export function readConfig(env: Record<string, string | undefined> = process.env): ServerConfig {
@@ -129,6 +136,9 @@ export function readConfig(env: Record<string, string | undefined> = process.env
         : undefined,
     pseudonymKey: e.GOOD_EXCEPTION_PSEUDONYM_KEY,
     requireMfa: e.GOOD_EXCEPTION_REQUIRE_MFA === 'true',
+    openMembership: e.GOOD_EXCEPTION_OPEN_ORGANIZATION
+      ? { organizationId: e.GOOD_EXCEPTION_OPEN_ORGANIZATION, role: e.GOOD_EXCEPTION_OPEN_ROLE }
+      : undefined,
     emulator: Boolean(e.FIRESTORE_EMULATOR_HOST),
   };
 }

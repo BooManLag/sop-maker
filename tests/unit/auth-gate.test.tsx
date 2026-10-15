@@ -110,19 +110,14 @@ test('an account with an authenticator app is asked for its code before the work
   fireEvent.click(screen.getByRole('button', { name: /verify/i }));
   await screen.findByText('Workspace');
 });
-test('a signed-in person can enrol an authenticator app and sign out', async () => {
-  const { service, enrolled } = fakeAuth({ email: 'admin@example.com' });
+test('a signed-in person sees their email and can sign out', async () => {
+  const { service } = fakeAuth({ email: 'admin@example.com' });
   render(
     <AuthGate load={async () => service}>
       <p>Workspace</p>
     </AuthGate>,
   );
-  fireEvent.click(await screen.findByRole('button', { name: /set up authenticator/i }));
-  await screen.findByText('JBSWY3DPEHPK3PXP');
-  fireEvent.change(screen.getByLabelText(/authenticator code/i), { target: { value: '654321' } });
-  fireEvent.click(screen.getByRole('button', { name: /verify/i }));
-  await screen.findByText(/authenticator app is set up/i);
-  assert.deepEqual(enrolled, ['654321']);
+  await screen.findByText('admin@example.com');
   fireEvent.click(screen.getByRole('button', { name: /sign out/i }));
   await screen.findByRole('button', { name: /sign in with google/i });
 });

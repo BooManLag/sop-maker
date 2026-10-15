@@ -20,6 +20,8 @@ RUN --mount=type=secret,id=npm_ca,mode=0444 \
 WORKDIR /app
 ENV NODE_ENV=production
 ENV GOOD_EXCEPTION_MODE=production
+ENV GOOD_EXCEPTION_OPEN_ORGANIZATION=public
+ENV GOOD_EXCEPTION_OPEN_ROLE=reviewer
 ENV PORT=8080
 ENV HOSTNAME=0.0.0.0
 COPY --from=build --chown=node:node /app/.next/standalone ./

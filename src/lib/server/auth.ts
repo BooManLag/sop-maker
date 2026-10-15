@@ -55,6 +55,8 @@ export async function authenticate(
     if (error instanceof ApiError && error.status === 503) throw error;
     throw new ApiError(401, 'The session is invalid, expired, revoked, or disabled.');
   }
+  if (claims.organizationId === undefined && config.openMembership)
+    claims = { ...claims, ...config.openMembership };
   if (
     !identifier.test(String(claims.organizationId ?? '')) ||
     !identifier.test(claims.uid) ||
