@@ -210,6 +210,19 @@ test('revoked or expired identity cannot authorize and missing claims do not bec
     /expired/,
   );
 });
+test('open membership places unprovisioned users in the open organization with its role', async () => {
+  const { config } = await setup();
+  const open = {
+    ...config,
+    openMembership: { organizationId: 'public', role: 'reviewer' as const },
+  };
+  const now = Math.floor(Date.now() / 1000);
+  const actor = await authenticate(request('workspace'), open, {
+    verify: async () => ({ uid: 'u', role: 'admin', exp: now + 600, auth_time: now }),
+  });
+  assert.equal(actor.organizationId, 'public');
+  assert.equal(actor.role, 'reviewer');
+});
 test('rate limits, in-flight limits and graceful draining reject excess work', async () => {
   const gate = new AdmissionControl();
   gate.rate('user', 1);

@@ -5,12 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  setTokenSource,
-  type AuthService,
-  type AuthUser,
-  type AuthenticatorEnrollment,
-} from '@/lib/client/auth';
+import { setTokenSource, type AuthService, type AuthUser } from '@/lib/client/auth';
 
 type GateState =
   | { phase: 'loading' }
@@ -75,9 +70,7 @@ function SignIn({ auth }: { auth: AuthService }) {
     <main className="mx-auto flex min-h-screen max-w-md items-center px-4">
       <Card className="w-full space-y-4">
         <h1 className="text-xl font-semibold">Sign in to Good Exception</h1>
-        <p className="text-sm text-muted-foreground">
-          Use your work Google account. Reviewers and admins also confirm with an authenticator app.
-        </p>
+        <p className="text-sm text-muted-foreground">Use your work Google account.</p>
         {error && (
           <p role="alert" className="text-sm text-destructive">
             {error}
@@ -122,45 +115,11 @@ function CodeForm({ onSubmit }: { onSubmit: (code: string) => Promise<void> }) {
   );
 }
 
-/** Who is signed in, sign-out, and authenticator setup (needed for reviewer and admin actions). */
+/** Who is signed in, and sign-out. */
 function AccountBar({ auth, user }: { auth: AuthService; user: AuthUser }) {
-  const [enrollment, setEnrollment] = useState<AuthenticatorEnrollment>();
-  const [status, setStatus] = useState<string>();
   return (
     <div className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-2 text-sm">
       <span className="text-muted-foreground">{user.email}</span>
-      {status && <span role="status">{status}</span>}
-      {!enrollment && !status && (
-        <Button
-          variant="secondary"
-          onClick={() =>
-            auth
-              .enrollAuthenticator()
-              .then(setEnrollment)
-              .catch(() => setStatus('Sign in again, then set up the authenticator app.'))
-          }
-        >
-          Set up authenticator app
-        </Button>
-      )}
-      {enrollment && (
-        <div className="w-full space-y-2">
-          <p>
-            Add this key to your authenticator app: <code>{enrollment.secret}</code>
-          </p>
-          <CodeForm
-            onSubmit={(code) =>
-              enrollment.confirm(code).then(
-                () => {
-                  setEnrollment(undefined);
-                  setStatus('Authenticator app is set up.');
-                },
-                () => setStatus('That code did not match. Try the current code.'),
-              )
-            }
-          />
-        </div>
-      )}
       <Button variant="ghost" className="ml-auto" onClick={() => void auth.signOut()}>
         Sign out
       </Button>
