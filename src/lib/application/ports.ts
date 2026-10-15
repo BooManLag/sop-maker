@@ -48,7 +48,8 @@ export interface MediaTranscriber {
   transcribe(
     objectPath: string,
     contentType: MediaContentType,
-    options?: { signal: AbortSignal },
+    /** `durationSeconds` is the inspected recording length that segment times must fit. */
+    options?: { signal?: AbortSignal; durationSeconds?: number },
   ): Promise<Transcription>;
 }
 export interface AnalyticsService {

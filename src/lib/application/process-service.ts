@@ -5,7 +5,7 @@ const rawContentRetentionMs = 30 * 86400_000;
 import type { ProcessStep } from '../domain/types';
 import type { Actor } from '../server/auth';
 import { requireCondition } from '../server/errors';
-import type { schemas } from '../server/contracts';
+import { transcriptionSchema, type schemas } from '../server/contracts';
 import type { z } from 'zod';
 type Input<K extends keyof typeof schemas> = z.infer<(typeof schemas)[K]>;
 export function getProcess(s: Store, id?: string) {
@@ -98,6 +98,23 @@ export function getFrameStep(s: Store, id: string, body: Input<'frameRequest'>) 
   requireCondition(step, 'Step not found.', 404);
   return step;
 }
+/** The expert's corrections replace the transcript; draft steps are left to the step editor. */
+export function saveTranscript(s: Store, id: string, body: Input<'transcriptSave'>) {
+  const capture = getCapture(s, id);
+  requireDraft(getProcess(s, capture.processId));
+  requireCondition(
+    capture.media && capture.status === 'transcribed',
+    'Only a finished transcription can be edited.',
+    409,
+  );
+  const recordingMs = Math.ceil(capture.media.declaredSeconds * 1000);
+  const segments = transcriptionSchema(recordingMs).shape.segments.safeParse(body.segments);
+  requireCondition(
+    segments.success,
+    'Transcript times must stay inside the recording, in order and without overlaps.',
+  );
+  capture.segments = segments.data;
+}
 export function createClarification(s: Store, id: string, body: Input<'clarificationCreate'>) {
   const p = getProcess(s, id);
   requireDraft(p);
@@ -180,7 +197,13 @@ export function captureDraftDto(s: Store, id?: string) {
   return {
     id: capture.id,
     processId: capture.processId,
-    ...(capture.status ? { status: capture.status, segments: capture.segments ?? [] } : {}),
+    ...(capture.status
+      ? {
+          status: capture.status,
+          segments: capture.segments ?? [],
+          durationMs: Math.ceil((capture.media?.declaredSeconds ?? 0) * 1000),
+        }
+      : {}),
     questions: capture.questions ?? [],
     answers: s.clarifications
       .filter((c) => c.captureId === capture.id)

@@ -1,4 +1,4 @@
-export type DraftStage = 'steps' | 'clarify' | 'review';
+export type DraftStage = 'transcript' | 'steps' | 'clarify' | 'review';
 
 /** URL of a create-SOP stage; `sample` keeps the guided sample answers available. */
 export function draftPath(
