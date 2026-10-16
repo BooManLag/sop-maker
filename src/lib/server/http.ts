@@ -82,7 +82,7 @@ export function createHttpHandler(dependencies: HttpDependencies) {
         throw new ApiError(403, 'Cross-site requests require an allowed origin.');
       if (request.method === 'OPTIONS') {
         resolveEndpoint(request.headers.get('access-control-request-method') ?? 'GET', segments);
-        headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+        headers.set('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
         headers.set('Access-Control-Allow-Headers', 'Authorization, Content-Type, Idempotency-Key');
         headers.set('Access-Control-Max-Age', '600');
         status = 204;

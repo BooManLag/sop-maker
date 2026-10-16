@@ -157,7 +157,7 @@ Warnings for whoever implements this:
 
 ### Adding endpoints: the rules that will bite
 
-- **`Endpoint` expresses only `method: 'GET' | 'POST'`.** There is no PUT, PATCH or DELETE in the registry, and the preflight advertises the same three. Introducing another verb means changing `resolveEndpoint`, the CORS preflight and the OpenAPI generator.
+- **`Endpoint` expresses `method: 'GET' | 'POST' | 'PATCH' | 'DELETE'`.** The CORS preflight advertises the same set, and the OpenAPI generator documents a body for POST and PATCH. Introducing another verb means changing all three.
 - **`resolveEndpoint` rejects any path over 3 segments, and every segment must match `/^[A-Za-z0-9_-]{1,128}$/`.** `/processes/:id/exports` is legal. `/processes/:id/export/pptx` is not, and neither is any path ending in `.pptx` — both return 404, not a helpful error.
 - **The signed-URL upload bypasses this API, so the API's CORS list can stay as it is — but the Cloud Storage bucket needs its own CORS configuration** allowing `PUT` (and `GET` if frames are displayed straight from the bucket) from the app origin. Missing bucket CORS surfaces in the browser as an opaque failed request, which is a miserable thing to debug.
 - **Every new endpoint needs four edits plus a regeneration:** a `schemas` entry if it takes a body, an `endpoints` entry with `permission` and `create`, a `case` in `Backend.read` or `Backend.mutate`, a client method in `src/lib/client/api.ts` if the UI calls it, and `npm run api:generate` with the regenerated `docs/openapi.json` committed.

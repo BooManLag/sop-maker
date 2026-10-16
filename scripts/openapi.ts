@@ -17,7 +17,7 @@ export function openApiDocument() {
         required: true,
         schema: { type: 'string', pattern: '^[A-Za-z0-9_-]{1,128}$' },
       });
-    if (endpoint.method === 'POST')
+    if (endpoint.method !== 'GET')
       parameters.push({
         name: 'Idempotency-Key',
         in: 'header',
@@ -42,7 +42,7 @@ export function openApiDocument() {
       description: `Requires ${endpoint.permission} permission. Tenant comes only from verified Firebase custom claims. Review/admin writes require recent MFA by default.`,
       security: [{ firebaseBearer: [] }],
       parameters,
-      ...(endpoint.method === 'POST'
+      ...(endpoint.method === 'POST' || endpoint.method === 'PATCH'
         ? {
             requestBody: {
               required: true,

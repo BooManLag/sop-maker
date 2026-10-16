@@ -18,7 +18,14 @@ export function getProcess(s: Store, id?: string) {
   requireCondition(process, 'Process not found.', 404);
   return process;
 }
+/** Archived processes keep their history but take no new work. */
+export function requireActive(process: ReturnType<typeof getProcess>) {
+  requireCondition(!process.archivedAt, 'This process is archived.', 409);
+}
+/** Processes that still appear in lists. */
+export const activeProcesses = (s: Store) => s.processes.filter((p) => !p.archivedAt);
 export function requireDraft(process: ReturnType<typeof getProcess>) {
+  requireActive(process);
   requireCondition(
     process.currentVersion === 0,
     'Baseline is already published; changes go through a change request.',
@@ -51,7 +58,7 @@ export function createProcess(s: Store, body: Input<'processCreate'>, actor: Act
 /** Renames a process; published versions keep the title they were approved under. */
 export function updateProcess(s: Store, id: string, body: Input<'processUpdate'>) {
   const p = getProcess(s, id);
-  requireCondition(!p.archivedAt, 'An archived process cannot be edited.', 409);
+  requireActive(p);
   if (body.title !== undefined) p.title = body.title;
   if (body.equipment !== undefined) p.equipment = body.equipment;
   if (p.currentVersion === 0 && body.title !== undefined) p.versions[0].title = body.title;
@@ -69,13 +76,13 @@ export function deleteProcess(s: Store, id: string) {
     s.changes.some((x) => x.processId === id);
   if (p.currentVersion > 0 || referenced) {
     p.archivedAt ??= new Date().toISOString();
-    return { id, deleted: false, archived: true };
+    return { id, outcome: 'archived' as const };
   }
   const captureIds = new Set(s.captures.filter((c) => c.processId === id).map((c) => c.id));
   s.clarifications = s.clarifications.filter((c) => !captureIds.has(c.captureId));
   s.captures = s.captures.filter((c) => c.processId !== id);
   s.processes = s.processes.filter((x) => x.id !== id);
-  return { id, deleted: true, archived: false };
+  return { id, outcome: 'deleted' as const };
 }
 export function createCapture(s: Store, id: string, body: Input<'captureCreate'>) {
   const p = getProcess(s, id);
