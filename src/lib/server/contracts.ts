@@ -123,6 +123,7 @@ export const schemas = {
     .strict()
     .refine((b) => b.title !== undefined || b.equipment !== undefined, 'Nothing to update.'),
   processDelete: empty,
+  processPurge: z.object({ title: short }).strict(),
   captureGet: empty,
   processMedia: empty,
   uploadComplete: empty,
@@ -239,6 +240,7 @@ export const endpoints: Endpoint[] = [
   { operation: 'processGet', method: 'GET', path: 'processes/:id', permission: 'read' },
   { operation: 'processUpdate', method: 'PATCH', path: 'processes/:id', permission: 'process' },
   { operation: 'processDelete', method: 'DELETE', path: 'processes/:id', permission: 'process' },
+  { operation: 'processPurge', method: 'POST', path: 'processes/:id/purge', permission: 'admin' },
   { operation: 'processMedia', method: 'GET', path: 'processes/:id/media', permission: 'read' },
   {
     operation: 'captureCreate',

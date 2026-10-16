@@ -157,3 +157,58 @@ test('an archived process takes no new work', async () => {
     /archived/,
   );
 });
+
+test('admins delete a published process and everything recorded against it', async () => {
+  const { execute, create, publish, tenant } = await harness();
+  const id = await create();
+  const other = await create();
+  await publish(id);
+  await tenant.transact((s) => {
+    s.processes
+      .find((p) => p.id === id)!
+      .versions[0].steps.push({
+        id: 'step_1',
+        text: 'Bleed',
+        frameObjectPath: `published/tenant_a/${id}/v1/step_1`,
+      } as never);
+    s.scans.push({
+      id: 'scan_1',
+      processId: id,
+      demo: false,
+      records: [],
+      status: 'uploaded',
+      findingIds: [],
+    });
+    s.findings.push(
+      { id: 'finding_1', processId: id } as never,
+      { id: 'finding_2', processId: other } as never,
+    );
+    s.trials.push({ id: 'trial_1', findingId: 'finding_1' } as never);
+    s.results.push({ trialId: 'trial_1', outcome: 'validated' } as never);
+    s.changes.push({
+      id: 'change_1',
+      processId: id,
+      findingId: 'finding_1',
+      trialId: 'trial_1',
+    } as never);
+    s.responses.push({ id: 'response_1', findingId: 'finding_1' } as never);
+  });
+  await assert.rejects(
+    execute('POST', `processes/${id}/purge`, { title: 'Brake bleed' }, actor('reviewer')),
+    /role does not permit/,
+  );
+  await assert.rejects(
+    execute('POST', `processes/${id}/purge`, { title: 'brake bleed' }, actor('admin')),
+    /title exactly/,
+  );
+  assert.deepEqual(
+    await execute('POST', `processes/${id}/purge`, { title: 'Brake bleed' }, actor('admin')),
+    { id, outcome: 'deleted' },
+  );
+  const left = await tenant.query((s) => ({
+    processes: s.processes.map((p) => p.id),
+    findings: s.findings.map((f) => f.id),
+    rest: [s.scans, s.trials, s.results, s.changes, s.responses].map((x) => x.length),
+  }));
+  assert.deepEqual(left, { processes: [other], findings: ['finding_2'], rest: [0, 0, 0, 0, 0] });
+});
