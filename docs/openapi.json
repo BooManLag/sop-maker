@@ -3734,7 +3734,40 @@
               "schema": {
                 "$schema": "https://json-schema.org/draft/2020-12/schema",
                 "type": "object",
-                "properties": {},
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000
+                  },
+                  "condition": {
+                    "default": "",
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "warning": {
+                    "default": "",
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "equipment": {
+                    "default": "",
+                    "type": "string",
+                    "maxLength": 300
+                  },
+                  "doNotUse": {
+                    "default": "",
+                    "type": "string",
+                    "maxLength": 2000
+                  }
+                },
+                "required": [
+                  "reason",
+                  "condition",
+                  "warning",
+                  "equipment",
+                  "doNotUse"
+                ],
                 "additionalProperties": false
               }
             }
