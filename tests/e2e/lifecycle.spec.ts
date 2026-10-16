@@ -11,7 +11,7 @@ test('an expert walkthrough becomes a published baseline, surviving a mid-flow r
   page,
 }) => {
   await page.goto('/');
-  await page.getByRole('link', { name: /Start with your best know-how/ }).click();
+  await page.getByRole('link', { name: /Create first SOP|Capture a process/ }).click();
   await expect(page).toHaveURL('/processes/new');
   await page.getByLabel('Process name').fill('Valve Replacement');
   await page.getByLabel('Equipment / job type').fill('Valve assembly X');
@@ -104,18 +104,31 @@ test('insufficient uploaded records do not produce findings', async ({ page }) =
   await expect(page.getByRole('button', { name: 'Run scan', exact: true })).toBeDisabled();
 });
 
-test('on a phone the layout fits and the menu navigates', async ({ page }) => {
+test('on a phone the layout fits and the tab bar navigates', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
   await expect(page.getByRole('heading', { name: /Good work deserves/ })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await expect(page.getByRole('complementary')).toBeHidden();
 
-  await page.getByRole('button', { name: 'Toggle menu' }).click();
-  await page
-    .getByRole('dialog')
-    .getByRole('link', { name: /Processes/ })
-    .click();
+  const tabs = page.getByRole('navigation', { name: 'Main navigation' });
+  await expect(tabs).toHaveCount(1);
+  await tabs.getByRole('link', { name: /Processes/ }).click();
   await expect(page).toHaveURL('/processes');
   await expect(page.getByRole('heading', { name: 'Processes', exact: true })).toBeVisible();
-  await expect(page.getByRole('dialog')).toBeHidden();
+  await expect(tabs.getByRole('link', { name: /Processes/ })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+});
+
+test('on a desktop the sidebar navigates and the tab bar is hidden', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto('/');
+  const nav = page.getByRole('navigation', { name: 'Main navigation' });
+  await expect(nav).toHaveCount(1);
+  await expect(page.getByRole('complementary')).toBeVisible();
+  await nav.getByRole('link', { name: /Findings/ }).click();
+  await expect(page).toHaveURL('/findings');
+  await expect(page.getByRole('navigation', { name: 'Breadcrumb' })).toContainText('Findings');
 });

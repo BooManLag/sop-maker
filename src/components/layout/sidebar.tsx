@@ -2,22 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FileText, FlaskConical, Layers, Leaf, LogOut, Search } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+import { Layers, Leaf, LogOut } from 'lucide-react';
 import { useSession } from '@/features/auth/auth-gate';
 import type { Workspace } from '@/lib/client/api';
 import { useWorkspace } from '@/lib/client/queries';
 import { cn } from '@/lib/utils';
-import { sectionFor, sectionLabels, type Section } from './sections';
+import { navItems, sectionFor, sectionLabels, type Section } from './sections';
 
-const navItems: { section: Section; href: string; icon: LucideIcon }[] = [
-  { section: 'overview', href: '/', icon: Layers },
-  { section: 'processes', href: '/processes', icon: FileText },
-  { section: 'findings', href: '/findings', icon: Search },
-  { section: 'trials', href: '/trials', icon: FlaskConical },
-];
-
-function useNavCounts(): Partial<Record<Section, number>> {
+export function useNavCounts(): Partial<Record<Section, number>> {
   const { data } = useWorkspace();
   if (!data) return {};
   return {
@@ -27,17 +19,16 @@ function useNavCounts(): Partial<Record<Section, number>> {
   };
 }
 
-export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+export function SidebarContent() {
   const active = sectionFor(usePathname());
   const counts = useNavCounts();
   const account = useAccount();
   return (
-    <div className="flex h-full flex-col px-6 pt-9 max-lg:sm:px-4">
+    <div className="flex h-full flex-col px-6 pt-9 max-lg:px-4">
       <Link
         href="/"
-        onClick={onNavigate}
         aria-label="Good Exception home"
-        className="flex items-center gap-3 text-xl leading-[0.98] font-bold tracking-[-1px] text-foreground max-md:sm:gap-1.5 max-md:sm:text-lg"
+        className="flex items-center gap-3 text-xl leading-[0.98] font-bold tracking-[-1px] text-foreground"
       >
         <span className="grid h-12 w-10 -rotate-7 place-items-center text-brand-600">
           <Layers size={23} aria-hidden />
@@ -64,7 +55,6 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           <Link
             key={section}
             href={href}
-            onClick={onNavigate}
             aria-current={active === section ? 'page' : undefined}
             className={cn(
               'flex items-center gap-3 rounded-sm p-3 text-sm text-muted-foreground transition-colors hover:bg-brand-100',
