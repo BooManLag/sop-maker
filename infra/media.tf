@@ -35,6 +35,12 @@ resource "google_storage_bucket_iam_member" "runtime_media" {
   role   = "roles/storage.objectAdmin"
   member = google_service_account.runtime.member
 }
+# Gemini reads recordings by gs:// URI as the Vertex AI service agent, not as the caller.
+resource "google_storage_bucket_iam_member" "vertex_reads_media" {
+  bucket = google_storage_bucket.media.name
+  role   = "roles/storage.objectViewer"
+  member = "serviceAccount:service-${data.google_project.this.number}@gcp-sa-aiplatform.iam.gserviceaccount.com"
+}
 
 # Signed URLs are signed by the runtime account itself through IAM signBlob.
 resource "google_service_account_iam_member" "runtime_signs_urls" {
