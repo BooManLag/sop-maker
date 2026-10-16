@@ -8,6 +8,7 @@ const environment = z.object({
   GOOD_EXCEPTION_ALLOWED_ORIGINS: z.string().default(''),
   GOOD_EXCEPTION_PSEUDONYM_KEY: z.string().min(32).optional(),
   GOOD_EXCEPTION_REQUIRE_MFA: flag.default('false'),
+  GOOD_EXCEPTION_ROLES_ENFORCED: flag.default('true'),
   GOOD_EXCEPTION_OPEN_ORGANIZATION: z
     .string()
     .regex(/^[A-Za-z0-9_-]{1,128}$/)
@@ -61,6 +62,8 @@ export interface ServerConfig {
   tasks?: { queue: string; workerUrl: string; invokerEmail: string };
   pseudonymKey?: string;
   requireMfa: boolean;
+  /** False lets every role create, edit and delete processes; other actions keep their roles. */
+  rolesEnforced?: boolean;
   /** Signed-in users without membership claims join this organization with this role. */
   openMembership?: { organizationId: string; role: 'viewer' | 'expert' | 'reviewer' | 'admin' };
   emulator: boolean;
@@ -152,6 +155,7 @@ export function readConfig(env: Record<string, string | undefined> = process.env
         : undefined,
     pseudonymKey: e.GOOD_EXCEPTION_PSEUDONYM_KEY,
     requireMfa: e.GOOD_EXCEPTION_REQUIRE_MFA === 'true',
+    rolesEnforced: e.GOOD_EXCEPTION_ROLES_ENFORCED === 'true',
     openMembership: e.GOOD_EXCEPTION_OPEN_ORGANIZATION
       ? { organizationId: e.GOOD_EXCEPTION_OPEN_ORGANIZATION, role: e.GOOD_EXCEPTION_OPEN_ROLE }
       : undefined,

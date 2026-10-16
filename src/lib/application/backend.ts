@@ -300,7 +300,10 @@ export class Backend {
     switch (operation) {
       case 'workspace':
         return {
-          processes: s.processes.slice(0, 50).map(processes.processDto),
+          processes: s.processes
+            .filter((p) => !p.archivedAt)
+            .slice(0, 50)
+            .map(processes.processDto),
           findings: s.findings.slice(0, 50),
           trials: s.trials.slice(0, 50),
           changes: s.changes.slice(0, 50),
@@ -308,14 +311,14 @@ export class Backend {
           organization: actor.organizationId,
           role: actor.role,
           hasMore: {
-            processes: s.processes.length > 50,
+            processes: s.processes.filter((p) => !p.archivedAt).length > 50,
             findings: s.findings.length > 50,
             trials: s.trials.length > 50,
             changes: s.changes.length > 50,
           },
         };
       case 'processList':
-        return page(s.processes.map(processes.processDto), q);
+        return page(s.processes.filter((p) => !p.archivedAt).map(processes.processDto), q);
       case 'findingList':
         return page(s.findings, q);
       case 'trialList':
@@ -364,6 +367,10 @@ export class Backend {
         return processes.processDto(
           processes.createProcess(s, parseInput(operation, input), ctx.actor),
         );
+      case 'processUpdate':
+        return processes.processDto(processes.updateProcess(s, id!, parseInput(operation, input)));
+      case 'processDelete':
+        return processes.deleteProcess(s, id!);
       case 'captureCreate': {
         const c = processes.createCapture(s, id!, parseInput(operation, input));
         return { id: c.id, processId: c.processId, kind: c.kind, createdAt: c.createdAt };

@@ -44,6 +44,8 @@ export interface Process {
   equipment: string;
   currentVersion: number;
   versions: ProcessVersion[];
+  /** Set when a published process is retired; it stays for its history but leaves the lists. */
+  archivedAt?: string;
 }
 export interface ExpertCapture {
   id: ID;

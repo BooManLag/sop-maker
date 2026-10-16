@@ -170,7 +170,8 @@ export function createHttpHandler(dependencies: HttpDependencies) {
       const parsedQuery = querySchema.safeParse(params);
       if (!parsedQuery.success)
         throw new ApiError(400, 'Invalid pagination, filtering or sorting parameters.');
-      const body = request.method === 'POST' ? await readJson(request) : {};
+      const body =
+        request.method === 'POST' || request.method === 'PATCH' ? await readJson(request) : {};
       const execution = backend.execute(
         resolved.endpoint,
         resolved.id,

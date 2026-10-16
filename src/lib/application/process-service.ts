@@ -48,6 +48,35 @@ export function createProcess(s: Store, body: Input<'processCreate'>, actor: Act
   s.processes.push(process);
   return process;
 }
+/** Renames a process; published versions keep the title they were approved under. */
+export function updateProcess(s: Store, id: string, body: Input<'processUpdate'>) {
+  const p = getProcess(s, id);
+  requireCondition(!p.archivedAt, 'An archived process cannot be edited.', 409);
+  if (body.title !== undefined) p.title = body.title;
+  if (body.equipment !== undefined) p.equipment = body.equipment;
+  if (p.currentVersion === 0 && body.title !== undefined) p.versions[0].title = body.title;
+  return p;
+}
+/**
+ * Deletes a draft with everything captured for it; its recordings expire with draft storage.
+ * A published process, or one evidence points at, is archived so its history survives.
+ */
+export function deleteProcess(s: Store, id: string) {
+  const p = getProcess(s, id);
+  const referenced =
+    s.scans.some((x) => x.processId === id) ||
+    s.findings.some((x) => x.processId === id) ||
+    s.changes.some((x) => x.processId === id);
+  if (p.currentVersion > 0 || referenced) {
+    p.archivedAt ??= new Date().toISOString();
+    return { id, deleted: false, archived: true };
+  }
+  const captureIds = new Set(s.captures.filter((c) => c.processId === id).map((c) => c.id));
+  s.clarifications = s.clarifications.filter((c) => !captureIds.has(c.captureId));
+  s.captures = s.captures.filter((c) => c.processId !== id);
+  s.processes = s.processes.filter((x) => x.id !== id);
+  return { id, deleted: true, archived: false };
+}
 export function createCapture(s: Store, id: string, body: Input<'captureCreate'>) {
   const p = getProcess(s, id);
   requireDraft(p);
@@ -240,6 +269,7 @@ export function processDto(process: ReturnType<typeof getProcess>) {
     title: process.title,
     equipment: process.equipment,
     currentVersion: process.currentVersion,
+    ...(process.archivedAt ? { archivedAt: process.archivedAt } : {}),
     versions: process.versions.map(({ approvedBy, ...version }) => ({
       ...version,
       approved: !!approvedBy,
