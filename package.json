@@ -23,6 +23,7 @@
     "prepare": "husky"
   },
   "dependencies": {
+    "@google-cloud/storage": "^7.22.0",
     "@google/adk": "^2.2.1",
     "@google/genai": "^2.28.0",
     "@hookform/resolvers": "^5.9.1",
