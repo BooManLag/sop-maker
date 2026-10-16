@@ -42,6 +42,8 @@ const environment = z.object({
   K_SERVICE: z.string().optional(),
   FIRESTORE_EMULATOR_HOST: z.string().optional(),
   FIREBASE_AUTH_EMULATOR_HOST: z.string().optional(),
+  /** Local development against the live project: allows the loopback origin. */
+  GOOD_EXCEPTION_LOCAL: flag.default('false'),
 });
 export interface ServerConfig {
   mode: 'demo' | 'production';
@@ -56,6 +58,8 @@ export interface ServerConfig {
   /** Signed-in users without membership claims join this organization with this role. */
   openMembership?: { organizationId: string; role: 'viewer' | 'expert' | 'reviewer' | 'admin' };
   emulator: boolean;
+  /** Running on a developer machine against the live project. */
+  local?: boolean;
 }
 export function readConfig(env: Record<string, string | undefined> = process.env): ServerConfig {
   const parsed = environment.safeParse(env);
@@ -86,11 +90,13 @@ export function readConfig(env: Record<string, string | undefined> = process.env
     (!e.GOOGLE_CLOUD_PROJECT ||
       !e.GOOD_EXCEPTION_PSEUDONYM_KEY ||
       // Against the local emulators the app is served from loopback, which is always allowed.
-      (!origins.length && !e.FIRESTORE_EMULATOR_HOST))
+      (!origins.length && !e.FIRESTORE_EMULATOR_HOST && e.GOOD_EXCEPTION_LOCAL !== 'true'))
   )
     throw new Error(
       'Production requires GOOGLE_CLOUD_PROJECT, GOOD_EXCEPTION_PSEUDONYM_KEY and GOOD_EXCEPTION_ALLOWED_ORIGINS.',
     );
+  if (e.K_SERVICE && e.GOOD_EXCEPTION_LOCAL === 'true')
+    throw new Error('Local development mode is forbidden on Cloud Run.');
   if (e.K_SERVICE && (e.FIRESTORE_EMULATOR_HOST || e.FIREBASE_AUTH_EMULATOR_HOST))
     throw new Error('Emulator connections are forbidden on Cloud Run.');
   const taskFields = [
@@ -143,6 +149,7 @@ export function readConfig(env: Record<string, string | undefined> = process.env
       ? { organizationId: e.GOOD_EXCEPTION_OPEN_ORGANIZATION, role: e.GOOD_EXCEPTION_OPEN_ROLE }
       : undefined,
     emulator: Boolean(e.FIRESTORE_EMULATOR_HOST),
+    local: e.GOOD_EXCEPTION_LOCAL === 'true',
   };
 }
 export const LIMITS = Object.freeze({

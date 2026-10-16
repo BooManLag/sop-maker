@@ -319,6 +319,14 @@ test('production mode fails closed for missing config, emulator on Cloud Run and
       }),
     /Emulator/,
   );
+  const local = {
+    GOOD_EXCEPTION_MODE: 'production',
+    GOOGLE_CLOUD_PROJECT: 'demo-good-exception',
+    GOOD_EXCEPTION_PSEUDONYM_KEY: 'x'.repeat(32),
+    GOOD_EXCEPTION_LOCAL: 'true',
+  };
+  assert.ok(readConfig(local).local);
+  assert.throws(() => readConfig({ ...local, K_SERVICE: 'app' }), /Local development/);
 });
 
 test('invalid model output and provider failure leave draft steps unchanged', async () => {
