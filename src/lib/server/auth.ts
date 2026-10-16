@@ -79,7 +79,8 @@ export async function authenticate(
     demo: false,
   };
 }
-export type Permission = 'read' | 'write' | 'review' | 'admin';
+/** `process` covers creating, editing and deleting processes, the part roles can be relaxed for. */
+export type Permission = 'read' | 'write' | 'process' | 'review' | 'admin';
 export function authorize(actor: Actor, permission: Permission, config: ServerConfig) {
   if (!identifier.test(actor.organizationId) || !identifier.test(actor.userId))
     throw new ApiError(403, 'Invalid actor context.');
@@ -88,6 +89,10 @@ export function authorize(actor: Actor, permission: Permission, config: ServerCo
   const granted: Record<Permission, Role[]> = {
     read: ['viewer', 'expert', 'reviewer', 'admin'],
     write: ['expert', 'reviewer', 'admin'],
+    process:
+      config.rolesEnforced === false
+        ? ['viewer', 'expert', 'reviewer', 'admin']
+        : ['expert', 'reviewer', 'admin'],
     review: ['reviewer', 'admin'],
     admin: ['admin'],
   };

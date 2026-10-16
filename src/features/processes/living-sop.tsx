@@ -15,6 +15,7 @@ import { useProcess } from '@/lib/client/queries';
 import { StepView } from './step-view';
 import { useStepStills } from './step-still';
 import { SopExportButton } from './sop-export-button';
+import { ProcessSettings } from './process-settings';
 
 export function LivingSop({ processId }: { processId: string }) {
   return (
@@ -30,7 +31,10 @@ export function LivingSop({ processId }: { processId: string }) {
                 title={process.title}
                 description={`${process.equipment} · ${process.currentVersion ? `Version ${process.currentVersion}` : 'Draft v1'}`}
                 action={
-                  <SopExportButton process={process} data={process} fileName="living-sop.json" />
+                  <div className="flex gap-2">
+                    <SopExportButton process={process} data={process} fileName="living-sop.json" />
+                    <ProcessSettings process={process} />
+                  </div>
                 }
               />
               <WithSideRail>

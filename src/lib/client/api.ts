@@ -17,6 +17,7 @@ export type ProcessDto = {
   equipment: string;
   currentVersion: number;
   versions: (Omit<ProcessVersion, 'approvedBy'> & { approved: boolean })[];
+  archivedAt?: string;
 };
 export type Workspace = {
   processes: ProcessDto[];
@@ -99,16 +100,15 @@ export function createApiClient({
   fetch: send = (...args) => fetch(...args),
   getToken = async () => undefined,
 }: ClientOptions = {}) {
-  async function request<T>(path: string, body?: unknown): Promise<T> {
+  type Method = 'GET' | 'POST' | 'PATCH' | 'DELETE';
+  async function request<T>(path: string, method: Method, body?: unknown): Promise<T> {
     const headers = new Headers({ Accept: 'application/json' });
     const token = await getToken();
     if (token) headers.set('Authorization', `Bearer ${token}`);
-    if (body !== undefined) {
-      headers.set('Content-Type', 'application/json');
-      headers.set('Idempotency-Key', crypto.randomUUID());
-    }
+    if (body !== undefined) headers.set('Content-Type', 'application/json');
+    if (method !== 'GET') headers.set('Idempotency-Key', crypto.randomUUID());
     const response = await send(`${baseUrl}/${path}`, {
-      method: body === undefined ? 'GET' : 'POST',
+      method,
       headers,
       body: body === undefined ? undefined : JSON.stringify(body),
     });
@@ -122,8 +122,8 @@ export function createApiClient({
       );
     return payload as T;
   }
-  const get = <T>(path: string) => request<T>(path);
-  const post = <T>(path: string, body: unknown = {}) => request<T>(path, body);
+  const get = <T>(path: string) => request<T>(path, 'GET');
+  const post = <T>(path: string, body: unknown = {}) => request<T>(path, 'POST', body);
 
   return {
     workspace: () => get<Workspace>('workspace'),
@@ -131,6 +131,10 @@ export function createApiClient({
     process: (id: string) => get<ProcessDto>(`processes/${id}`),
     createProcess: (body: { title: string; equipment: string }) =>
       post<ProcessDto>('processes', body),
+    updateProcess: (id: string, body: { title?: string; equipment?: string }) =>
+      request<ProcessDto>(`processes/${id}`, 'PATCH', body),
+    deleteProcess: (id: string) =>
+      request<{ id: string; deleted: boolean; archived: boolean }>(`processes/${id}`, 'DELETE'),
     createCapture: (
       processId: string,
       body: { kind: 'text'; expertReference: string; text: string },
