@@ -25,7 +25,7 @@ export const stepSchema = z
       .number()
       .int()
       .min(0)
-      .max(LIMITS.mediaSeconds * 1000)
+      .max(LIMITS.mediaSecondsCeiling * 1000)
       .optional(),
   })
   .strict()
@@ -129,11 +129,11 @@ export const schemas = {
     .strict(),
   uploadRequest: z
     .object({
-      kind: z.literal('audio'),
       expertReference: idSchema,
       contentType: z.enum(mediaContentTypes),
       bytes: z.number().int().positive().max(LIMITS.mediaBytes),
-      durationSeconds: z.number().positive().max(LIMITS.mediaSeconds),
+      /** Everyone in the recording agreed to be recorded. */
+      consent: z.literal(true),
     })
     .strict(),
   frameRequest: z

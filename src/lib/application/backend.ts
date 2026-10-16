@@ -2,7 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import type { MediaJobs, Repository, RepositoryProvider, UploadSigner } from './ports';
 import type { AnalysisQueue } from './analysis/worker';
 import type { Store } from './store';
-import { consumeQuota, pruneExpired, reserveMediaSeconds } from './store';
+import { consumeQuota, pruneExpired, requireMediaAllowance } from './store';
 import { authorize, type Actor, type RequestContext } from '../server/auth';
 import { LIMITS, type ServerConfig } from '../server/config';
 import { type Endpoint, type ListQuery, parseInput } from '../server/contracts';
@@ -134,7 +134,7 @@ export class Backend {
       const body = parseInput('uploadRequest', input);
       await repository.transact((s) => {
         processes.requireDraft(processes.getProcess(s, id));
-        reserveMediaSeconds(s, Math.ceil(body.durationSeconds));
+        requireMediaAllowance(s);
       });
       upload = await this.signUpload(
         (uploadId) => mediaPaths.recording(organizationId, id!, uploadId),
@@ -309,7 +309,7 @@ export class Backend {
       }
       case 'uploadRequest': {
         const body = parseInput(operation, input);
-        processes.createMediaCapture(s, id!, upload!, body);
+        processes.createMediaCapture(s, id!, upload!, body, ctx.actor);
         return uploadTarget(upload!);
       }
       case 'frameRequest': {

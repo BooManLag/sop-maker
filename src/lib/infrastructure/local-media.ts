@@ -1,5 +1,7 @@
-import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
-import { mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
+import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import { createReadStream } from 'node:fs';
+import { mkdir, open, rename, rm, stat, writeFile } from 'node:fs/promises';
+import { pipeline } from 'node:stream/promises';
 import path from 'node:path';
 import { z } from 'zod';
 import type { MediaStorage, UploadSigner, WritableMediaStorage } from '../application/ports';
@@ -26,8 +28,27 @@ export class LocalMediaStore implements MediaStorage {
     await writeFile(`${file}.partial`, bytes);
     await rename(`${file}.partial`, file);
   }
-  async read(objectPath: string) {
-    return new Uint8Array(await readFile(this.file(objectPath)));
+  async open(objectPath: string) {
+    const file = this.file(objectPath);
+    const { size } = await stat(file);
+    return {
+      size,
+      async read(start: number, end: number) {
+        const bytes = new Uint8Array(Math.max(0, Math.min(end, size) - start));
+        const handle = await open(file, 'r');
+        try {
+          await handle.read(bytes, 0, bytes.length, start);
+        } finally {
+          await handle.close();
+        }
+        return bytes;
+      },
+    };
+  }
+  async sha256(objectPath: string) {
+    const hash = createHash('sha256');
+    await pipeline(createReadStream(this.file(objectPath)), hash);
+    return hash.digest('hex');
   }
   async promote(from: string, to: string) {
     const target = this.file(to);

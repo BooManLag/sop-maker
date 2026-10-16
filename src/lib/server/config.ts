@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { z } from 'zod';
+import { maxMediaBytes } from '../domain/types';
 const flag = z.enum(['true', 'false']);
 const environment = z.object({
   GOOD_EXCEPTION_MODE: z.enum(['demo', 'production']).default('demo'),
@@ -167,8 +168,9 @@ export const LIMITS = Object.freeze({
   rows: 1000,
   steps: 100,
   captureCharacters: 20_000,
-  mediaBytes: 10_000_000,
-  mediaSeconds: 600,
+  mediaBytes: maxMediaBytes,
+  /** Not a product cap: the longest recording Gemini can transcribe in one request. */
+  mediaSecondsCeiling: 45 * 60,
   frameBytes: 500_000,
   mediaSecondsPerMonth: 300 * 60,
   responseBytes: 800_000,
