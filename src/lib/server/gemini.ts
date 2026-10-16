@@ -31,7 +31,6 @@ const stepsSchema = {
   properties: {
     steps: {
       type: 'array',
-      maxItems: LIMITS.steps,
       items: {
         type: 'object',
         properties: {
@@ -49,7 +48,7 @@ const stepsSchema = {
 };
 const questionsSchema = {
   type: 'object',
-  properties: { questions: { type: 'array', minItems: 1, maxItems: 3, items: { type: 'string' } } },
+  properties: { questions: { type: 'array', items: { type: 'string' } } },
   required: ['questions'],
 };
 
