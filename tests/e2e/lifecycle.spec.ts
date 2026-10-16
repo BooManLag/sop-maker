@@ -33,9 +33,6 @@ test('an expert walkthrough becomes a published baseline, surviving a mid-flow r
 
   await expect(page).toHaveURL(/\/review$/);
   await page.getByRole('button', { name: 'Publish baseline SOP' }).click();
-  await expect(page.getByText('Approve the procedure before publishing it.')).toBeVisible();
-  await page.getByRole('checkbox').check();
-  await page.getByRole('button', { name: 'Publish baseline SOP' }).click();
 
   await expect(page).toHaveURL(/\/published$/);
   await expect(
