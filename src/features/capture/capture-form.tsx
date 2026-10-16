@@ -64,6 +64,7 @@ async function startDraft({ recording, ...values }: CaptureValues & { recording?
     });
     rememberRecording(target.uploadId, recording.blob);
     await api.upload(target, recording.blob);
+    await api.completeUpload(target.uploadId);
     return draftPath(process.id, target.uploadId, 'transcript');
   }
   const capture = await api.createCapture(process.id, {

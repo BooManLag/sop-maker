@@ -1,5 +1,6 @@
 /** Feeds the log-based metrics in infra/monitoring.tf; field names here are part of that contract. */
-export type AiFeature = 'capture_extract' | 'capture_questions' | 'scan_embed' | 'scan_agent';
+export type AiFeature =
+  'capture_extract' | 'capture_questions' | 'capture_transcribe' | 'scan_embed' | 'scan_agent';
 export interface AiUsage {
   feature: AiFeature;
   model: string;

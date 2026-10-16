@@ -146,6 +146,8 @@ export function createApiClient({
         );
       }
     },
+    /** Tells the server the upload finished; it checks storage before transcribing. */
+    completeUpload: (captureId: string) => post<DraftCapture>(`captures/${captureId}/uploaded`, {}),
     saveTranscript: (captureId: string, segments: TranscriptSegment[]) =>
       post<DraftCapture>(`captures/${captureId}/transcript`, { segments }),
     saveDraft: (processId: string, steps: ProcessStep[]) =>

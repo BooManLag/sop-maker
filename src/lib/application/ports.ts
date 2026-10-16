@@ -37,6 +37,11 @@ export interface MediaStorage {
   /** Moves an inspected object out of quarantine. Idempotent: a finished move is a no-op. */
   promote(from: string, to: string): Promise<void>;
   remove(objectPath: string): Promise<void>;
+  exists(objectPath: string): Promise<boolean>;
+}
+/** Starts processing an uploaded recording, off the request path where storage allows. */
+export interface MediaJobs {
+  start(job: { objectPath: string }): Promise<void>;
 }
 export interface Transcription {
   segments: TranscriptSegment[];
