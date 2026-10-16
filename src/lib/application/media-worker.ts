@@ -105,7 +105,10 @@ export class MediaWorker {
       : await this.transcriber
           .transcribe(cleanPath!, contentType, { durationSeconds: seconds })
           .catch(() => undefined);
-    const parsed = transcriptionSchema(processes.recordingLengthMs(recording)).safeParse(candidate);
+    const recordingMs = processes.recordingLengthMs(recording);
+    const parsed = transcriptionSchema(recordingMs).safeParse(
+      fitToRecording(candidate, recordingMs),
+    );
     if (parsed.success) return { transcription: parsed.data, reused: !!earlier };
     return {
       issues: parsed.error.issues.slice(0, 5).map((i) => `${i.path.join('.')}: ${i.message}`),
@@ -151,6 +154,27 @@ export class MediaWorker {
     });
     this.log({ severity: 'INFO', event: 'media_transcribed', captureId: recording.id });
   }
+}
+/**
+ * Pulls model times inside the recording and trims overlaps, which models make routinely.
+ * Anything not shaped like a transcription is passed through for the schema to reject.
+ */
+function fitToRecording(candidate: unknown, recordingMs: number): unknown {
+  const c = candidate as Partial<Transcription> | undefined;
+  if (!Array.isArray(c?.segments) || !Array.isArray(c?.steps)) return candidate;
+  const fit = (ms: unknown) =>
+    typeof ms === 'number' ? Math.min(Math.max(Math.round(ms), 0), recordingMs) : ms;
+  let previousEnd = 0;
+  const segments = [...c.segments]
+    .sort((a, b) => Number(a?.startMs) - Number(b?.startMs))
+    .map((segment) => {
+      const startMs = Math.max(Number(fit(segment.startMs)), previousEnd);
+      const endMs = Math.max(Number(fit(segment.endMs)), startMs);
+      previousEnd = endMs;
+      return { ...segment, startMs, endMs };
+    });
+  const steps = c.steps.map((step) => ({ ...step, frameAtMs: fit(step.frameAtMs) as number }));
+  return { ...c, segments, steps };
 }
 const toDraftStep = (step: Transcription['steps'][number], i: number) => ({
   id: randomUUID(),
