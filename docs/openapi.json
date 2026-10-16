@@ -2411,7 +2411,6 @@
                   }
                 },
                 "required": [
-                  "approved",
                   "steps"
                 ],
                 "additionalProperties": false
