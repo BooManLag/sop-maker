@@ -18,3 +18,4 @@ ui-debug.log
 gha-creds-*.json
 *.tfplan
 .firebase-deploy.json
+.emulator-data/

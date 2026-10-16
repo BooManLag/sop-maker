@@ -83,7 +83,10 @@ export function readConfig(env: Record<string, string | undefined> = process.env
     throw new Error('Cloud Run requires production mode. The local demo cannot be deployed.');
   if (
     e.GOOD_EXCEPTION_MODE === 'production' &&
-    (!e.GOOGLE_CLOUD_PROJECT || !e.GOOD_EXCEPTION_PSEUDONYM_KEY || !origins.length)
+    (!e.GOOGLE_CLOUD_PROJECT ||
+      !e.GOOD_EXCEPTION_PSEUDONYM_KEY ||
+      // Against the local emulators the app is served from loopback, which is always allowed.
+      (!origins.length && !e.FIRESTORE_EMULATOR_HOST))
   )
     throw new Error(
       'Production requires GOOGLE_CLOUD_PROJECT, GOOD_EXCEPTION_PSEUDONYM_KEY and GOOD_EXCEPTION_ALLOWED_ORIGINS.',
