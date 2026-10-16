@@ -289,25 +289,69 @@ for (const [outcome, run] of Object.entries(outcomes))
     assert.equal(await spentMediaSeconds(h), kept);
   });
 const disordered = {
-  'a segment that ends before it starts': [{ startMs: 4000, endMs: 1000, text: 'Backwards.' }],
-  'segments out of order': [
-    { startMs: 4000, endMs: 9000, text: 'Second.' },
-    { startMs: 0, endMs: 4000, text: 'First.' },
-  ],
+  'a segment that ends before it starts': {
+    segments: [{ startMs: 4000, endMs: 1000, text: 'Backwards.' }],
+    fitted: [[4000, 4000]],
+  },
+  'segments out of order': {
+    segments: [
+      { startMs: 4000, endMs: 9000, text: 'Second.' },
+      { startMs: 0, endMs: 4000, text: 'First.' },
+    ],
+    fitted: [
+      [0, 4000],
+      [4000, 9000],
+    ],
+  },
 };
-for (const [name, segments] of Object.entries(disordered))
-  test(`model output with ${name} is invalid`, async () => {
+for (const [name, { segments, fitted }] of Object.entries(disordered))
+  test(`model output with ${name} is put in order, not rejected`, async () => {
     const h = await mediaHarness({ ...transcript, segments });
     const { captureId, objectPath } = await uploaded(h);
     await h.worker.process({ objectPath }, true);
     const capture = (await execute(h.backend, 'GET', `captures/${captureId}`)) as {
       status: string;
+      segments: { startMs: number; endMs: number }[];
     };
-    assert.equal(capture.status, 'failed');
+    assert.equal(capture.status, 'transcribed');
+    assert.deepEqual(
+      capture.segments.map(({ startMs, endMs }) => [startMs, endMs]),
+      fitted,
+    );
   });
 test('the model reporting a longer recording does not change the charge', async () => {
   const h = await mediaHarness({ ...transcript, audioSeconds: 40 * 60 });
   const { objectPath } = await uploaded(h);
   await h.worker.process({ objectPath }, true);
   assert.equal(await spentMediaSeconds(h), 10);
+});
+
+test('model times past the end or overlapping are fitted to the recording, not rejected', async () => {
+  // The harness recording is 10 s long.
+  const h = await mediaHarness({
+    ...transcript,
+    segments: [
+      { startMs: 0, endMs: 4500, text: 'Isolate the pump at the breaker.' },
+      { startMs: 4000, endMs: 12_000, text: 'Then open the drain valve slowly.' },
+    ],
+    steps: [
+      { action: 'Isolate the pump at the breaker', frameAtMs: 2500 },
+      { action: 'Open the drain valve slowly', frameAtMs: 11_000 },
+    ],
+  });
+  const { captureId, objectPath } = await uploaded(h);
+  await h.worker.process({ objectPath }, false);
+  const capture = (await execute(h.backend, 'GET', `captures/${captureId}`)) as {
+    status: string;
+    durationMs: number;
+    segments: { startMs: number; endMs: number }[];
+  };
+  assert.equal(capture.status, 'transcribed');
+  assert.deepEqual(
+    capture.segments.map(({ startMs, endMs }) => [startMs, endMs]),
+    [
+      [0, 4500],
+      [4500, capture.durationMs],
+    ],
+  );
 });
