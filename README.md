@@ -24,7 +24,7 @@ bash scripts/grant-dev.sh someone@example.com [more@example.com ...]
 bash scripts/grant-dev.sh --revoke someone@example.com
 ```
 
-The demo mode with seeded sample data now runs only inside the automated browser tests. `.env.example` documents validated demo/production configuration.
+The demo mode with seeded sample data now runs only inside the automated browser tests.
 
 ```sh
 npm run typecheck
