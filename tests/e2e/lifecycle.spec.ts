@@ -22,6 +22,13 @@ test('an expert walkthrough becomes a published baseline, surviving a mid-flow r
 
   // The first draft compiles several dev routes on demand; slower machines need more than 5s.
   await expect(page).toHaveURL(/\/captures\/[^/]+\/steps$/, { timeout: 30_000 });
+  // A text walkthrough has no video to take stills from, so every step is marked as needing none.
+  const waivers = page.getByRole('checkbox', { name: 'No picture needed' });
+  await expect(waivers.first()).toBeVisible();
+  for (const waiver of await waivers.all()) {
+    await waiver.check();
+    await expect(waiver).toBeEnabled();
+  }
   await page.getByRole('button', { name: 'Clarify the know-how' }).click();
   await expect(page).toHaveURL(/\/clarify$/);
   await answer(page, 'Next question');
