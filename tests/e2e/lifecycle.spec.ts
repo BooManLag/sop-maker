@@ -111,8 +111,9 @@ test('on a phone the layout fits and the tab bar navigates', async ({ page }) =>
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await expect(page.getByRole('complementary')).toBeHidden();
 
-  const tabs = page.getByRole('navigation', { name: 'Main navigation' });
-  await expect(tabs).toHaveCount(1);
+  const tabs = page.getByRole('navigation', { name: 'Tab bar' });
+  await expect(tabs).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeHidden();
   await tabs.getByRole('link', { name: /Processes/ }).click();
   await expect(page).toHaveURL('/processes');
   await expect(page.getByRole('heading', { name: 'Processes', exact: true })).toBeVisible();
@@ -126,8 +127,9 @@ test('on a desktop the sidebar navigates and the tab bar is hidden', async ({ pa
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto('/');
   const nav = page.getByRole('navigation', { name: 'Main navigation' });
-  await expect(nav).toHaveCount(1);
+  await expect(nav).toBeVisible();
   await expect(page.getByRole('complementary')).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Tab bar' })).toBeHidden();
   await nav.getByRole('link', { name: /Findings/ }).click();
   await expect(page).toHaveURL('/findings');
   await expect(page.getByRole('navigation', { name: 'Breadcrumb' })).toContainText('Findings');

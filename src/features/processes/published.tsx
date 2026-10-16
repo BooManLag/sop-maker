@@ -16,7 +16,7 @@ export function Published({ processId }: { processId: string }) {
             <Check size={30} aria-hidden />
           </span>
           <Badge className="mb-6">Published · Version {process.currentVersion}</Badge>
-          <h1 className="font-serif text-2xl leading-[1.1] font-normal tracking-[-0.5px] sm:text-4xl">
+          <h1 className="text-2xl leading-[1.1] tracking-[-0.5px] sm:text-4xl">
             Your know-how is now a standard.
           </h1>
           <p className="mt-5 mb-7.5">

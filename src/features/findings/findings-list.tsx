@@ -12,7 +12,7 @@ import { QueryState } from '@/components/common/query-state';
 import { api } from '@/lib/client/browser';
 import { useWorkspace, useWorkspaceMutation } from '@/lib/client/queries';
 import type { Finding } from '@/lib/domain/types';
-import { relativeReduction } from '@/lib/domain/findings';
+import { needsReview, relativeReduction } from '@/lib/domain/findings';
 import { gradeLabel, gradeTone } from './grade';
 
 export function FindingsList() {
@@ -84,7 +84,10 @@ function FindingCard({ finding }: { finding: Finding }) {
   return (
     <article className="mb-4 flex flex-col justify-between gap-4.5 rounded-lg border border-border bg-card p-6 sm:flex-row md:gap-7.5 md:p-7">
       <div>
-        <Badge tone={gradeTone(finding.grade)}>{gradeLabel(finding.grade)}</Badge>
+        <div className="flex flex-wrap gap-2">
+          <Badge tone={gradeTone(finding.grade)}>{gradeLabel(finding.grade)}</Badge>
+          {needsReview(finding) ? <Badge tone="amber">Needs review</Badge> : null}
+        </div>
         <h2 className="mt-4.5 mb-3 text-lg tracking-[-0.55px]">{finding.title}</h2>
         <p className="mb-5.5 max-w-[590px] text-sm">{finding.description}</p>
         <div className="flex flex-wrap items-center gap-3 text-2xs text-muted-foreground [&>span+span]:before:mr-1 [&>span+span]:before:text-subtle-foreground [&>span+span]:before:content-['·']">

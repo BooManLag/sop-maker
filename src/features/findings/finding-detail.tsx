@@ -29,7 +29,7 @@ import { useFinding, useWorkspace, useWorkspaceMutation } from '@/lib/client/que
 import type { Finding, TechnicianResponse } from '@/lib/domain/types';
 
 type Explanation = Omit<TechnicianResponse, 'id' | 'findingId'>;
-import { relativeReduction } from '@/lib/domain/findings';
+import { needsReview, relativeReduction } from '@/lib/domain/findings';
 import { OutcomeGrid } from './outcome-grid';
 
 export function FindingDetail({ findingId }: { findingId: string }) {
@@ -68,6 +68,7 @@ function FindingReview({ finding }: { finding: Finding }) {
           .toUpperCase()}
         title={finding.title}
         description="A promising practice. A reason to investigate before changing the standard."
+        action={needsReview(finding) ? <Badge tone="amber">Needs review</Badge> : undefined}
       />
       <WithSideRail>
         <div className="grid gap-5">
