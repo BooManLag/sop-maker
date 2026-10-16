@@ -81,6 +81,11 @@ resource "google_cloud_run_v2_service" "app" {
         name  = "GOOD_EXCEPTION_OPEN_ROLE"
         value = "admin"
       }
+      # Prototype: any role may create, rename and delete processes; set "true" to restore roles.
+      env {
+        name  = "GOOD_EXCEPTION_ROLES_ENFORCED"
+        value = "false"
+      }
       env {
         name  = "GOOD_EXCEPTION_GEMINI_MODEL"
         value = var.gemini_model
