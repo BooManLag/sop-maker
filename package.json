@@ -70,5 +70,8 @@
   },
   "lint-staged": {
     "*": "prettier --write --ignore-unknown"
+  },
+  "overrides": {
+    "@grpc/grpc-js": "^1.14.6"
   }
 }
