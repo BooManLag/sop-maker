@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
-import type { Repository, RepositoryProvider, UploadSigner } from './ports';
+import type { MediaJobs, Repository, RepositoryProvider, UploadSigner } from './ports';
 import type { AnalysisQueue } from './analysis/worker';
 import type { Store } from './store';
 import { consumeQuota, pruneExpired, reserveMediaSeconds } from './store';
@@ -62,6 +62,7 @@ export class Backend {
     private capture: GuardedCaptureAdapter,
     private analysis?: AnalysisQueue,
     private uploads?: UploadSigner,
+    private mediaJobs?: MediaJobs,
   ) {}
   async execute(
     endpoint: Endpoint,
@@ -149,6 +150,14 @@ export class Backend {
         'image/jpeg',
         body.bytes,
       );
+    }
+    if (endpoint.operation === 'uploadComplete') {
+      const media = await repository.query((s) => {
+        const capture = processes.getCapture(s, id);
+        return capture.status === 'awaiting_upload' ? capture.media : undefined;
+      });
+      // The demo processes recordings as they arrive, so there is nothing left to start.
+      if (media && this.mediaJobs) await this.mediaJobs.start({ objectPath: media.objectPath });
     }
     /** Work to start only after this request's own change commits. */
     const effects = { analysisStarted: false };
@@ -306,6 +315,8 @@ export class Backend {
         step.frameObjectPath = upload!.objectPath;
         return uploadTarget(upload!);
       }
+      case 'uploadComplete':
+        return processes.captureDraftDto(s, id);
       case 'transcriptSave':
         processes.saveTranscript(s, id!, parseInput(operation, input));
         return processes.captureDraftDto(s, id);

@@ -102,6 +102,10 @@ resource "google_cloud_run_v2_service" "app" {
         value = google_service_account.tasks.email
       }
       env {
+        name  = "GOOD_EXCEPTION_MEDIA_BUCKET"
+        value = google_storage_bucket.media.name
+      }
+      env {
         name  = "GOOGLE_CLOUD_LOCATION"
         value = var.gemini_location
       }
@@ -130,6 +134,8 @@ resource "google_cloud_run_v2_service" "app" {
     google_project_iam_member.runtime,
     google_secret_manager_secret_iam_member.runtime,
     google_secret_manager_secret_version.pseudonym_key,
+    google_storage_bucket_iam_member.runtime_media,
+    google_service_account_iam_member.runtime_signs_urls,
   ]
 }
 

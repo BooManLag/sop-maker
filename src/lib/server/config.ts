@@ -44,6 +44,11 @@ const environment = z.object({
   FIREBASE_AUTH_EMULATOR_HOST: z.string().optional(),
   /** Local development against the live project: allows the loopback origin. */
   GOOD_EXCEPTION_LOCAL: flag.default('false'),
+  /** Cloud Storage bucket for recordings and frames; unset = media uploads are unavailable. */
+  GOOD_EXCEPTION_MEDIA_BUCKET: z
+    .string()
+    .regex(/^[a-z0-9][a-z0-9._-]{1,61}[a-z0-9]$/)
+    .optional(),
 });
 export interface ServerConfig {
   mode: 'demo' | 'production';
@@ -60,6 +65,7 @@ export interface ServerConfig {
   emulator: boolean;
   /** Running on a developer machine against the live project. */
   local?: boolean;
+  mediaBucket?: string;
 }
 export function readConfig(env: Record<string, string | undefined> = process.env): ServerConfig {
   const parsed = environment.safeParse(env);
@@ -150,6 +156,7 @@ export function readConfig(env: Record<string, string | undefined> = process.env
       : undefined,
     emulator: Boolean(e.FIRESTORE_EMULATOR_HOST),
     local: e.GOOD_EXCEPTION_LOCAL === 'true',
+    mediaBucket: e.GOOD_EXCEPTION_MEDIA_BUCKET,
   };
 }
 export const LIMITS = Object.freeze({

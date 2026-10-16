@@ -78,3 +78,27 @@ test("another tenant's process is not found and nothing is signed", async () => 
   );
   assert.equal(signed.length, before);
 });
+
+test('a finished upload is queued for transcription only once storage holds it', async () => {
+  const { backend, objects, queued } = await mediaHarness();
+  const id = await draft(backend);
+  const target = (await execute(backend, 'POST', `processes/${id}/uploads`, audio)) as {
+    uploadId: string;
+  };
+  await assert.rejects(
+    execute(backend, 'POST', `captures/${target.uploadId}/uploaded`),
+    /not finished/,
+  );
+  assert.equal(queued.length, 0);
+  objects.set(`quarantine/tenant_a/${id}/${target.uploadId}`, new Uint8Array([1]));
+  const capture = (await execute(backend, 'POST', `captures/${target.uploadId}/uploaded`)) as {
+    status: string;
+  };
+  assert.equal(capture.status, 'awaiting_upload');
+  assert.deepEqual(queued, [
+    {
+      url: 'https://app.example/api/v1/internal/media',
+      job: { objectPath: `quarantine/tenant_a/${id}/${target.uploadId}` },
+    },
+  ]);
+});

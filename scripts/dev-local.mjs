@@ -18,6 +18,7 @@ const env = {
   ),
   GOOD_EXCEPTION_GEMINI_MODEL: process.env.GOOD_EXCEPTION_GEMINI_MODEL || 'gemini-3.5-flash',
   GOOD_EXCEPTION_LOCAL: 'true',
+  GOOD_EXCEPTION_MEDIA_BUCKET: `${project}-media`,
   // Matches Cloud Run (infra/run.tf): every signed-in user joins the prototype org as admin.
   GOOD_EXCEPTION_OPEN_ORGANIZATION: 'prototype',
   GOOD_EXCEPTION_OPEN_ROLE: 'admin',
