@@ -1,5 +1,5 @@
 import { QueuedMediaJobs } from '../../src/lib/server/media-jobs';
-import type { CloudTasksQueue } from '../../src/lib/server/cloud-tasks';
+import type { TaskQueue } from '../../src/lib/server/cloud-tasks';
 import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -78,14 +78,16 @@ export async function mediaHarness(output: unknown = transcript) {
     },
   };
   const signed: Parameters<UploadSigner['sign']>[0][] = [];
-  const queued: { url: string; job: object }[] = [];
+  const queued: { url: string; job: object; taskId?: string }[] = [];
   const jobs = new QueuedMediaJobs(
     storage,
     {
-      async post(url: string, job: object) {
-        queued.push({ url, job });
+      async post(url: string, job: object, taskId?: string) {
+        // Cloud Tasks refuses a second task with the same name.
+        if (!queued.some((task) => taskId && task.taskId === taskId))
+          queued.push({ url, job, taskId });
       },
-    } as unknown as CloudTasksQueue,
+    } satisfies TaskQueue,
     'https://app.example/api/v1/internal/media',
   );
   const repositories = new JsonRepositoryProvider(directory);

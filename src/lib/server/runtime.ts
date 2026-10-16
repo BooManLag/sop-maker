@@ -15,6 +15,7 @@ import { GcsMedia } from '../infrastructure/gcs-media';
 import { GeminiTranscriber } from './gemini-transcriber';
 import { InlineMediaJobs, QueuedMediaJobs } from './media-jobs';
 import { MediaWorker } from '../application/media-worker';
+import type { MediaJobs, UploadSigner } from '../application/ports';
 import {
   LocalMediaStore,
   LocalMediaUploads,
@@ -22,6 +23,14 @@ import {
 } from '../infrastructure/local-media';
 import { DemoTranscriber } from '../infrastructure/demo-transcriber';
 import path from 'node:path';
+/** How recordings arrive and get processed; every part is absent when media is unavailable. */
+interface MediaWiring {
+  signer?: UploadSigner;
+  /** Loopback only: receives uploads addressed by locally signed URLs. */
+  uploads?: LocalMediaUploads;
+  jobs?: MediaJobs;
+  tasks?: { worker: MediaWorker; verify: (request: Request) => Promise<boolean> };
+}
 let runtime: ReturnType<typeof compose> | undefined;
 function compose() {
   const config = readConfig();
@@ -45,8 +54,8 @@ function compose() {
       ? new CloudTasksQueue(config.tasks)
       : new InlineAnalysisQueue(worker)
     : undefined;
-  const media = composeMedia();
-  function composeMedia() {
+  const media: MediaWiring = composeMedia();
+  function composeMedia(): MediaWiring {
     // The loopback demo keeps media on local disk and transcribes with a labelled sample.
     if (config.mode === 'demo') {
       const signer = new LocalUploadSigner();
@@ -54,7 +63,7 @@ function compose() {
       const worker = new MediaWorker(repositories, store, new DemoTranscriber());
       return { signer, uploads: new LocalMediaUploads(signer, store, worker) };
     }
-    if (!config.mediaBucket || !vertex) return undefined;
+    if (!config.mediaBucket || !vertex) return {};
     const bucket = new GcsMedia(config.mediaBucket);
     const worker = new MediaWorker(repositories, bucket, new GeminiTranscriber(vertex, bucket));
     // A developer's own credentials cannot sign bucket URLs, so local uploads come through the
@@ -82,8 +91,8 @@ function compose() {
           : new UnavailableCaptureAdapter(),
     ),
     queue,
-    media?.signer,
-    media && 'jobs' in media ? media.jobs : undefined,
+    media.signer,
+    media.jobs,
   );
   const admission = new AdmissionControl();
   return {
@@ -96,8 +105,8 @@ function compose() {
       admission,
       analysisTasks:
         worker && config.tasks ? { worker, verify: cloudTasksVerifier(config.tasks) } : undefined,
-      mediaUploads: media && 'uploads' in media ? media.uploads : undefined,
-      mediaTasks: media && 'tasks' in media ? media.tasks : undefined,
+      mediaUploads: media.uploads,
+      mediaTasks: media.tasks,
     }),
   };
 }
