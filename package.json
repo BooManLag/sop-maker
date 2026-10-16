@@ -10,6 +10,8 @@
     "test": "tsx --import ./tests/support/setup.ts --test tests/unit/*.test.ts tests/unit/*.test.tsx",
     "eval": "tsx evals/run.ts",
     "seed": "tsx scripts/seed.ts",
+    "seed:manufacturing": "tsx scripts/seed.ts --manufacturing",
+    "testdata:generate": "tsx scripts/generate-test-data.ts",
     "test:e2e": "playwright test",
     "demo:reset": "tsx scripts/seed.ts --reset",
     "test:emulator": "node scripts/test-emulator.mjs",
