@@ -117,6 +117,11 @@ export const schemas = {
   auditList: empty,
   processCreate: z.object({ title: short, equipment: short }).strict(),
   processGet: empty,
+  processUpdate: z
+    .object({ title: short.optional(), equipment: short.optional() })
+    .strict()
+    .refine((b) => b.title !== undefined || b.equipment !== undefined, 'Nothing to update.'),
+  processDelete: empty,
   captureGet: empty,
   processMedia: empty,
   uploadComplete: empty,
@@ -215,7 +220,7 @@ export const schemas = {
 export type Operation = keyof typeof schemas;
 export interface Endpoint {
   operation: Operation;
-  method: 'GET' | 'POST';
+  method: 'GET' | 'POST' | 'PATCH' | 'DELETE';
   path: string;
   permission: Permission;
   create?: boolean;
@@ -227,10 +232,12 @@ export const endpoints: Endpoint[] = [
     operation: 'processCreate',
     method: 'POST',
     path: 'processes',
-    permission: 'write',
+    permission: 'process',
     create: true,
   },
   { operation: 'processGet', method: 'GET', path: 'processes/:id', permission: 'read' },
+  { operation: 'processUpdate', method: 'PATCH', path: 'processes/:id', permission: 'process' },
+  { operation: 'processDelete', method: 'DELETE', path: 'processes/:id', permission: 'process' },
   { operation: 'processMedia', method: 'GET', path: 'processes/:id/media', permission: 'read' },
   {
     operation: 'captureCreate',
