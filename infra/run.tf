@@ -34,8 +34,8 @@ resource "google_cloud_run_v2_service" "app" {
   template {
     service_account                  = google_service_account.runtime.email
     max_instance_request_concurrency = 16
-    # Scan analysis runs inside a Cloud Tasks request for up to four minutes.
-    timeout = "300s"
+    # Cloud Tasks requests run scan analysis and media transcription; a long video takes minutes.
+    timeout = "900s"
     scaling {
       min_instance_count = 0
       max_instance_count = var.max_instances

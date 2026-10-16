@@ -46,7 +46,7 @@ export class CloudTasksQueue implements AnalysisQueue, TaskQueue {
       data: {
         task: {
           ...(taskId ? { name: `${this.settings.queue}/tasks/${taskId}` } : {}),
-          dispatchDeadline: '300s',
+          dispatchDeadline: '900s',
           httpRequest: {
             httpMethod: 'POST',
             url,

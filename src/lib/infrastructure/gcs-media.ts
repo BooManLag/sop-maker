@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+import { pipeline } from 'node:stream/promises';
 import { Storage } from '@google-cloud/storage';
 import type { UploadSigner, WritableMediaStorage } from '../application/ports';
 
@@ -46,9 +48,29 @@ export class GcsMedia implements WritableMediaStorage, UploadSigner {
   async write(objectPath: string, bytes: Uint8Array) {
     await this.bucket.file(objectPath).save(Buffer.from(bytes), { resumable: false });
   }
-  async read(objectPath: string) {
-    const [bytes] = await this.bucket.file(objectPath).download();
-    return new Uint8Array(bytes);
+  /** The `gs://` address Vertex AI reads the object from directly. */
+  uri(objectPath: string) {
+    return `gs://${this.bucket.name}/${objectPath}`;
+  }
+  async open(objectPath: string) {
+    const file = this.bucket.file(objectPath);
+    const [metadata] = await file.getMetadata();
+    const size = Number(metadata.size);
+    return {
+      size,
+      async read(start: number, end: number) {
+        const last = Math.min(end, size) - 1;
+        if (last < start) return new Uint8Array();
+        // Cloud Storage ranges include their end byte.
+        const [bytes] = await file.download({ start, end: last });
+        return new Uint8Array(bytes);
+      },
+    };
+  }
+  async sha256(objectPath: string) {
+    const hash = createHash('sha256');
+    await pipeline(this.bucket.file(objectPath).createReadStream(), hash);
+    return hash.digest('hex');
   }
   async exists(objectPath: string) {
     const [found] = await this.bucket.file(objectPath).exists();

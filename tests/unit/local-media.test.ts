@@ -66,12 +66,7 @@ async function demo(now?: () => number) {
   };
   return { call, post, process, dataDir, store };
 }
-const audio = {
-  kind: 'audio',
-  expertReference: 'expert_1',
-  contentType: 'audio/webm',
-  durationSeconds: 12,
-};
+const audio = { expertReference: 'expert_1', contentType: 'audio/webm', consent: true };
 const put = (url: string, bytes: Uint8Array, contentType = 'audio/webm') => ({
   url: url.replace(/^\/api\//, ''),
   init: { method: 'PUT', headers: { 'content-type': contentType }, body: new Uint8Array(bytes) },
@@ -91,9 +86,9 @@ test('a demo recording uploads through a local signed URL and comes back transcr
 
   const capture = await call(`v1/captures/${target.body.uploadId}`);
   assert.equal(capture.body.status, 'transcribed');
-  assert.equal(capture.body.durationMs, 12_000);
+  assert.equal(capture.body.durationMs, 10_000);
   assert.ok(capture.body.segments.length > 1);
-  assert.ok(capture.body.segments.every((s: { endMs: number }) => s.endMs <= 12_000));
+  assert.ok(capture.body.segments.every((s: { endMs: number }) => s.endMs <= 10_000));
   const draft = await call(`v1/processes/${process.id}`);
   assert.equal(draft.body.versions[0].steps.length, capture.body.segments.length);
 });
@@ -172,15 +167,21 @@ test('upload links are bound to their type, size, signature and lifetime', async
 test('the local store only accepts server-built object paths and promotes idempotently', async () => {
   const store = new LocalMediaStore(await mkdtemp(path.join(tmpdir(), 'ge-store-')));
   await assert.rejects(store.write('quarantine/../../etc/passwd', new Uint8Array([1])));
-  await assert.rejects(store.read('quarantine/org/process'));
+  await assert.rejects(store.open('quarantine/org/process'));
   const from = 'quarantine/org/process/upload';
   const to = 'clean/org/process/upload';
   await store.write(from, new Uint8Array([1, 2, 3]));
   await store.promote(from, to);
   await store.promote(from, to);
-  assert.deepEqual([...(await store.read(to))], [1, 2, 3]);
+  const file = await store.open(to);
+  assert.equal(file.size, 3);
+  assert.deepEqual([...(await file.read(1, 3))], [2, 3]);
+  assert.equal(
+    await store.sha256(to),
+    '039058c6f2c0cb492c533b0a4d14ef77cc0f78abccced5287d84a1a2011cfb81',
+  );
   await store.write('quarantine/org/process/frames/f1', new Uint8Array([9]));
-  assert.deepEqual([...(await store.read('quarantine/org/process/frames/f1'))], [9]);
+  assert.equal((await store.open('quarantine/org/process/frames/f1')).size, 1);
 });
 
 test('the demo transcription always satisfies the transcription contract', async () => {

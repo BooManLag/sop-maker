@@ -52,3 +52,52 @@ export const webm = (...clusterMs: number[]) =>
     0xff,
     ...clusterMs.flatMap(cluster),
   );
+const segment = [0x18, 0x53, 0x80, 0x67, 0x01, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff];
+const float64 = (n: number) => {
+  const bytes = Buffer.alloc(8);
+  bytes.writeDoubleBE(n);
+  return [...bytes];
+};
+/** WebM whose Segment Info carries an explicit Duration, as ffmpeg and OBS write it. */
+export const webmWithDuration = (ms: number) =>
+  ebml('webm', ...segment, 0x15, 0x49, 0xa9, 0x66, 0x8b, 0x44, 0x89, 0x88, ...float64(ms));
+/** A file of `size` bytes holding `parts` at their offsets and zeros elsewhere; counts bytes read. */
+export function sparseFile(size: number, parts: { at: number; bytes: Uint8Array }[]) {
+  const file = {
+    size,
+    bytesRead: 0,
+    async read(start: number, end: number) {
+      const bytes = new Uint8Array(Math.max(0, Math.min(end, size) - start));
+      for (const part of parts)
+        for (let i = 0; i < part.bytes.length; i++) {
+          const at = part.at + i - start;
+          if (at >= 0 && at < bytes.length) bytes[at] = part.bytes[i];
+        }
+      file.bytesRead += bytes.length;
+      return bytes;
+    },
+  };
+  return file;
+}
+export const wholeFile = (bytes: Uint8Array) => sparseFile(bytes.length, [{ at: 0, bytes }]);
+/** MP4 with its `moov` box after `mdatBytes` of media, as cameras write it without faststart. */
+export function mp4MoovLast(seconds: number, mdatBytes: number, brand = 'isom') {
+  const head = Uint8Array.from([
+    ...box('ftyp', [...Buffer.from(brand), 0, 0, 0, 0]),
+    ...u32(8 + mdatBytes),
+    ...Buffer.from('mdat'),
+  ]);
+  const moov = mp4(seconds).subarray(box('ftyp', [0, 0, 0, 0, 0, 0, 0, 0]).length);
+  return sparseFile(head.length + mdatBytes + moov.length, [
+    { at: 0, bytes: head },
+    { at: head.length + mdatBytes, bytes: moov },
+  ]);
+}
+/** WebM without a Duration element, whose last cluster sits at the very end of a large file. */
+export function webmLastClusterAt(ms: number, size: number) {
+  const tail = Uint8Array.from(cluster(ms));
+  return sparseFile(size, [
+    { at: 0, bytes: webm(0) },
+    { at: size - tail.length, bytes: tail },
+  ]);
+}

@@ -789,10 +789,6 @@
                 "$schema": "https://json-schema.org/draft/2020-12/schema",
                 "type": "object",
                 "properties": {
-                  "kind": {
-                    "type": "string",
-                    "const": "audio"
-                  },
                   "expertReference": {
                     "type": "string",
                     "pattern": "^[A-Za-z0-9_-]{1,128}$"
@@ -801,26 +797,26 @@
                     "type": "string",
                     "enum": [
                       "audio/webm",
-                      "audio/mp4"
+                      "audio/mp4",
+                      "video/webm",
+                      "video/mp4"
                     ]
                   },
                   "bytes": {
                     "type": "integer",
                     "exclusiveMinimum": 0,
-                    "maximum": 10000000
+                    "maximum": 100000000
                   },
-                  "durationSeconds": {
-                    "type": "number",
-                    "exclusiveMinimum": 0,
-                    "maximum": 600
+                  "consent": {
+                    "type": "boolean",
+                    "const": true
                   }
                 },
                 "required": [
-                  "kind",
                   "expertReference",
                   "contentType",
                   "bytes",
-                  "durationSeconds"
+                  "consent"
                 ],
                 "additionalProperties": false
               }
@@ -2027,7 +2023,7 @@
                         "frameAtMs": {
                           "type": "integer",
                           "minimum": 0,
-                          "maximum": 600000
+                          "maximum": 2700000
                         }
                       },
                       "required": [
@@ -2272,7 +2268,7 @@
                         "frameAtMs": {
                           "type": "integer",
                           "minimum": 0,
-                          "maximum": 600000
+                          "maximum": 2700000
                         }
                       },
                       "required": [
