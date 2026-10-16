@@ -4,18 +4,15 @@ import type { AuthService } from './auth';
 /**
  * Firebase Hosting serves the project's public web config at this path, so one image works in
  * every project without build-time variables. Anywhere else (the loopback demo) the request
- * fails and sign-in stays off.
+ * fails and sign-in stays off. Local dev proxies the live project's config (next.config).
  */
 const HOSTING_CONFIG = '/__/firebase/init.json';
 const ISSUER = 'Good Exception';
 
-/** Present only in local development, where sign-in goes to the Firebase Auth emulator. */
-type WebConfig = FirebaseOptions & { authEmulatorUrl?: string };
-
-async function hostingConfig(): Promise<WebConfig | null> {
+async function hostingConfig(): Promise<FirebaseOptions | null> {
   try {
     const response = await fetch(HOSTING_CONFIG);
-    return response.ok ? ((await response.json()) as WebConfig) : null;
+    return response.ok ? ((await response.json()) as FirebaseOptions) : null;
   } catch {
     return null;
   }
@@ -29,10 +26,7 @@ export async function loadFirebaseAuth(): Promise<AuthService | null> {
     import('firebase/app'),
     import('firebase/auth'),
   ]);
-  const { authEmulatorUrl, ...options } = config;
-  const auth = firebase.getAuth(getApps()[0] ?? initializeApp(options));
-  if (authEmulatorUrl && !auth.emulatorConfig)
-    firebase.connectAuthEmulator(auth, authEmulatorUrl, { disableWarnings: true });
+  const auth = firebase.getAuth(getApps()[0] ?? initializeApp(config));
   const { TotpMultiFactorGenerator: Totp } = firebase;
   const signedIn = () => {
     if (!auth.currentUser) throw new Error('Not signed in.');

@@ -55,7 +55,9 @@ export function createHttpHandler(dependencies: HttpDependencies) {
       const url = new URL(request.url);
       const origin = request.headers.get('origin');
       const localOrigin =
-        config.mode === 'demo' || config.emulator ? localRequestOrigin(request) : null;
+        config.mode === 'demo' || config.emulator || config.local
+          ? localRequestOrigin(request)
+          : null;
       if (origin) {
         const allowed =
           config.allowedOrigins.includes(origin) ||
