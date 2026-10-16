@@ -43,8 +43,8 @@ export class MediaWorker {
     if (!admitted) return;
     await this.storage.promote(admitted.media.objectPath, admitted.media.cleanPath!);
     const result = await this.transcribe(repository, admitted);
-    if (result) await this.applyDraft(repository, admitted, result);
-    else await this.fail(repository, admitted, finalAttempt);
+    if (result.transcription) await this.applyDraft(repository, admitted, result);
+    else await this.fail(repository, admitted, finalAttempt, result.issues ?? []);
   }
   private pendingRecording(repository: Repository, objectPath: string) {
     return repository.query(
@@ -106,14 +106,23 @@ export class MediaWorker {
           .transcribe(cleanPath!, contentType, { durationSeconds: seconds })
           .catch(() => undefined);
     const parsed = transcriptionSchema(processes.recordingLengthMs(recording)).safeParse(candidate);
-    return parsed.success ? { transcription: parsed.data, reused: !!earlier } : undefined;
+    if (parsed.success) return { transcription: parsed.data, reused: !!earlier };
+    return {
+      issues: parsed.error.issues.slice(0, 5).map((i) => `${i.path.join('.')}: ${i.message}`),
+    };
   }
-  private async fail(repository: Repository, recording: Recording, finalAttempt: boolean) {
+  private async fail(
+    repository: Repository,
+    recording: Recording,
+    finalAttempt: boolean,
+    issues: string[],
+  ) {
     this.log({
       severity: finalAttempt ? 'ERROR' : 'WARNING',
       event: 'media_transcription_invalid',
       captureId: recording.id,
       finalAttempt,
+      issues,
     });
     if (!finalAttempt) throw new Error('The transcription was invalid. Nothing was saved.');
     await repository.transact((s) => {
