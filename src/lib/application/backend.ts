@@ -182,7 +182,9 @@ export class Backend {
       if (media && this.mediaJobs) await this.mediaJobs.start({ objectPath: media.objectPath });
     }
     /** Work to start only after this request's own change commits. */
-    const effects = { analysisStarted: false };
+    const effects: { analysisStarted: boolean; removedMedia?: string[] } = {
+      analysisStarted: false,
+    };
     const response = await repository.transact((s) => {
       pruneExpired(s);
       const cached = replay(s);
@@ -228,7 +230,19 @@ export class Backend {
     });
     if (effects.analysisStarted && this.analysis)
       await this.enqueueAnalysis(repository, context.actor.organizationId, id!);
+    if (effects.removedMedia?.length && this.media) await this.removeMedia(effects.removedMedia);
     return response;
+  }
+  /**
+   * Deletes a purged process's stored media after the deletion commits. Best effort: the records
+   * are already gone, and draft storage expires on its own anyway.
+   */
+  private async removeMedia(objectPaths: string[]) {
+    const media = this.media!;
+    const failed = (
+      await Promise.allSettled(objectPaths.map((objectPath) => media.remove(objectPath)))
+    ).filter((x) => x.status === 'rejected').length;
+    if (failed) console.warn(`Purged process left ${failed} stored media object(s) behind.`);
   }
   /**
    * Copies a draft's step images to storage that does not expire, before publishing commits.
@@ -353,7 +367,7 @@ export class Backend {
     id: string | undefined,
     input: unknown,
     ctx: RequestContext,
-    effects: { analysisStarted: boolean },
+    effects: { analysisStarted: boolean; removedMedia?: string[] },
     extraction?: Awaited<ReturnType<GuardedCaptureAdapter['extract']>>,
     expected?: string,
     upload?: SignedUpload,
@@ -368,6 +382,11 @@ export class Backend {
         return processes.processDto(processes.updateProcess(s, id!, parseInput(operation, input)));
       case 'processDelete':
         return processes.deleteProcess(s, id!);
+      case 'processPurge': {
+        const { result, media } = processes.purgeProcess(s, id!, parseInput(operation, input));
+        effects.removedMedia = media;
+        return result;
+      }
       case 'captureCreate': {
         const c = processes.createCapture(s, id!, parseInput(operation, input));
         return { id: c.id, processId: c.processId, kind: c.kind, createdAt: c.createdAt };

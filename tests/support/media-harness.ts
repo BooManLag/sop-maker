@@ -111,6 +111,9 @@ export async function mediaHarness(output: unknown = transcript) {
       objects.set(to, objects.get(from)!);
       copies.push({ from, to });
     },
+    async remove(objectPath) {
+      objects.delete(objectPath);
+    },
   };
   const queued: { url: string; job: object; taskId?: string }[] = [];
   const jobs = new QueuedMediaJobs(
