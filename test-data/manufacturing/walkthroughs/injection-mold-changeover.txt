@@ -1,0 +1,8 @@
+1. Stop the press and confirm the previous lot is cleared
+2. Cool the old mold and disconnect water and hot runner lines
+3. Lift out the old mold and clean the platen faces
+4. Mount the new mold and torque the clamps to specification
+5. Reconnect water and heat the hot runner to setpoint
+6. Run a dry cycle at low clamp pressure
+7. Mold the first article and measure the critical dimensions
+8. Release the lot and record the changeover time
