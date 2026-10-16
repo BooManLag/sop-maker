@@ -79,6 +79,8 @@ export const mediaContentTypes = ['audio/webm', 'audio/mp4', 'video/webm', 'vide
 export const maxMediaBytes = 100_000_000;
 /** Largest stored step image. */
 export const maxFrameBytes = 500_000;
+/** Short-lived read links to step images, keyed by step id. */
+export type StepImageLinks = Record<string, string>;
 export const isVideo = (contentType: MediaContentType) => contentType.startsWith('video/');
 export type MediaContentType = (typeof mediaContentTypes)[number];
 export interface SuggestedStep {

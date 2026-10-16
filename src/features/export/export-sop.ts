@@ -1,5 +1,5 @@
 import type { ProcessDto } from '@/lib/client/api';
-import type { ProcessStep } from '@/lib/domain/types';
+import type { ProcessStep, StepImageLinks } from '@/lib/domain/types';
 import { buildSopDocument } from './sop-document';
 import type { StepImages } from './images';
 
@@ -11,8 +11,7 @@ export interface ExportableSop {
   /** Reviewed steps that replace the stored ones, when the page is editing them. */
   steps?: ProcessStep[];
   demo: boolean;
-  /** Signed links to step images, keyed by step id. */
-  stills: Record<string, string>;
+  stills: StepImageLinks;
 }
 
 const mimeTypes: Record<ExportFormat, string> = {
@@ -42,7 +41,7 @@ export async function exportSop(format: ExportFormat, sop: ExportableSop) {
 }
 
 /** Step images that can be fetched; one that fails is left out rather than failing the export. */
-async function fetchImages(stepIds: string[], stills: Record<string, string>) {
+async function fetchImages(stepIds: string[], stills: StepImageLinks) {
   const images: StepImages = {};
   await Promise.all(
     stepIds.map(async (id) => {

@@ -2,7 +2,12 @@ import { randomUUID } from 'node:crypto';
 import type { Store } from './store';
 /** Raw capture content (walkthrough text, recordings, transcripts) expires after 30 days. */
 const rawContentRetentionMs = 30 * 86400_000;
-import { isVideo, type ExpertCapture, type ProcessStep } from '../domain/types';
+import {
+  isVideo,
+  type ExpertCapture,
+  type MediaContentType,
+  type ProcessStep,
+} from '../domain/types';
 import type { Actor } from '../server/auth';
 import { requireCondition } from '../server/errors';
 import { transcriptionSchema, type schemas } from '../server/contracts';
@@ -85,14 +90,17 @@ export function createMediaCapture(
   });
 }
 /** The inspected recording length; zero until the media worker has read it. */
-export const recordingMs = (capture: ExpertCapture) =>
+export const recordingLengthMs = (capture: ExpertCapture) =>
   Math.ceil((capture.media?.seconds ?? 0) * 1000);
 export function getFrameStep(s: Store, id: string, body: Input<'frameRequest'>) {
   const p = getProcess(s, id);
   requireDraft(p);
   const capture = s.captures.find((c) => c.id === body.captureId && c.processId === p.id);
   requireCondition(capture?.media, 'Recording not found.', 404);
-  requireCondition(body.atMs <= recordingMs(capture), 'The frame time is outside the recording.');
+  requireCondition(
+    body.atMs <= recordingLengthMs(capture),
+    'The frame time is outside the recording.',
+  );
   const step = p.versions[0].steps.find((step) => step.id === body.stepId);
   requireCondition(step, 'Step not found.', 404);
   return step;
@@ -106,7 +114,7 @@ export function saveTranscript(s: Store, id: string, body: Input<'transcriptSave
     'Only a finished transcription can be edited.',
     409,
   );
-  const segments = transcriptionSchema(recordingMs(capture)).shape.segments.safeParse(
+  const segments = transcriptionSchema(recordingLengthMs(capture)).shape.segments.safeParse(
     body.segments,
   );
   requireCondition(
@@ -174,7 +182,8 @@ export function publishProcess(
   id: string,
   body: Input<'processPublish'>,
   actor: Actor,
-  keptFrames = new Map<string, string>(),
+  /** Each draft image path mapped to its kept copy, from `keepFrames`. */
+  keptFrames: Map<string, string>,
 ) {
   const p = getProcess(s, id);
   requireCondition(body.approved, 'Explicit human approval is required.');
@@ -194,28 +203,37 @@ export function publishProcess(
   p.currentVersion = 1;
   return p;
 }
+/** A transcribed recording's checked copy in storage. */
+export interface StoredRecording {
+  captureId: string;
+  objectPath: string;
+  contentType: MediaContentType;
+}
+type CleanRecording = ExpertCapture & {
+  media: NonNullable<ExpertCapture['media']> & { cleanPath: string };
+};
+const isUsableRecording =
+  (processId: string) =>
+  (c: ExpertCapture): c is CleanRecording =>
+    c.processId === processId &&
+    c.status === 'transcribed' &&
+    !!c.media?.cleanPath &&
+    (!c.expiresAt || Date.parse(c.expiresAt) > Date.now());
 /** Objects behind a process's step images and, while it is a draft, its latest recording. */
-export function mediaObjects(s: Store, id?: string) {
+export function mediaObjects(s: Store, id: string) {
   const p = getProcess(s, id);
-  const frames = p.versions[0].steps.flatMap((step) =>
+  const draft = p.versions[0];
+  const frames = draft.steps.flatMap((step) =>
     step.frameObjectPath ? [{ stepId: step.id, objectPath: step.frameObjectPath }] : [],
   );
   const recording =
-    p.currentVersion === 0
-      ? s.captures.findLast(
-          (c) =>
-            c.processId === p.id &&
-            c.status === 'transcribed' &&
-            c.media?.cleanPath &&
-            (!c.expiresAt || Date.parse(c.expiresAt) > Date.now()),
-        )
-      : undefined;
-  const video = recording?.media && {
+    p.currentVersion === 0 ? s.captures.findLast(isUsableRecording(p.id)) : undefined;
+  const video: StoredRecording | undefined = recording && {
     captureId: recording.id,
-    objectPath: recording.media.cleanPath!,
+    objectPath: recording.media.cleanPath,
     contentType: recording.media.contentType,
   };
-  return { frames, video };
+  return { version: draft.version, frames, video };
 }
 export function processDto(process: ReturnType<typeof getProcess>) {
   return {
@@ -245,7 +263,7 @@ export function captureDraftDto(s: Store, id?: string) {
       ? {
           status: capture.status,
           segments: capture.segments ?? [],
-          durationMs: recordingMs(capture),
+          durationMs: recordingLengthMs(capture),
           ...(capture.rejection ? { rejection: capture.rejection } : {}),
         }
       : {}),
