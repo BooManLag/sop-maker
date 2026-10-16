@@ -2444,6 +2444,9 @@
                           "type": "string",
                           "maxLength": 512
                         },
+                        "imageWaived": {
+                          "type": "boolean"
+                        },
                         "frameAtMs": {
                           "type": "integer",
                           "minimum": 0,
@@ -2688,6 +2691,9 @@
                         "frameObjectPath": {
                           "type": "string",
                           "maxLength": 512
+                        },
+                        "imageWaived": {
+                          "type": "boolean"
                         },
                         "frameAtMs": {
                           "type": "integer",

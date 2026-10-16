@@ -47,7 +47,11 @@ export function StepEditor({
   useAutoCapture(steps, {
     ready: videoReady,
     busy: picker.busy !== undefined,
-    capture: picker.capture,
+    // A step added here must reach the server before its still can be stored.
+    capture: async (stepId, atMs) => {
+      await ensureSaved(stepId);
+      await picker.capture(stepId, atMs);
+    },
   });
   const serverSteps = useProcess(processId).data?.versions[0].steps ?? [];
   const imageUrls = imageUrlsByPath(serverSteps, picker.links);
@@ -142,6 +146,11 @@ export function StepEditor({
                   await picker.upload(step.id, atMs, file);
                 }}
                 onRemove={() => setImage(step.id, { frameObjectPath: undefined })}
+                onWaive={(imageWaived) =>
+                  setSteps((prev) =>
+                    prev.map((s) => (s.id === step.id ? { ...s, imageWaived } : s)),
+                  )
+                }
               />
             </li>
           ))}
@@ -149,7 +158,9 @@ export function StepEditor({
         <Button
           variant="link"
           className="mt-5"
-          onClick={() => setSteps((prev) => addStep(prev, crypto.randomUUID()))}
+          onClick={() =>
+            setSteps((prev) => addStep(prev, crypto.randomUUID(), recordingMs(video.current)))
+          }
         >
           <Plus size={16} aria-hidden />
           Add a step
@@ -170,6 +181,12 @@ export function StepEditor({
       </FormActions>
     </>
   );
+}
+
+/** The loaded recording's length, so a new step's still lands inside it; none without a video. */
+function recordingMs(player: HTMLVideoElement | null) {
+  const seconds = player?.duration;
+  return seconds && Number.isFinite(seconds) ? Math.floor(seconds * 1000) : undefined;
 }
 
 /** Signed links are keyed by the server's step ids; a merge can move an image to another step. */

@@ -210,6 +210,8 @@ test('publishing cannot point a step at an object outside the draft', async () =
   const forged = (await stored()).map(({ frameObjectPath: _, ...step }) => ({
     ...step,
     frameObjectPath: 'clean/tenant_b/secret.jpg',
+    // The forged paths are dropped, so the steps must not need pictures to publish.
+    imageWaived: true,
   }));
   h.objects.set(linked!, new Uint8Array([0xff, 0xd8]));
   await execute(h.backend, 'POST', `processes/${processId}/publish`, {

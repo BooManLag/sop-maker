@@ -24,6 +24,8 @@ export interface ProcessStep {
   /** Suggested video frame for this step, in milliseconds from the recording start. */
   frameAtMs?: number;
   frameObjectPath?: string;
+  /** The expert decided this step needs no picture, for example a wait or a phone call. */
+  imageWaived?: boolean;
 }
 export interface ProcessVersion {
   id: ID;
