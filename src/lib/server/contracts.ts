@@ -21,6 +21,7 @@ export const stepSchema = z
     source: z.enum(['expert_walkthrough', 'baseline', 'validated_field_practice']),
     evidenceLinks: z.array(idSchema).max(20).optional(),
     frameObjectPath: z.string().max(512).optional(),
+    imageWaived: z.boolean().optional(),
     frameAtMs: z
       .number()
       .int()

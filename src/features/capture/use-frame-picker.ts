@@ -98,7 +98,11 @@ export function useAutoCapture(
   useEffect(() => {
     if (!ready || busy) return;
     const next = steps.find(
-      (s) => s.frameAtMs !== undefined && !s.frameObjectPath && !attempted.current.has(s.id),
+      (s) =>
+        s.frameAtMs !== undefined &&
+        !s.frameObjectPath &&
+        !s.imageWaived &&
+        !attempted.current.has(s.id),
     );
     if (next?.frameAtMs === undefined) return;
     attempted.current.add(next.id);

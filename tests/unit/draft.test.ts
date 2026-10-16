@@ -113,7 +113,7 @@ test('edited draft steps are saved and survive a reload until the baseline is pu
   assert.deepEqual(reloaded.versions[0].steps, edited);
 
   await call(backend, 'POST', `processes/${draft.processId}/publish`, {
-    steps: edited,
+    steps: edited.map((step) => ({ ...step, imageWaived: true })),
     approved: true,
   });
   await assert.rejects(
