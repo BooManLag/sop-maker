@@ -13,7 +13,16 @@ npm ci
 npm run dev
 ```
 
-`npm run dev` runs the app locally exactly as in production, against the live Firebase project (`sop-app-prod-511406`, override with `GCP_PROJECT_ID`): real Google sign-in, real Firestore and Gemini. **Everything you do locally changes live data.** One-time setup: run `gcloud auth login` and `gcloud auth application-default login` with an account that can read the `sop-app-pseudonym-key` secret and use Firestore and Vertex AI, and add `127.0.0.1` under Firebase Console → Authentication → Settings → Authorized domains. Open the app at `http://127.0.0.1:3000`.
+`npm run dev` runs the app locally exactly as in production, against the live Firebase project (`sop-app-prod-511406`, override with `GCP_PROJECT_ID`): real Google sign-in, real Firestore and Gemini. **Everything you do locally changes live data**, and every signed-in user joins the prototype organization as admin. No `.env` is needed; the launcher reads your gcloud credentials and fetches the pseudonym key itself. One-time setup: ask a project owner for access (below), then run `gcloud auth login` and `gcloud auth application-default login` with that account. Open the app at `http://127.0.0.1:3000` (not `localhost`, which is not an authorized sign-in domain).
+
+### Contributor access
+
+A project owner grants a contributor what `npm run dev` needs (Firestore, Vertex AI, the `sop-app-pseudonym-key` secret and the media bucket) from Git Bash, not WSL, signed in to gcloud:
+
+```sh
+bash scripts/grant-dev.sh someone@example.com [more@example.com ...]
+bash scripts/grant-dev.sh --revoke someone@example.com
+```
 
 The demo mode with seeded sample data now runs only inside the automated browser tests. `.env.example` documents validated demo/production configuration.
 
