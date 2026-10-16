@@ -48,6 +48,8 @@ export interface MediaLibrary {
   /** A short-lived link the browser can read the object from. */
   signRead(objectPath: string, contentType: string): Promise<string>;
   copy(from: string, to: string): Promise<void>;
+  /** Deletes an object; a missing one is not an error. */
+  remove(objectPath: string): Promise<void>;
 }
 /** One uploaded recording to inspect and transcribe. */
 export interface MediaJob {

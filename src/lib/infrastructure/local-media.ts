@@ -174,6 +174,9 @@ export class LocalMediaLibrary implements MediaLibrary {
   copy(from: string, to: string) {
     return this.store.copy(from, to);
   }
+  remove(objectPath: string) {
+    return this.store.remove(objectPath);
+  }
   async serve(request: Request): Promise<MediaFileResponse> {
     const grant = this.signer.verifyRead(new URL(request.url).searchParams.get('grant'));
     if (!grant) throw new ApiError(403, 'The media link is invalid or expired.');

@@ -138,6 +138,9 @@ export function createApiClient({
     updateProcess: (id: string, body: { title?: string; equipment?: string }) =>
       patch<ProcessDto>(`processes/${id}`, body),
     deleteProcess: (id: string) => del<ProcessDeletion>(`processes/${id}`),
+    /** Admins only: removes the process and everything recorded against it, for good. */
+    purgeProcess: (id: string, title: string) =>
+      post<ProcessDeletion>(`processes/${id}/purge`, { title }),
     createCapture: (
       processId: string,
       body: { kind: 'text'; expertReference: string; text: string },
