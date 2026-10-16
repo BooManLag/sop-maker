@@ -2,7 +2,7 @@ import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { z } from 'zod';
-import type { MediaStorage, UploadSigner } from '../application/ports';
+import type { MediaStorage, UploadSigner, WritableMediaStorage } from '../application/ports';
 import type { MediaWorker } from '../application/media-worker';
 import { ApiError } from '../server/errors';
 
@@ -100,7 +100,7 @@ export class LocalUploadSigner implements UploadSigner {
 export class LocalMediaUploads {
   constructor(
     private signer: LocalUploadSigner,
-    private store: MediaStorage & { write(objectPath: string, bytes: Uint8Array): Promise<void> },
+    private store: WritableMediaStorage,
     private worker: MediaWorker,
   ) {}
   async receive(request: Request) {

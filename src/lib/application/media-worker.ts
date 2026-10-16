@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import type { ExpertCapture } from '../domain/types';
 import type {
+  MediaJob,
   MediaStorage,
   MediaTranscriber,
   Repository,
@@ -14,10 +15,6 @@ import { adjustMediaSeconds } from './store';
 import { transcriptionSchema } from '../server/contracts';
 import { LIMITS } from '../server/config';
 
-export interface MediaJob {
-  /** Object written through a signed upload URL (see `mediaPaths.recording`). */
-  objectPath: string;
-}
 type Recording = ExpertCapture & { media: NonNullable<ExpertCapture['media']> };
 const reservedSeconds = (recording: Recording) => Math.ceil(recording.media.declaredSeconds);
 

@@ -12,7 +12,7 @@ resource "google_cloud_tasks_queue" "analysis" {
     max_concurrent_dispatches = 2
     max_dispatches_per_second = 1
   }
-  # Must match ANALYSIS_MAX_ATTEMPTS in lib/server/http.ts.
+  # Must match TASK_MAX_ATTEMPTS in lib/server/http.ts.
   retry_config {
     max_attempts  = 3
     min_backoff   = "30s"
