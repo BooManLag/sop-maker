@@ -18,6 +18,9 @@ const env = {
   ),
   GOOD_EXCEPTION_GEMINI_MODEL: process.env.GOOD_EXCEPTION_GEMINI_MODEL || 'gemini-3.5-flash',
   GOOD_EXCEPTION_LOCAL: 'true',
+  // Matches Cloud Run (infra/run.tf): every signed-in user joins the prototype org as admin.
+  GOOD_EXCEPTION_OPEN_ORGANIZATION: 'prototype',
+  GOOD_EXCEPTION_OPEN_ROLE: 'admin',
 };
 delete env.FIRESTORE_EMULATOR_HOST;
 delete env.FIREBASE_AUTH_EMULATOR_HOST;
