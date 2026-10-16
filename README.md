@@ -6,15 +6,16 @@ A working B2B product foundation for capturing expert know-how, finding promisin
 
 ## Local setup
 
-Requires Node.js 22 or newer and npm.
+Requires Node.js 22 or newer, npm and Java 21 (for the Firestore emulator).
 
 ```sh
 npm ci
-npm run seed
 npm run dev
 ```
 
-No credentials are required for the local demo. `.env.example` documents validated demo/production configuration. Production mode requires verified Firebase bearer tokens and tenant/role claims. Open the app through your local development environment. Onboarding validation uses HTTP requests internally.
+`npm run dev` runs the app in production mode against the Firebase Auth and Firestore emulators: you sign in with an emulator Google account, start from an empty workspace, and see only data you create. Anyone who signs in joins the single local workspace as an admin. Emulator data persists in ignored `.emulator-data/` between runs; delete that folder to start over. Gemini is never connected to the emulators, so AI walkthrough drafting, scan analysis and audio uploads return "unavailable" locally.
+
+The demo mode with seeded sample data now runs only inside the automated browser tests. `.env.example` documents validated demo/production configuration.
 
 ```sh
 npm run typecheck
