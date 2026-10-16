@@ -5,6 +5,7 @@ import {
   box,
   cluster,
   ebml,
+  fragmentedMp4,
   mp4,
   mp4MoovLast,
   webm,
@@ -53,4 +54,19 @@ test('a recording whose length cannot be read is refused', async () => {
   assert.equal((await inspectMedia(wholeFile(webm()), 'audio/webm')).ok, false);
   const noMoov = Uint8Array.from(box('ftyp', [...Buffer.from('M4A ')]));
   assert.equal((await inspectMedia(wholeFile(noMoov), 'audio/mp4')).ok, false);
+});
+
+test('a fragmented MP4 is measured to the end of its last fragment', async () => {
+  // Two 3 s fragments of 90 kHz samples; the movie header says zero.
+  const second = 90_000;
+  const file = fragmentedMp4([
+    { startTicks: 0, sampleTicks: [second, second, second] },
+    { startTicks: 3 * second, sampleTicks: [second, second, second] },
+  ]);
+  assert.deepEqual(await inspectMedia(wholeFile(file), 'video/mp4'), { ok: true, seconds: 6 });
+});
+
+test('a fragmented MP4 without fragments is refused rather than measured as zero', async () => {
+  const file = fragmentedMp4([]);
+  assert.equal((await inspectMedia(wholeFile(file), 'video/mp4')).ok, false);
 });
