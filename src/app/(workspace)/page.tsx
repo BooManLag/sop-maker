@@ -1,19 +1,15 @@
 import { Principle } from '@/components/common/principle';
 import { Hero } from '@/features/overview/hero';
-import { PathCards } from '@/features/overview/path-cards';
-import { FeaturedFinding } from '@/features/overview/featured-finding';
-import { LivingStandards } from '@/features/overview/living-standards';
+import { WhereThingsStand } from '@/features/overview/where-things-stand';
 
 export default function OverviewPage() {
   return (
-    <>
+    <div className="mx-auto max-w-[1000px]">
       <Hero />
-      <PathCards />
-      <FeaturedFinding />
-      <LivingStandards />
+      <WhereThingsStand />
       <Principle>
         Evidence opens the conversation. <strong>Your people approve the change.</strong>
       </Principle>
-    </>
+    </div>
   );
 }

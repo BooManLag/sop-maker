@@ -1,46 +1,54 @@
 'use client';
 
-import { useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { ChevronRight, Menu } from 'lucide-react';
-import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { Avatar, SidebarContent, useAccount } from './sidebar';
-import { sectionFor, sectionLabels } from './sections';
+import Link from 'next/link';
+import { ChevronRight } from 'lucide-react';
+import { Avatar, useAccount } from './sidebar';
+import { navItems, pageLabelFor, sectionFor, sectionLabels } from './sections';
 
+/** Desktop header: where you are, and who is signed in. */
 export function Topbar() {
-  const section = sectionFor(usePathname());
-  const [menuOpen, setMenuOpen] = useState(false);
-  const account = useAccount();
+  const pathname = usePathname();
+  const section = sectionFor(pathname);
+  const page = pageLabelFor(pathname);
+  const sectionHref = navItems.find((item) => item.section === section)?.href ?? '/';
   return (
-    <header className="flex h-15.5 items-center justify-between border-b border-border bg-topbar px-5 sm:h-[72px] sm:px-7.5 lg:px-11">
-      <div className="flex items-center gap-3 text-xs text-muted-foreground">
-        <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
-          <SheetTrigger className="mr-1 text-brand-400 sm:hidden" aria-label="Toggle menu">
-            <Menu size={20} />
-          </SheetTrigger>
-          <SheetContent
-            side="left"
-            className="w-[237px] border-border bg-sidebar p-0 shadow-drawer"
-          >
-            <SheetTitle className="sr-only">Navigation</SheetTitle>
-            <SidebarContent onNavigate={() => setMenuOpen(false)} />
-          </SheetContent>
-        </Sheet>
-        <nav aria-label="Breadcrumb" className="flex items-center gap-3">
-          <span>Workspace</span>
-          <ChevronRight size={13} aria-hidden />
-          <strong aria-current="page" className="font-medium text-foreground-soft">
+    <header className="flex h-[72px] items-center justify-between border-b border-border bg-topbar px-7.5 max-md:hidden lg:px-11">
+      <nav
+        aria-label="Breadcrumb"
+        className="flex items-center gap-3 text-xs text-muted-foreground"
+      >
+        {page ? (
+          <>
+            <Link href={sectionHref} className="hover:text-foreground">
+              {sectionLabels[section]}
+            </Link>
+            <ChevronRight size={13} aria-hidden />
+            <strong aria-current="page" className="font-semibold text-foreground">
+              {page}
+            </strong>
+          </>
+        ) : (
+          <strong aria-current="page" className="font-semibold text-foreground">
             {sectionLabels[section]}
           </strong>
-        </nav>
-      </div>
-      <div className="flex items-center gap-3 sm:gap-6">
-        <span className="flex items-center gap-2 text-2xs text-muted-foreground sm:text-tiny">
-          <span aria-hidden className="size-1 rounded-full bg-brand-300" />
-          {account.workspace}
-        </span>
-        <Avatar initials={account.initials} photo={account.photo} small />
-      </div>
+        )}
+      </nav>
+      <AccountBadge />
     </header>
+  );
+}
+
+/** Workspace name beside the avatar; on phones this is the only place the workspace shows. */
+export function AccountBadge() {
+  const account = useAccount();
+  return (
+    <div className="flex items-center gap-3 sm:gap-6">
+      <span className="flex items-center gap-2 text-2xs text-muted-foreground sm:text-tiny">
+        <span aria-hidden className="size-1 rounded-full bg-brand-300" />
+        {account.workspace}
+      </span>
+      <Avatar initials={account.initials} photo={account.photo} small />
+    </div>
   );
 }
