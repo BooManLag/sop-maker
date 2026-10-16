@@ -37,5 +37,6 @@ export function formatClock(ms: number) {
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
 }
 export function formatMegabytes(bytes: number) {
-  return `${(bytes / 1_000_000).toFixed(1)} MB`;
+  const megabytes = bytes / 1_000_000;
+  return `${Number.isInteger(megabytes) ? megabytes : megabytes.toFixed(1)} MB`;
 }

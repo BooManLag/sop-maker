@@ -42,8 +42,8 @@ export class MediaWorker {
       : await this.admit(repository, recording);
     if (!admitted) return;
     await this.storage.promote(admitted.media.objectPath, admitted.media.cleanPath!);
-    const transcription = await this.transcribe(repository, admitted);
-    if (transcription) await this.applyDraft(repository, admitted, transcription);
+    const result = await this.transcribe(repository, admitted);
+    if (result) await this.applyDraft(repository, admitted, result);
     else await this.fail(repository, admitted, finalAttempt);
   }
   private pendingRecording(repository: Repository, objectPath: string) {
@@ -105,8 +105,8 @@ export class MediaWorker {
       : await this.transcriber
           .transcribe(cleanPath!, contentType, { durationSeconds: seconds })
           .catch(() => undefined);
-    const parsed = transcriptionSchema(processes.recordingMs(recording)).safeParse(candidate);
-    return parsed.success ? parsed.data : undefined;
+    const parsed = transcriptionSchema(processes.recordingLengthMs(recording)).safeParse(candidate);
+    return parsed.success ? { transcription: parsed.data, reused: !!earlier } : undefined;
   }
   private async fail(repository: Repository, recording: Recording, finalAttempt: boolean) {
     this.log({
@@ -120,11 +120,14 @@ export class MediaWorker {
       processes.getCapture(s, recording.id).status = 'failed';
     });
   }
-  /** Saves the transcript; seeds draft steps only when the expert has none yet. */
+  /**
+   * Saves the transcript; seeds draft steps only when the expert has none yet. The charge stays
+   * the length read from the file, refunded when an identical recording's transcript was reused.
+   */
   private async applyDraft(
     repository: Repository,
     recording: Recording,
-    transcription: Transcription,
+    { transcription, reused }: { transcription: Transcription; reused: boolean },
   ) {
     await repository.transact((s) => {
       const capture = processes.getCapture(s, recording.id);
@@ -133,11 +136,7 @@ export class MediaWorker {
       capture.segments = transcription.segments;
       capture.suggestedSteps = transcription.steps;
       capture.status = 'transcribed';
-      const billedSeconds = Math.min(
-        chargedSeconds(transcription.audioSeconds),
-        LIMITS.mediaSecondsCeiling,
-      );
-      adjustMediaSeconds(s, billedSeconds - chargedSeconds(recording.media.seconds));
+      if (reused) adjustMediaSeconds(s, -chargedSeconds(recording.media.seconds));
       const version = draft.versions[0];
       if (!version.steps.length) version.steps = transcription.steps.map(toDraftStep);
     });

@@ -88,19 +88,22 @@ export function useFramePicker({
 /** Captures an image at each proposed time for steps that have none, one at a time. */
 export function useAutoCapture(
   steps: ProcessStep[],
-  picker: ReturnType<typeof useFramePicker>,
-  ready: boolean,
+  {
+    ready,
+    busy,
+    capture,
+  }: { ready: boolean; busy: boolean; capture: (stepId: string, atMs: number) => Promise<void> },
 ) {
   const attempted = useRef(new Set<string>());
   useEffect(() => {
-    if (!ready || picker.busy) return;
+    if (!ready || busy) return;
     const next = steps.find(
       (s) => s.frameAtMs !== undefined && !s.frameObjectPath && !attempted.current.has(s.id),
     );
-    if (!next) return;
+    if (next?.frameAtMs === undefined) return;
     attempted.current.add(next.id);
-    void picker.capture(next.id, next.frameAtMs!);
-  }, [ready, picker, steps]);
+    void capture(next.id, next.frameAtMs);
+  }, [ready, busy, capture, steps]);
 }
 
 type VideoSource = { url: string; crossOrigin?: 'anonymous' };

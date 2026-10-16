@@ -2,6 +2,7 @@ import type {
   ChangeRequest,
   Finding,
   MediaContentType,
+  StepImageLinks,
   ProcessStep,
   ProcessVersion,
   Readiness,
@@ -56,7 +57,7 @@ export type RecordingUpload = {
 };
 /** Short-lived read links for a process's step images and, while drafting, its recording. */
 export type MediaLinks = {
-  frames: Record<string, string>;
+  frames: StepImageLinks;
   video?: { captureId: string; url: string; contentType: MediaContentType };
 };
 export type FrameUpload = { captureId: string; stepId: string; atMs: number; bytes: number };

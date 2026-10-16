@@ -281,11 +281,11 @@ const spentMediaSeconds = async (h: MediaHarness) =>
     (q) => q.key === 'media:tenant:seconds',
   )?.count ?? 0;
 for (const [outcome, run] of Object.entries(outcomes))
-  test(`a ${outcome} recording is charged only for audio actually billed`, async () => {
+  test(`a ${outcome} recording is charged the length read from the file`, async () => {
     const h = await mediaHarness(outcome === 'failed' ? { steps: [] } : transcript);
     await run(h);
-    // Rejected audio costs nothing; a failed call keeps its measured 10s; reuse bills only the first (9s).
-    const kept = { rejected: 0, failed: 10, reused: 9 }[outcome as keyof typeof outcomes];
+    // Rejected audio costs nothing; a failed call keeps its measured 10s; a reused transcript is free.
+    const kept = { rejected: 0, failed: 10, reused: 10 }[outcome as keyof typeof outcomes];
     assert.equal(await spentMediaSeconds(h), kept);
   });
 const disordered = {
@@ -305,3 +305,9 @@ for (const [name, segments] of Object.entries(disordered))
     };
     assert.equal(capture.status, 'failed');
   });
+test('the model reporting a longer recording does not change the charge', async () => {
+  const h = await mediaHarness({ ...transcript, audioSeconds: 40 * 60 });
+  const { objectPath } = await uploaded(h);
+  await h.worker.process({ objectPath }, true);
+  assert.equal(await spentMediaSeconds(h), 10);
+});
