@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Camera, ImageOff, Upload } from 'lucide-react';
+import { Camera, ImageOff, Smartphone, Upload } from 'lucide-react';
 import type { ProcessStep } from '@/lib/domain/types';
 import { formatClock } from './recording';
 
@@ -9,7 +9,10 @@ const toolClass =
   'inline-flex items-center gap-1 rounded-[3px] bg-muted px-2 py-1.5 text-tiny text-brand-500 disabled:opacity-45';
 const nudgeMs = 1000;
 
-/** A step's image with controls to recapture it at a nudged time, replace it, or remove it. */
+/**
+ * A step's image with controls to recapture it at a nudged time, replace it, take a photo, remove
+ * it, or mark the step as needing no picture.
+ */
 export function StepImagePicker({
   step,
   label,
@@ -19,6 +22,7 @@ export function StepImagePicker({
   onCapture,
   onUpload,
   onRemove,
+  onWaive,
 }: {
   step: ProcessStep;
   label: string;
@@ -28,6 +32,7 @@ export function StepImagePicker({
   onCapture: (atMs: number) => void;
   onUpload: (atMs: number, file: File) => void;
   onRemove: () => void;
+  onWaive: (waived: boolean) => void;
 }) {
   const [atMs, setAtMs] = useState(step.frameAtMs ?? 0);
   const disabled = busy;
@@ -41,8 +46,13 @@ export function StepImagePicker({
         ) : imageUrl && step.frameObjectPath ? (
           // eslint-disable-next-line @next/next/no-img-element -- signed storage links change every few minutes.
           <img src={imageUrl} alt={`Still for ${label}`} className="size-full object-cover" />
+        ) : step.imageWaived ? (
+          <span className="px-1 text-center text-tiny">No picture needed</span>
         ) : (
-          <ImageOff size={18} aria-label={`${label} has no image`} />
+          <span className="grid place-items-center gap-0.5 text-tiny">
+            <ImageOff size={16} aria-hidden />
+            No picture yet
+          </span>
         )}
       </div>
       {canCapture && (
@@ -94,10 +104,36 @@ export function StepImagePicker({
           }}
         />
       </label>
-      {step.frameObjectPath && (
+      {/* Opens the rear camera on phones; desktops pick a file instead. */}
+      <label className={`${toolClass} ${disabled ? 'opacity-45' : 'cursor-pointer'}`}>
+        <Smartphone size={13} aria-hidden />
+        Take photo
+        <input
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="sr-only"
+          disabled={disabled}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = '';
+            if (file) onUpload(atMs, file);
+          }}
+        />
+      </label>
+      {step.frameObjectPath ? (
         <button type="button" className={toolClass} disabled={busy} onClick={onRemove}>
           Remove image
         </button>
+      ) : (
+        <label className="inline-flex cursor-pointer items-center gap-1.5 text-tiny text-brand-500">
+          <input
+            type="checkbox"
+            checked={!!step.imageWaived}
+            onChange={(e) => onWaive(e.target.checked)}
+          />
+          No picture needed
+        </label>
       )}
     </div>
   );
