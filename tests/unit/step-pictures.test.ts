@@ -14,7 +14,9 @@ test('a draft publishes only when every step has a picture or is marked as needi
   const h = await mediaHarness();
   const { processId, captureId } = await transcribed(h);
   const steps = await draftSteps(h, processId);
-  await assert.rejects(publish(h, processId, steps), /step 1, 2.*needing none/);
+  await assert.rejects(publish(h, processId, steps), {
+    message: 'Add pictures to steps 1 and 2, or mark them as needing none.',
+  });
 
   await execute(h.backend, 'POST', `processes/${processId}/frames`, {
     captureId,
@@ -24,7 +26,9 @@ test('a draft publishes only when every step has a picture or is marked as needi
   });
   const framed = await draftSteps(h, processId);
   h.objects.set(framed[0].frameObjectPath!, new Uint8Array([0xff, 0xd8]));
-  await assert.rejects(publish(h, processId, framed), /step 2,? or/);
+  await assert.rejects(publish(h, processId, framed), {
+    message: 'Add a picture to step 2, or mark it as needing none.',
+  });
 
   const waived = framed.map((step, i) => (i ? { ...step, imageWaived: true } : step));
   const published = (await publish(h, processId, waived)) as Draft;
