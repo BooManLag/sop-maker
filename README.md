@@ -25,6 +25,8 @@ npm start
 
 Tests exercise privacy normalization, insufficient-data behavior, sample-size planning, human approval and the complete sample lifecycle. Tests use a temporary data directory and never touch your demo data. Normal seed preserves existing data; run `npm run demo:reset` to discard local demo changes and restore the scenario. Demo data persists in ignored `.demo-data/store.json`.
 
+For a fuller workspace, `npm run seed:manufacturing` adds a fictional manufacturing SOP library: seven published SOPs (CNC spindle bearings, mold changeover, weld torch service, stencil printer, press brake tooling, gearbox oil change, hydraulic seals), two drafts at different capture stages and two illustrative findings. It only adds what is missing, and `npm run demo:reset` removes it. Matching service-record files for scans are in [test-data/manufacturing](test-data/manufacturing/README.md).
+
 ## Explore
 
 1. **Create first SOP** → choose the sample walkthrough or paste your own text → edit/reorder/merge steps → answer one clarification at a time → review safety, rationale and evidence → explicitly approve and publish v1.
