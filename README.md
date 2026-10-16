@@ -6,14 +6,14 @@ A working B2B product foundation for capturing expert know-how, finding promisin
 
 ## Local setup
 
-Requires Node.js 22 or newer, npm and Java 21 (for the Firestore emulator).
+Requires Node.js 22 or newer, npm and the gcloud CLI. Java 21 is needed only for the emulator tests.
 
 ```sh
 npm ci
 npm run dev
 ```
 
-`npm run dev` runs the app in production mode against the Firebase Auth and Firestore emulators: you sign in with an emulator Google account, start from an empty workspace, and see only data you create. Anyone who signs in joins the single local workspace as an admin. Emulator data persists in ignored `.emulator-data/` between runs; delete that folder to start over. Gemini is never connected to the emulators, so AI walkthrough drafting, scan analysis and audio uploads return "unavailable" locally.
+`npm run dev` runs the app locally exactly as in production, against the live Firebase project (`sop-app-prod-511406`, override with `GCP_PROJECT_ID`): real Google sign-in, real Firestore and Gemini. **Everything you do locally changes live data.** One-time setup: run `gcloud auth login` and `gcloud auth application-default login` with an account that can read the `sop-app-pseudonym-key` secret and use Firestore and Vertex AI, and add `127.0.0.1` under Firebase Console → Authentication → Settings → Authorized domains. Open the app at `http://127.0.0.1:3000`.
 
 The demo mode with seeded sample data now runs only inside the automated browser tests. `.env.example` documents validated demo/production configuration.
 

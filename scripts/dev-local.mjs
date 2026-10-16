@@ -1,50 +1,28 @@
-import { spawn } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { execSync, spawn } from 'node:child_process';
 
 /**
- * Runs the app in production mode against the Firebase Auth and Firestore emulators, so local
- * development shows only data you create yourself. Emulator data persists in .emulator-data/.
+ * Runs the app locally against the live Firebase project, exactly as in production: real Google
+ * sign-in, real Firestore and Gemini. Uses your application default credentials
+ * (gcloud auth application-default login). Everything you do here changes live data.
  */
+const project = process.env.GCP_PROJECT_ID || 'sop-app-prod-511406';
+const gcloud = (args) =>
+  execSync(`gcloud ${args} --project ${project}`, { encoding: 'utf8' }).trim();
+
 const env = {
   ...process.env,
   GOOD_EXCEPTION_MODE: 'production',
-  GOOGLE_CLOUD_PROJECT: 'demo-good-exception',
-  GOOD_EXCEPTION_PSEUDONYM_KEY: 'local-emulator-pseudonym-key-not-a-live-secret',
-  GOOD_EXCEPTION_REQUIRE_MFA: 'false',
-  // Anyone signing in to the Auth emulator joins one local workspace as an admin.
-  GOOD_EXCEPTION_OPEN_ORGANIZATION: 'local',
-  GOOD_EXCEPTION_OPEN_ROLE: 'admin',
-  FIRESTORE_EMULATOR_HOST: '127.0.0.1:8085',
-  FIREBASE_AUTH_EMULATOR_HOST: '127.0.0.1:9099',
+  GOOGLE_CLOUD_PROJECT: project,
+  GOOD_EXCEPTION_PSEUDONYM_KEY: gcloud(
+    'secrets versions access latest --secret sop-app-pseudonym-key',
+  ),
+  GOOD_EXCEPTION_GEMINI_MODEL: process.env.GOOD_EXCEPTION_GEMINI_MODEL || 'gemini-3.5-flash',
+  GOOD_EXCEPTION_LOCAL: 'true',
 };
-// Live credentials and models never reach the emulators.
-delete env.GOOGLE_APPLICATION_CREDENTIALS;
-delete env.GOOD_EXCEPTION_GEMINI_MODEL;
+delete env.FIRESTORE_EMULATOR_HOST;
+delete env.FIREBASE_AUTH_EMULATOR_HOST;
 
-const dataDir = '.emulator-data';
-// The first run has nothing to import; later runs restore what the last one exported.
-const importArgs = existsSync(`${dataDir}/firebase-export-metadata.json`)
-  ? ['--import', dataDir]
-  : [];
-
-const child = spawn(
-  'npx',
-  [
-    '--yes',
-    '--package',
-    'firebase-tools@15.33.0',
-    'firebase',
-    'emulators:exec',
-    '--only',
-    'auth,firestore',
-    '--project',
-    env.GOOGLE_CLOUD_PROJECT,
-    '--config',
-    'firebase.emulators.json',
-    ...importArgs,
-    `--export-on-exit=${dataDir}`,
-    'next dev --hostname 127.0.0.1',
-  ],
-  { stdio: 'inherit', env },
-);
+const command = 'next dev --hostname 127.0.0.1';
+// Windows ships npx as npx.cmd, which Node only runs through a shell.
+const child = spawn(`npx ${command}`, { stdio: 'inherit', env, shell: true });
 child.on('exit', (code) => process.exit(code ?? 1));
