@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --hostname 127.0.0.1",
+    "dev": "node scripts/dev-local.mjs",
     "build": "next build",
     "start": "node scripts/start.mjs",
     "typecheck": "next typegen && tsc --noEmit",

@@ -9,10 +9,13 @@ import type { AuthService } from './auth';
 const HOSTING_CONFIG = '/__/firebase/init.json';
 const ISSUER = 'Good Exception';
 
-async function hostingConfig(): Promise<FirebaseOptions | null> {
+/** Present only in local development, where sign-in goes to the Firebase Auth emulator. */
+type WebConfig = FirebaseOptions & { authEmulatorUrl?: string };
+
+async function hostingConfig(): Promise<WebConfig | null> {
   try {
     const response = await fetch(HOSTING_CONFIG);
-    return response.ok ? ((await response.json()) as FirebaseOptions) : null;
+    return response.ok ? ((await response.json()) as WebConfig) : null;
   } catch {
     return null;
   }
@@ -26,7 +29,10 @@ export async function loadFirebaseAuth(): Promise<AuthService | null> {
     import('firebase/app'),
     import('firebase/auth'),
   ]);
-  const auth = firebase.getAuth(getApps()[0] ?? initializeApp(config));
+  const { authEmulatorUrl, ...options } = config;
+  const auth = firebase.getAuth(getApps()[0] ?? initializeApp(options));
+  if (authEmulatorUrl && !auth.emulatorConfig)
+    firebase.connectAuthEmulator(auth, authEmulatorUrl, { disableWarnings: true });
   const { TotpMultiFactorGenerator: Totp } = firebase;
   const signedIn = () => {
     if (!auth.currentUser) throw new Error('Not signed in.');
