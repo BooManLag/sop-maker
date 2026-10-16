@@ -72,6 +72,15 @@ resource "google_cloud_run_v2_service" "app" {
         name  = "GOOD_EXCEPTION_ALLOWED_ORIGINS"
         value = join(",", local.allowed_origins)
       }
+      # Prototype: every signed-in user without membership claims joins one shared org as admin.
+      env {
+        name  = "GOOD_EXCEPTION_OPEN_ORGANIZATION"
+        value = "prototype"
+      }
+      env {
+        name  = "GOOD_EXCEPTION_OPEN_ROLE"
+        value = "admin"
+      }
       env {
         name  = "GOOD_EXCEPTION_GEMINI_MODEL"
         value = var.gemini_model
