@@ -9,7 +9,7 @@ export const ANALYSIS_VERSION = 'agent-v1';
 import { EvidenceEngine, normalizeRecords, requiredSamplePerGroup } from './evidence-engine';
 import type { schemas } from '../server/contracts';
 import type { z } from 'zod';
-import { getProcess } from './process-service';
+import { getProcess, requireActive } from './process-service';
 type Input<K extends keyof typeof schemas> = z.infer<(typeof schemas)[K]>;
 export function getScan(s: Store, id?: string) {
   const scan = s.scans.find((x) => x.id === id);
@@ -33,6 +33,7 @@ export function createScan(
   pseudonymKey?: string,
 ) {
   const p = getProcess(s, body.processId);
+  requireActive(p);
   requireCondition(p.currentVersion > 0, 'Select a published baseline SOP.');
   requireCondition(
     !body.demo || (actor.demo && body.processId === 'valve-replacement'),
