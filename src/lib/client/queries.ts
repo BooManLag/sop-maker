@@ -7,6 +7,7 @@ export const queryKeys = {
   workspace: ['workspace'] as const,
   process: (id: string) => ['process', id] as const,
   capture: (id: string) => ['capture', id] as const,
+  media: (processId: string) => ['media', processId] as const,
   scan: (id: string) => ['scan', id] as const,
   finding: (id: string) => ['finding', id] as const,
   trial: (id: string) => ['trial', id] as const,
@@ -17,6 +18,15 @@ export const useWorkspace = () =>
   useQuery({ queryKey: queryKeys.workspace, queryFn: api.workspace });
 export const useProcess = (id: string) =>
   useQuery({ queryKey: queryKeys.process(id), queryFn: () => api.process(id) });
+/** Read links expire after 15 minutes, so they are refreshed well before then. */
+export const useProcessMedia = (processId: string, enabled = true) =>
+  useQuery({
+    queryKey: queryKeys.media(processId),
+    enabled,
+    queryFn: () => api.media(processId),
+    staleTime: 5 * 60_000,
+    refetchInterval: 10 * 60_000,
+  });
 /** Polls while a recording is still waiting to be inspected and transcribed. */
 export const useCapture = (id: string) =>
   useQuery({

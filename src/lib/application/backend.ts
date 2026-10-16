@@ -1,5 +1,11 @@
 import { createHash, randomUUID } from 'node:crypto';
-import type { MediaJobs, Repository, RepositoryProvider, UploadSigner } from './ports';
+import type {
+  MediaJobs,
+  MediaLibrary,
+  Repository,
+  RepositoryProvider,
+  UploadSigner,
+} from './ports';
 import type { AnalysisQueue } from './analysis/worker';
 import type { Store } from './store';
 import { consumeQuota, pruneExpired, requireMediaAllowance } from './store';
@@ -63,6 +69,7 @@ export class Backend {
     private analysis?: AnalysisQueue,
     private uploads?: UploadSigner,
     private mediaJobs?: MediaJobs,
+    private media?: MediaLibrary,
   ) {}
   async execute(
     endpoint: Endpoint,
@@ -74,6 +81,7 @@ export class Backend {
     authorize(context.actor, endpoint.permission, this.config);
     const input = parseInput(endpoint.operation, raw);
     const repository = this.repositories.forTenant(context.actor.organizationId);
+    if (endpoint.operation === 'processMedia') return this.mediaLinks(repository, id);
     if (endpoint.method === 'GET')
       return repository.query((s) => this.read(s, endpoint.operation, id, query, context.actor));
     if (this.config.mode === 'production' && !context.idempotencyKey)
@@ -151,6 +159,10 @@ export class Backend {
         body.bytes,
       );
     }
+    const keptFrames =
+      endpoint.operation === 'processPublish'
+        ? await this.keepFrames(repository, organizationId, id!)
+        : undefined;
     if (endpoint.operation === 'uploadComplete') {
       const media = await repository.query((s) => {
         const capture = processes.getCapture(s, id);
@@ -192,6 +204,7 @@ export class Backend {
         extraction,
         captureFingerprint,
         upload,
+        keptFrames,
       );
       const response = JSON.parse(JSON.stringify(result));
       s.auditEvents.push({
@@ -210,6 +223,45 @@ export class Backend {
     if (effects.analysisStarted && this.analysis)
       await this.enqueueAnalysis(repository, context.actor.organizationId, id!);
     return response;
+  }
+  /**
+   * Copies a draft's step images to storage that does not expire, before publishing commits.
+   * Returns each draft image path mapped to its kept copy. Copying again on a retry is harmless.
+   */
+  private async keepFrames(repository: Repository, organizationId: string, id: string) {
+    const frames = await repository.query((s) => {
+      processes.requireDraft(processes.getProcess(s, id));
+      return processes.mediaObjects(s, id).frames;
+    });
+    const kept = new Map<string, string>();
+    if (!frames.length) return kept;
+    const media = this.media;
+    requireCondition(media, 'Media storage is not configured.', 503);
+    for (const { stepId, objectPath } of frames) {
+      const copy = mediaPaths.published(organizationId, id, 1, stepId);
+      await media.copy(objectPath, copy);
+      kept.set(objectPath, copy);
+    }
+    return kept;
+  }
+  /** Signs read links outside the store query, which must not perform I/O. */
+  private async mediaLinks(repository: Repository, id?: string) {
+    const media = this.media;
+    requireCondition(media, 'Media storage is not configured.', 503);
+    const { frames, video } = await repository.query((s) => processes.mediaObjects(s, id));
+    const frameLinks: Record<string, string> = {};
+    for (const frame of frames)
+      frameLinks[frame.stepId] = await media.signRead(frame.objectPath, 'image/jpeg');
+    return {
+      frames: frameLinks,
+      ...(video && {
+        video: {
+          captureId: video.captureId,
+          contentType: video.contentType,
+          url: await media.signRead(video.objectPath, video.contentType),
+        },
+      }),
+    };
   }
   private async signUpload(
     objectPathFor: (uploadId: string) => string,
@@ -297,6 +349,7 @@ export class Backend {
     extraction?: Awaited<ReturnType<GuardedCaptureAdapter['extract']>>,
     expected?: string,
     upload?: SignedUpload,
+    keptFrames?: Map<string, string>,
   ): unknown {
     switch (operation) {
       case 'processCreate':
@@ -349,7 +402,7 @@ export class Backend {
         return processes.processDto(processes.saveDraftSteps(s, id!, parseInput(operation, input)));
       case 'processPublish':
         return processes.processDto(
-          processes.publishProcess(s, id!, parseInput(operation, input), ctx.actor),
+          processes.publishProcess(s, id!, parseInput(operation, input), ctx.actor, keptFrames),
         );
       case 'scanCreate':
         return evidence.scanDto(

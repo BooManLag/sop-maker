@@ -4,9 +4,14 @@ import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
-import { wholeFile } from './media-fixtures';
+import { webm, wholeFile } from './media-fixtures';
 import { Backend } from '../../src/lib/application/backend';
-import type { MediaStorage, MediaTranscriber, UploadSigner } from '../../src/lib/application/ports';
+import type {
+  MediaLibrary,
+  MediaStorage,
+  MediaTranscriber,
+  UploadSigner,
+} from '../../src/lib/application/ports';
 import { MediaWorker } from '../../src/lib/application/media-worker';
 import { JsonRepositoryProvider } from '../../src/lib/infrastructure/json-repository';
 import { GuardedCaptureAdapter } from '../../src/lib/server/ai';
@@ -94,6 +99,19 @@ export async function mediaHarness(output: unknown = transcript) {
     },
   };
   const signed: Parameters<UploadSigner['sign']>[0][] = [];
+  const reads: { objectPath: string; contentType: string }[] = [];
+  const copies: { from: string; to: string }[] = [];
+  const library: MediaLibrary = {
+    async signRead(objectPath, contentType) {
+      reads.push({ objectPath, contentType });
+      return `https://storage.example/${objectPath}?read=1`;
+    },
+    async copy(from, to) {
+      if (!objects.has(from)) throw new Error('missing object');
+      objects.set(to, objects.get(from)!);
+      copies.push({ from, to });
+    },
+  };
   const queued: { url: string; job: object; taskId?: string }[] = [];
   const jobs = new QueuedMediaJobs(
     storage,
@@ -119,9 +137,22 @@ export async function mediaHarness(output: unknown = transcript) {
       },
     },
     jobs,
+    library,
   );
   const worker = new MediaWorker(repositories, storage, transcriber, () => undefined);
-  return { backend, worker, objects, transcribed, durations, repositories, faults, signed, queued };
+  return {
+    backend,
+    worker,
+    objects,
+    transcribed,
+    durations,
+    repositories,
+    reads,
+    copies,
+    faults,
+    signed,
+    queued,
+  };
 }
 export type MediaHarness = Awaited<ReturnType<typeof mediaHarness>>;
 export async function execute(
@@ -137,4 +168,38 @@ export async function execute(
     requestId: randomUUID(),
     idempotencyKey: randomUUID(),
   });
+}
+
+/** A draft process with one recording waiting in quarantine. */
+export async function uploaded(
+  h: MediaHarness,
+  bytes = webm(0, 10_000),
+  contentType = 'audio/webm',
+) {
+  const p = (await execute(h.backend, 'POST', 'processes', {
+    title: 'Pump',
+    equipment: 'P-1',
+  })) as {
+    id: string;
+  };
+  const target = (await execute(
+    h.backend,
+    'POST',
+    `processes/${p.id}/uploads`,
+    recordingRequest({ contentType, bytes: bytes.length }),
+  )) as { uploadId: string };
+  const objectPath = `quarantine/tenant_a/${p.id}/${target.uploadId}`;
+  h.objects.set(objectPath, bytes);
+  return { processId: p.id, captureId: target.uploadId, objectPath };
+}
+/** A draft whose recording has been inspected and transcribed into steps. */
+export async function transcribed(h: MediaHarness) {
+  const upload = await uploaded(h);
+  await h.worker.process({ objectPath: upload.objectPath }, true);
+  const process = (await execute(h.backend, 'GET', `processes/${upload.processId}`)) as {
+    versions: {
+      steps: { id: string; action: string; frameAtMs?: number; frameObjectPath?: string }[];
+    }[];
+  };
+  return { ...upload, steps: process.versions[0].steps };
 }

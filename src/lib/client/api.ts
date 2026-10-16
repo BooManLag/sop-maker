@@ -54,6 +54,12 @@ export type RecordingUpload = {
   /** Everyone in the recording agreed to be recorded. */
   consent: true;
 };
+/** Short-lived read links for a process's step images and, while drafting, its recording. */
+export type MediaLinks = {
+  frames: Record<string, string>;
+  video?: { captureId: string; url: string; contentType: MediaContentType };
+};
+export type FrameUpload = { captureId: string; stepId: string; atMs: number; bytes: number };
 export type Extraction = { steps: ProcessStep[]; questions: string[]; notice: string };
 export type ScanDetail = {
   id: string;
@@ -134,6 +140,9 @@ export function createApiClient({
     requestUpload: (processId: string, body: RecordingUpload) =>
       post<UploadTarget>(`processes/${processId}/uploads`, body),
     /** Tells the server the upload finished; it checks storage before transcribing. */
+    media: (processId: string) => get<MediaLinks>(`processes/${processId}/media`),
+    requestFrame: (processId: string, body: FrameUpload) =>
+      post<UploadTarget>(`processes/${processId}/frames`, body),
     completeUpload: (captureId: string) => post<DraftCapture>(`captures/${captureId}/uploaded`, {}),
     saveTranscript: (captureId: string, segments: TranscriptSegment[]) =>
       post<DraftCapture>(`captures/${captureId}/transcript`, { segments }),
