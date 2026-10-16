@@ -8,13 +8,13 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { BackLink } from '@/components/common/back-link';
 import { EmptyState } from '@/components/common/empty-state';
-import { ExportButton } from '@/components/common/export-button';
 import { PageTitle } from '@/components/common/page-title';
 import { QueryState } from '@/components/common/query-state';
 import { WithSideRail, sideRailClass } from '@/components/common/layouts';
 import { useProcess } from '@/lib/client/queries';
 import { StepView } from './step-view';
 import { useStepStills } from './step-still';
+import { SopExportButton } from './sop-export-button';
 
 export function LivingSop({ processId }: { processId: string }) {
   return (
@@ -29,7 +29,9 @@ export function LivingSop({ processId }: { processId: string }) {
                 eyebrow="LIVING SOP"
                 title={process.title}
                 description={`${process.equipment} · ${process.currentVersion ? `Version ${process.currentVersion}` : 'Draft v1'}`}
-                action={<ExportButton data={process} fileName="living-sop.json" />}
+                action={
+                  <SopExportButton process={process} data={process} fileName="living-sop.json" />
+                }
               />
               <WithSideRail>
                 <Card>

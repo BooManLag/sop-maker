@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { ErrorBanner } from '@/components/common/error-banner';
-import { ExportButton } from '@/components/common/export-button';
+import { SopExportButton } from '@/features/processes/sop-export-button';
 import { PageTitle } from '@/components/common/page-title';
 import { TwoFields, WithSideRail, sideRailClass } from '@/components/common/layouts';
 import { StepRow } from '@/features/processes/step-view';
@@ -82,7 +82,14 @@ function ReviewForm({ draft }: { draft: ProcessDto }) {
         eyebrow="DRAFT V1 · HUMAN REVIEW"
         title={draft.title}
         description="A useful standard includes what to do, when to do it, and why."
-        action={<ExportButton data={{ ...draft, steps }} fileName="sop-draft.json" />}
+        action={
+          <SopExportButton
+            process={draft}
+            steps={steps}
+            data={{ ...draft, steps }}
+            fileName="sop-draft.json"
+          />
+        }
       />
       <Form {...form}>
         <form onSubmit={form.handleSubmit((values) => publish.mutate(values))}>
