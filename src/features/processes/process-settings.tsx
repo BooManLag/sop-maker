@@ -28,7 +28,7 @@ import {
 import { api } from '@/lib/client/browser';
 import type { ProcessDto } from '@/lib/client/api';
 import { useQueryClient } from '@tanstack/react-query';
-import { queryKeys, useWorkspaceMutation } from '@/lib/client/queries';
+import { queryKeys, useWorkspace, useWorkspaceMutation } from '@/lib/client/queries';
 import { shortText } from '@/lib/domain/validation';
 
 const detailsSchema = z.object({ title: shortText, equipment: shortText });
@@ -57,12 +57,24 @@ export function ProcessSettings({ process }: { process: ProcessDto }) {
       router.push('/processes');
     },
   );
+  const admin = useWorkspace().data?.role === 'admin';
+  const [purging, setPurging] = useState(false);
+  const [typedTitle, setTypedTitle] = useState('');
+  const purge = useWorkspaceMutation(
+    () => api.purgeProcess(process.id, typedTitle),
+    () => {
+      queryClient.removeQueries({ queryKey: queryKeys.process(process.id) });
+      router.push('/processes');
+    },
+  );
   return (
     <Sheet
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
         setConfirming(false);
+        setPurging(false);
+        setTypedTitle('');
         if (next) form.reset({ title: process.title, equipment: process.equipment });
       }}
     >
@@ -141,6 +153,45 @@ export function ProcessSettings({ process }: { process: ProcessDto }) {
               </Button>
             )}
           </div>
+          {admin && published && (
+            <div className="flex flex-col gap-3 border-t border-border pt-6">
+              <h4 className="m-0 text-destructive">Delete permanently</h4>
+              <p className="m-0 text-sm text-muted-foreground">
+                Removes the process, every version, its captures, scans, findings, trials and change
+                requests, and its stored pictures and recordings. This cannot be undone.
+              </p>
+              <ErrorBanner error={purge.error} onDismiss={purge.reset} />
+              {purging ? (
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm" htmlFor="purge-title">
+                    Type <strong>{process.title}</strong> to confirm
+                  </label>
+                  <Input
+                    id="purge-title"
+                    autoComplete="off"
+                    value={typedTitle}
+                    onChange={(event) => setTypedTitle(event.target.value)}
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      className="border-destructive bg-destructive hover:bg-destructive/90"
+                      disabled={purge.isPending || typedTitle !== process.title}
+                      onClick={() => purge.mutate(undefined)}
+                    >
+                      {purge.isPending ? 'Deleting…' : 'Delete forever'}
+                    </Button>
+                    <Button variant="secondary" onClick={() => setPurging(false)}>
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <Button variant="secondary" onClick={() => setPurging(true)}>
+                  Delete permanently…
+                </Button>
+              )}
+            </div>
+          )}
         </div>
       </SheetContent>
     </Sheet>

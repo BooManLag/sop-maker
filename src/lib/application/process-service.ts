@@ -85,6 +85,34 @@ export function deleteProcess(s: Store, id: string) {
   s.processes = s.processes.filter((x) => x.id !== id);
   return { id, outcome: 'deleted' as const };
 }
+/**
+ * Permanently deletes a process, published or not, with every record that points at it: captures,
+ * clarifications, scans, findings and their trials, results and responses, and change requests.
+ * The caller must type the current title to confirm. Returns the stored media to remove once the
+ * deletion commits.
+ */
+export function purgeProcess(s: Store, id: string, body: Input<'processPurge'>) {
+  const p = getProcess(s, id);
+  requireCondition(body.title === p.title, 'Type the process title exactly to confirm.', 400);
+  const captures = s.captures.filter((c) => c.processId === id);
+  const captureIds = new Set(captures.map((c) => c.id));
+  const findingIds = new Set(s.findings.filter((f) => f.processId === id).map((f) => f.id));
+  const trialIds = new Set(s.trials.filter((t) => findingIds.has(t.findingId)).map((t) => t.id));
+  const media = [
+    ...p.versions.flatMap((v) => v.steps.flatMap((step) => step.frameObjectPath ?? [])),
+    ...captures.flatMap((c) => (c.media ? [c.media.objectPath, c.media.cleanPath ?? []] : [])),
+  ].flat();
+  s.clarifications = s.clarifications.filter((c) => !captureIds.has(c.captureId));
+  s.captures = s.captures.filter((c) => c.processId !== id);
+  s.scans = s.scans.filter((x) => x.processId !== id);
+  s.changes = s.changes.filter((x) => x.processId !== id && !trialIds.has(x.trialId));
+  s.results = s.results.filter((r) => !trialIds.has(r.trialId));
+  s.trials = s.trials.filter((t) => !trialIds.has(t.id));
+  s.responses = s.responses.filter((r) => !findingIds.has(r.findingId));
+  s.findings = s.findings.filter((f) => f.processId !== id);
+  s.processes = s.processes.filter((x) => x.id !== id);
+  return { result: { id, outcome: 'deleted' as const }, media: [...new Set(media)] };
+}
 export function createCapture(s: Store, id: string, body: Input<'captureCreate'>) {
   const p = getProcess(s, id);
   requireDraft(p);
