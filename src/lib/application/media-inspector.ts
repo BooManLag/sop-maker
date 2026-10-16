@@ -11,6 +11,8 @@ const headBytes = 64 * 1024;
 /** Long enough to hold a whole WebM cluster header at the end of the file. */
 const tailBytes = 1024 * 1024;
 const maxMoovBytes = 16 * 1024 * 1024;
+/** Long enough to hold a whole final fragment, header and media, of a fragmented MP4. */
+const fragmentTailBytes = 8 * 1024 * 1024;
 
 /** Checks the bytes match the declared type and reads the recording's length from its headers. */
 export async function inspectMedia(
@@ -100,6 +102,7 @@ function lastClusterTicks(bytes: Uint8Array) {
 
 const mp4 = {
   matches: (head: Uint8Array) => ascii(head, 4, 8) === 'ftyp',
+  /** The movie header's duration; fragmented files leave it zero, so their fragments are read. */
   async seconds(file: ByteSource) {
     const moov = await topLevelBox(file, 'moov');
     const mvhd = moov && childBox(moov, 'mvhd');
@@ -107,7 +110,12 @@ const mp4 = {
     const wide = mvhd[0] === 1;
     const timescale = uint(mvhd, wide ? 20 : 12, 4);
     const duration = uint(mvhd, wide ? 24 : 16, wide ? 8 : 4);
-    return timescale ? duration / timescale : undefined;
+    if (!timescale) return undefined;
+    if (duration) return duration / timescale;
+    const mehd = childBox(childBox(moov, 'mvex') ?? new Uint8Array(), 'mehd');
+    const fragmentDuration = mehd && uint(mehd, 4, mehd[0] === 1 ? 8 : 4);
+    if (fragmentDuration) return fragmentDuration / timescale;
+    return fragmentedSeconds(file, moov);
   },
 };
 /** Walks the file's top-level boxes by their headers, skipping media data without reading it. */
@@ -122,6 +130,69 @@ async function topLevelBox(file: ByteSource, type: string) {
   }
   return undefined;
 }
+/**
+ * The body of the last fragment header, found in the file's tail rather than by walking every
+ * fragment, which would cost one storage read each. A fragment header always opens with mfhd.
+ */
+async function lastFragment(file: ByteSource) {
+  const bytes = await file.read(Math.max(0, file.size - fragmentTailBytes), file.size);
+  for (let at = bytes.length - 16; at >= 0; at--) {
+    if (ascii(bytes, at + 4, at + 8) !== 'moof' || ascii(bytes, at + 12, at + 16) !== 'mfhd')
+      continue;
+    const size = uint(bytes, at, 4);
+    if (size >= 16 && at + size <= bytes.length) return bytes.subarray(at + 8, at + size);
+  }
+  return undefined;
+}
+/** Each track's media timescale, keyed by track ID. */
+function trackTimescales(moov: Uint8Array) {
+  const scales = new Map<number, number>();
+  for (const trak of childBoxes(moov, 'trak')) {
+    const tkhd = childBox(trak, 'tkhd');
+    const mdhd = childBox(childBox(trak, 'mdia') ?? new Uint8Array(), 'mdhd');
+    if (!tkhd || !mdhd) continue;
+    const wide = (box: Uint8Array) => box[0] === 1;
+    scales.set(uint(tkhd, wide(tkhd) ? 20 : 12, 4), uint(mdhd, wide(mdhd) ? 20 : 12, 4));
+  }
+  return scales;
+}
+/** The end of the last fragment: its decode time plus the durations of its samples. */
+async function fragmentedSeconds(file: ByteSource, moov: Uint8Array) {
+  const moof = await lastFragment(file);
+  if (!moof) return undefined;
+  const scales = trackTimescales(moov);
+  let end = 0;
+  for (const traf of childBoxes(moof, 'traf')) {
+    const tfhd = childBox(traf, 'tfhd');
+    const tfdt = childBox(traf, 'tfdt');
+    const scale = tfhd && scales.get(uint(tfhd, 4, 4));
+    if (!tfhd || !tfdt || !scale) continue;
+    const ticks = uint(tfdt, 4, tfdt[0] === 1 ? 8 : 4) + trafDuration(traf, tfhd);
+    end = Math.max(end, ticks / scale);
+  }
+  return end || undefined;
+}
+/** Sums sample durations across a fragment's runs, falling back to the fragment's default. */
+function trafDuration(traf: Uint8Array, tfhd: Uint8Array) {
+  const tfhdFlags = uint(tfhd, 1, 3);
+  // Optional tfhd fields precede the default duration: base data offset, sample description index.
+  const defaultAt = 8 + (tfhdFlags & 0x01 ? 8 : 0) + (tfhdFlags & 0x02 ? 4 : 0);
+  const defaultDuration = tfhdFlags & 0x08 ? uint(tfhd, defaultAt, 4) : 0;
+  let total = 0;
+  for (const trun of childBoxes(traf, 'trun')) {
+    const flags = uint(trun, 1, 3);
+    const count = uint(trun, 4, 4);
+    if (!(flags & 0x100)) {
+      total += count * defaultDuration;
+      continue;
+    }
+    const sampleBytes = [0x100, 0x200, 0x400, 0x800].filter((f) => flags & f).length * 4;
+    let at = 8 + (flags & 0x01 ? 4 : 0) + (flags & 0x04 ? 4 : 0);
+    for (let i = 0; i < count && at + 4 <= trun.length; i++, at += sampleBytes)
+      total += uint(trun, at, 4);
+  }
+  return total;
+}
 /** Box sizes are 32-bit, or 64-bit when the 32-bit size is 1, or run to the end when it is 0. */
 function boxSize(header: Uint8Array, remaining: number) {
   const size = uint(header, 0, 4);
@@ -129,11 +200,15 @@ function boxSize(header: Uint8Array, remaining: number) {
   return { size: size === 0 ? remaining : size, headerLength: 8 };
 }
 function childBox(parent: Uint8Array, type: string) {
+  return childBoxes(parent, type)[0];
+}
+function childBoxes(parent: Uint8Array, type: string) {
+  const found: Uint8Array[] = [];
   for (let at = 0; at + 8 <= parent.length;) {
     const size = uint(parent, at, 4);
-    if (size < 8) return undefined;
-    if (ascii(parent, at + 4, at + 8) === type) return parent.subarray(at + 8, at + size);
+    if (size < 8) break;
+    if (ascii(parent, at + 4, at + 8) === type) found.push(parent.subarray(at + 8, at + size));
     at += size;
   }
-  return undefined;
+  return found;
 }
