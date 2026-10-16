@@ -12,7 +12,7 @@ import type { Actor } from '../server/auth';
 import { requireCondition } from '../server/errors';
 import { transcriptionSchema, type schemas } from '../server/contracts';
 import type { z } from 'zod';
-import { stepsMissingPictures } from '../domain/steps';
+import { missingPicturesMessage, stepsMissingPictures } from '../domain/steps';
 type Input<K extends keyof typeof schemas> = z.infer<(typeof schemas)[K]>;
 export function getProcess(s: Store, id?: string) {
   const process = s.processes.find((p) => p.id === id);
@@ -231,11 +231,7 @@ export function publishProcess(
   );
   const steps = withServerFrames(p.versions[0].steps, body.steps);
   const missing = stepsMissingPictures(steps);
-  requireCondition(
-    !missing.length,
-    `Add a picture to step ${missing.map((s) => s.sequence).join(', ')}, or mark it as needing none.`,
-    409,
-  );
+  requireCondition(!missing.length, missingPicturesMessage(missing), 409);
   p.versions[0] = {
     ...p.versions[0],
     steps: steps.map((step) => withKeptFrame(step, keptFrames)),
