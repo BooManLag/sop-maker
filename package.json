@@ -19,7 +19,8 @@
     "api:generate": "tsx scripts/openapi.ts",
     "api:check": "tsx scripts/openapi.ts --check",
     "test:load": "tsx scripts/load-test.ts",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "prepare": "husky"
   },
   "dependencies": {
     "@google/adk": "^2.2.1",
@@ -58,11 +59,16 @@
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.4.0",
     "global-jsdom": "^30.0.0",
+    "husky": "^9.1.7",
     "jsdom": "^30.1.2",
+    "lint-staged": "^17.6.0",
     "prettier": "^3.9.9",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "tailwindcss": "^4.1.0",
     "tsx": "^4.20.0",
     "typescript": "^5.9.0"
+  },
+  "lint-staged": {
+    "*": "prettier --write --ignore-unknown"
   }
 }
