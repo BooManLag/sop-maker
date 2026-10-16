@@ -3,12 +3,13 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { AccountBadge, useNavCounts } from './account';
+import { AccountMenu, Avatar, useAccount, useNavCounts } from './account';
 import { LogoMark, Wordmark } from './logo';
 import { navItems, sectionFor, sectionLabels } from './sections';
 
-/** Phone header: the mark on the left, the account on the right. */
+/** Phone header: the mark on the left, the account menu on the right. */
 export function MobileHeader() {
+  const account = useAccount();
   return (
     <header className="flex h-14 items-center justify-between border-b border-border bg-topbar px-4 md:hidden">
       <Link
@@ -19,7 +20,15 @@ export function MobileHeader() {
         <LogoMark size={20} />
         <Wordmark />
       </Link>
-      <AccountBadge />
+      <AccountMenu>
+        <button
+          type="button"
+          aria-label={`Account: ${account.name}`}
+          className="grid size-11 place-items-center rounded-full"
+        >
+          <Avatar initials={account.initials} photo={account.photo} small />
+        </button>
+      </AccountMenu>
     </header>
   );
 }
