@@ -22,7 +22,8 @@
     "api:check": "tsx scripts/openapi.ts --check",
     "test:load": "tsx scripts/load-test.ts",
     "lint": "eslint .",
-    "prepare": "husky"
+    "prepare": "husky",
+    "storage:cleanup": "tsx scripts/storage-cleanup.ts"
   },
   "dependencies": {
     "@google-cloud/storage": "^7.22.0",
