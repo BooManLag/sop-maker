@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { pipeline } from 'node:stream/promises';
 import { Storage } from '@google-cloud/storage';
-import type { UploadSigner, WritableMediaStorage } from '../application/ports';
+import type { MediaLibrary, UploadSigner, WritableMediaStorage } from '../application/ports';
 
 const uploadTtlMs = 15 * 60_000;
 const readTtlMs = 15 * 60_000;
@@ -11,7 +11,7 @@ const notFound = (error: unknown) => (error as { code?: number }).code === 404;
  * Media objects in the Cloud Storage bucket. Signing uses the runtime service account through
  * IAM signBlob, so the account needs Token Creator on itself.
  */
-export class GcsMedia implements WritableMediaStorage, UploadSigner {
+export class GcsMedia implements WritableMediaStorage, UploadSigner, MediaLibrary {
   private bucket;
   constructor(bucketName: string) {
     this.bucket = new Storage().bucket(bucketName);
@@ -83,6 +83,9 @@ export class GcsMedia implements WritableMediaStorage, UploadSigner {
       // A finished move is a no-op.
       if (!notFound(error) || !(await this.exists(to))) throw error;
     }
+  }
+  async copy(from: string, to: string) {
+    await this.bucket.file(from).copy(this.bucket.file(to));
   }
   async remove(objectPath: string) {
     await this.bucket.file(objectPath).delete({ ignoreNotFound: true });

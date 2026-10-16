@@ -9,6 +9,7 @@ import { JsonRepositoryProvider } from '../../src/lib/infrastructure/json-reposi
 import { DemoGeminiAdapter } from '../../src/lib/infrastructure/demo-capture-adapter';
 import { DemoTranscriber } from '../../src/lib/infrastructure/demo-transcriber';
 import {
+  LocalMediaLibrary,
   LocalMediaStore,
   LocalMediaUploads,
   LocalUploadSigner,
@@ -41,6 +42,8 @@ async function demo(now?: () => number) {
     new GuardedCaptureAdapter(new DemoGeminiAdapter()),
     undefined,
     signer,
+    undefined,
+    new LocalMediaLibrary(signer, store),
   );
   const handler = createHttpHandler({
     backend,
@@ -48,12 +51,24 @@ async function demo(now?: () => number) {
     verifier: { verify: async () => assert.fail('demo requests need no token') },
     observability: new Observability(() => undefined),
     mediaUploads: new LocalMediaUploads(signer, store, worker),
+    mediaFiles: new LocalMediaLibrary(signer, store),
   });
   const call = async (pathname: string, init: RequestInit = {}, host = '127.0.0.1:3000') => {
     const url = new URL(pathname, `http://${host}/api/`);
     const segments = url.pathname.replace(/^\/api\//, '').split('/');
     const response = await handler(new Request(url, init), segments);
     return { status: response.status, body: await response.json().catch(() => undefined) };
+  };
+  const fetchRaw = async (pathname: string, headers: Record<string, string> = {}) => {
+    const url = new URL(pathname, 'http://127.0.0.1:3000/');
+    const segments = url.pathname.replace(/^\/api\//, '').split('/');
+    const response = await handler(new Request(url, { headers }), segments);
+    return {
+      status: response.status,
+      type: response.headers.get('content-type'),
+      range: response.headers.get('content-range'),
+      bytes: new Uint8Array(await response.arrayBuffer()),
+    };
   };
   const post = (pathname: string, body: unknown) =>
     call(pathname, {
@@ -64,7 +79,7 @@ async function demo(now?: () => number) {
   const process = (await post('v1/processes', { title: 'Valve', equipment: 'V-1' })).body as {
     id: string;
   };
-  return { call, post, process, dataDir, store };
+  return { call, post, fetchRaw, process, dataDir, store };
 }
 const audio = { expertReference: 'expert_1', contentType: 'audio/webm', consent: true };
 const put = (url: string, bytes: Uint8Array, contentType = 'audio/webm') => ({
@@ -196,4 +211,49 @@ test('the demo transcription always satisfies the transcription contract', async
     );
   }
   await assert.rejects(transcriber.transcribe('clean/o/p/u', 'audio/webm'));
+});
+
+async function demoWithFrame(now?: () => number) {
+  const app = await demo(now);
+  const recording = webm(0, 5000, 10000);
+  const target = await app.post(`v1/processes/${app.process.id}/uploads`, {
+    ...audio,
+    bytes: recording.byteLength,
+  });
+  const upload = put(target.body.url, recording);
+  await app.call(upload.url, upload.init);
+  const draft = await app.call(`v1/processes/${app.process.id}`);
+  const stepId = draft.body.versions[0].steps[0].id;
+  const jpeg = Uint8Array.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3]);
+  const frame = await app.post(`v1/processes/${app.process.id}/frames`, {
+    captureId: target.body.uploadId,
+    stepId,
+    atMs: 1000,
+    bytes: jpeg.byteLength,
+  });
+  const frameUpload = put(frame.body.url, jpeg, 'image/jpeg');
+  await app.call(frameUpload.url, frameUpload.init);
+  const media = await app.call(`v1/processes/${app.process.id}/media`);
+  return { ...app, recording, jpeg, stepId, media: media.body };
+}
+test('the demo serves step images and the recording through signed local links', async () => {
+  const { fetchRaw, media, jpeg, stepId, recording } = await demoWithFrame();
+  const image = await fetchRaw(media.frames[stepId]);
+  assert.equal(image.status, 200);
+  assert.equal(image.type, 'image/jpeg');
+  assert.deepEqual([...image.bytes], [...jpeg]);
+  assert.match(media.video.url, /^\/api\/v1\/internal\/media-file\?grant=/);
+  const video = await fetchRaw(media.video.url, { range: 'bytes=4-9' });
+  assert.equal(video.status, 206);
+  assert.equal(video.type, 'audio/webm');
+  assert.equal(video.range, `bytes 4-9/${recording.byteLength}`);
+  assert.deepEqual([...video.bytes], [...recording.subarray(4, 10)]);
+});
+test('local media links refuse forged and expired grants', async () => {
+  let now = Date.now();
+  const { fetchRaw, media, stepId } = await demoWithFrame(() => now);
+  const url: string = media.frames[stepId];
+  assert.equal((await fetchRaw(url.replace(/.$/, url.endsWith('A') ? 'B' : 'A'))).status, 403);
+  now += 16 * 60_000;
+  assert.equal((await fetchRaw(url)).status, 403);
 });
