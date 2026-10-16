@@ -154,7 +154,7 @@ export function createApiClient({
       body: { captureId: string; stepId: string; question: string; answer: string },
     ) => post<unknown>(`processes/${processId}/clarifications`, body),
     publish: (processId: string, steps: ProcessStep[]) =>
-      post<ProcessDto>(`processes/${processId}/publish`, { steps, approved: true }),
+      post<ProcessDto>(`processes/${processId}/publish`, { steps }),
 
     createScan: (body: { processId: string; demo: boolean; rows?: ServiceRecord[] }) =>
       post<{ id: string }>('scans', body),
