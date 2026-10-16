@@ -89,3 +89,14 @@ test('reviewed steps can replace the stored ones before export', () => {
     ['Isolate the supply at the breaker'],
   );
 });
+
+test('a step marked as needing no picture exports with no image and no placeholder', () => {
+  const doc = buildSopDocument(process(true), {
+    demo: false,
+    generatedAt,
+    steps: [step(1, 'Wait 3–5 minutes', { imageWaived: true })],
+  });
+  const [page] = doc.steps;
+  assert.equal(page.hasImage, false);
+  assert.ok(!JSON.stringify(page).toLowerCase().includes('picture'));
+});

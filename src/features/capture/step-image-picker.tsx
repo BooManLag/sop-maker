@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Camera, ImageOff, Smartphone, Upload } from 'lucide-react';
+import { Camera, ImageOff, RotateCw, Smartphone, Upload, type LucideIcon } from 'lucide-react';
 import type { ProcessStep } from '@/lib/domain/types';
 import { formatClock } from './recording';
 
@@ -20,6 +20,7 @@ export function StepImagePicker({
   canCapture,
   busy,
   onCapture,
+  onRetry,
   onUpload,
   onRemove,
   onWaive,
@@ -30,12 +31,15 @@ export function StepImagePicker({
   canCapture: boolean;
   busy: boolean;
   onCapture: (atMs: number) => void;
+  /** Grabs the suggested still again, loading the video first when it is not ready. */
+  onRetry: () => void;
   onUpload: (atMs: number, file: File) => void;
   onRemove: () => void;
   onWaive: (waived: boolean) => void;
 }) {
   const [atMs, setAtMs] = useState(step.frameAtMs ?? 0);
   const disabled = busy;
+  const canRetry = step.frameAtMs !== undefined && !step.frameObjectPath && !step.imageWaived;
   return (
     <div className="flex w-full flex-wrap items-center gap-2 pl-8 sm:pl-12">
       <div className="grid h-16 w-28 shrink-0 place-items-center overflow-hidden rounded-xs border border-border bg-surface-sunken text-brand-300">
@@ -55,6 +59,12 @@ export function StepImagePicker({
           </span>
         )}
       </div>
+      {canRetry && (
+        <button type="button" className={toolClass} disabled={disabled} onClick={onRetry}>
+          <RotateCw size={13} aria-hidden />
+          Retry
+        </button>
+      )}
       {canCapture && (
         <>
           <button
@@ -89,38 +99,18 @@ export function StepImagePicker({
           </button>
         </>
       )}
-      <label className={`${toolClass} ${disabled ? 'opacity-45' : 'cursor-pointer'}`}>
-        <Upload size={13} aria-hidden />
+      <ImageFileTool icon={Upload} disabled={disabled} onFile={(file) => onUpload(atMs, file)}>
         Upload image
-        <input
-          type="file"
-          accept="image/*"
-          className="sr-only"
-          disabled={disabled}
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            e.target.value = '';
-            if (file) onUpload(atMs, file);
-          }}
-        />
-      </label>
+      </ImageFileTool>
       {/* Opens the rear camera on phones; desktops pick a file instead. */}
-      <label className={`${toolClass} ${disabled ? 'opacity-45' : 'cursor-pointer'}`}>
-        <Smartphone size={13} aria-hidden />
+      <ImageFileTool
+        icon={Smartphone}
+        camera
+        disabled={disabled}
+        onFile={(file) => onUpload(atMs, file)}
+      >
         Take photo
-        <input
-          type="file"
-          accept="image/*"
-          capture="environment"
-          className="sr-only"
-          disabled={disabled}
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            e.target.value = '';
-            if (file) onUpload(atMs, file);
-          }}
-        />
-      </label>
+      </ImageFileTool>
       {step.frameObjectPath ? (
         <button type="button" className={toolClass} disabled={busy} onClick={onRemove}>
           Remove image
@@ -130,11 +120,47 @@ export function StepImagePicker({
           <input
             type="checkbox"
             checked={!!step.imageWaived}
+            disabled={disabled}
             onChange={(e) => onWaive(e.target.checked)}
           />
           No picture needed
         </label>
       )}
     </div>
+  );
+}
+
+/** A button-styled image picker; with `camera`, phones open the rear camera. */
+function ImageFileTool({
+  icon: Icon,
+  camera,
+  disabled,
+  onFile,
+  children,
+}: {
+  icon: LucideIcon;
+  camera?: boolean;
+  disabled: boolean;
+  onFile: (file: File) => void;
+  children: string;
+}) {
+  return (
+    <label className={`${toolClass} ${disabled ? 'opacity-45' : 'cursor-pointer'}`}>
+      <Icon size={13} aria-hidden />
+      {children}
+      <input
+        type="file"
+        accept="image/*"
+        capture={camera ? 'environment' : undefined}
+        className="sr-only"
+        disabled={disabled}
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          // Cleared so choosing the same file again still counts as a change.
+          e.target.value = '';
+          if (file) onFile(file);
+        }}
+      />
+    </label>
   );
 }

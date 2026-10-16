@@ -27,7 +27,7 @@ import { StepStill, useStepStills } from '@/features/processes/step-still';
 import { api } from '@/lib/client/browser';
 import type { ProcessDto } from '@/lib/client/api';
 import { useWorkspaceMutation } from '@/lib/client/queries';
-import { stepsMissingPictures, withReviewedText } from '@/lib/domain/steps';
+import { missingPicturesMessage, stepsMissingPictures, withReviewedText } from '@/lib/domain/steps';
 import { shortText } from '@/lib/domain/validation';
 import { WithDraft } from './draft-steps';
 import { draftPath } from './paths';
@@ -146,11 +146,7 @@ function ReviewForm({ draft, captureId }: { draft: ProcessDto; captureId: string
                 <>
                   <Badge tone="amber">Pictures needed</Badge>
                   <h3>Every step needs a picture.</h3>
-                  <p>
-                    Step {missing.map((s) => s.sequence).join(', ')}{' '}
-                    {missing.length === 1 ? 'has' : 'have'} no picture. Add one, or mark the step as
-                    needing none.
-                  </p>
+                  <p>{missingPicturesMessage(missing)}</p>
                   <Button variant="secondary" asChild>
                     <Link href={draftPath(draft.id, captureId, 'steps')}>Back to steps</Link>
                   </Button>

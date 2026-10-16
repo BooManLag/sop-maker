@@ -85,7 +85,10 @@ export function useFramePicker({
   return { source, busy, error, dismissError, capture, upload, links };
 }
 
-/** Captures an image at each proposed time for steps that have none, one at a time. */
+/**
+ * Captures an image at each proposed time for steps that have none, one at a time. Each step is
+ * tried once; `retry` clears that so its still is grabbed again once the video is ready.
+ */
 export function useAutoCapture(
   steps: ProcessStep[],
   {
@@ -95,6 +98,7 @@ export function useAutoCapture(
   }: { ready: boolean; busy: boolean; capture: (stepId: string, atMs: number) => Promise<void> },
 ) {
   const attempted = useRef(new Set<string>());
+  const [retries, setRetries] = useState(0);
   useEffect(() => {
     if (!ready || busy) return;
     const next = steps.find(
@@ -107,7 +111,12 @@ export function useAutoCapture(
     if (next?.frameAtMs === undefined) return;
     attempted.current.add(next.id);
     void capture(next.id, next.frameAtMs);
-  }, [ready, busy, capture, steps]);
+    // `retries` only re-runs this effect after a step's attempt is cleared.
+  }, [ready, busy, capture, steps, retries]);
+  return useCallback((stepId: string) => {
+    attempted.current.delete(stepId);
+    setRetries((n) => n + 1);
+  }, []);
 }
 
 type VideoSource = { url: string; crossOrigin?: 'anonymous' };

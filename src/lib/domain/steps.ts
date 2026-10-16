@@ -23,9 +23,9 @@ export function mergeWithNext(steps: ProcessStep[], index: number) {
   return renumber([...steps.slice(0, index), merged, ...steps.slice(index + 2)]);
 }
 
-/** A step's image fields alone, so a merge can fall back to the next step's image. */
-const pickFrame = ({ frameAtMs, frameObjectPath }: ProcessStep) =>
-  frameObjectPath ? { frameAtMs, frameObjectPath } : {};
+/** A step's image, or its no-picture mark, so a merge can fall back to the next step's. */
+const pickFrame = ({ frameAtMs, frameObjectPath, imageWaived }: ProcessStep) =>
+  frameObjectPath ? { frameAtMs, frameObjectPath } : imageWaived ? { imageWaived } : {};
 
 export function removeStep(steps: ProcessStep[], id: string) {
   return renumber(steps.filter((s) => s.id !== id));
@@ -50,9 +50,29 @@ export function addStep(steps: ProcessStep[], id: string, recordingMs?: number):
   ];
 }
 
+/** Sets or removes a step's image. A picture replaces any earlier "no picture needed" mark. */
+export function withImage(
+  step: ProcessStep,
+  image: Pick<ProcessStep, 'frameAtMs' | 'frameObjectPath'>,
+): ProcessStep {
+  const next = { ...step, ...image };
+  if (image.frameObjectPath) delete next.imageWaived;
+  return next;
+}
+
 /** Steps that still need a picture: none stored, and the expert has not said none is needed. */
-export const stepsMissingPictures = (steps: ProcessStep[]) =>
-  steps.filter((s) => !s.frameObjectPath && !s.imageWaived);
+export function stepsMissingPictures(steps: ProcessStep[]) {
+  return steps.filter((s) => !s.frameObjectPath && !s.imageWaived);
+}
+
+/** What the expert must do about steps without pictures, worded for one step or several. */
+export function missingPicturesMessage(missing: ProcessStep[]) {
+  const numbers = missing.map((s) => s.sequence);
+  if (numbers.length === 1)
+    return `Add a picture to step ${numbers[0]}, or mark it as needing none.`;
+  const listed = `${numbers.slice(0, -1).join(', ')} and ${numbers.at(-1)}`;
+  return `Add pictures to steps ${listed}, or mark them as needing none.`;
+}
 
 /** The step whose expert judgment the clarifying questions ask about. */
 export function clarificationTarget(steps: ProcessStep[]) {
