@@ -23,10 +23,11 @@ import { ExportButton } from '@/components/common/export-button';
 import { PageTitle } from '@/components/common/page-title';
 import { TwoFields, WithSideRail, sideRailClass } from '@/components/common/layouts';
 import { StepRow } from '@/features/processes/step-view';
+import { StepStill, useStepStills } from '@/features/processes/step-still';
 import { api } from '@/lib/client/browser';
 import type { ProcessDto } from '@/lib/client/api';
 import { useWorkspaceMutation } from '@/lib/client/queries';
-import type { ProcessStep } from '@/lib/domain/types';
+import { withReviewedText } from '@/lib/domain/steps';
 import { shortText } from '@/lib/domain/validation';
 import { WithDraft } from './draft-steps';
 
@@ -47,23 +48,6 @@ type ReviewInput = z.input<typeof reviewSchema>;
 type ReviewValues = z.output<typeof reviewSchema>;
 type DetailField = 'condition' | 'rationale' | 'warning' | 'evidence';
 
-const blankToUndefined = (text: string) => text || undefined;
-
-/** Merges reviewed text back into the draft steps; blank details are cleared. */
-function reviewedSteps(steps: ProcessStep[], values: ReviewValues): ProcessStep[] {
-  return steps.map((step, i) => {
-    const reviewed = values.steps[i];
-    return {
-      ...step,
-      action: reviewed.action,
-      condition: blankToUndefined(reviewed.condition),
-      rationale: blankToUndefined(reviewed.rationale),
-      warning: blankToUndefined(reviewed.warning),
-      evidence: blankToUndefined(reviewed.evidence),
-    };
-  });
-}
-
 export function Review({ processId }: { processId: string }) {
   return <WithDraft processId={processId}>{(draft) => <ReviewForm draft={draft} />}</WithDraft>;
 }
@@ -71,6 +55,7 @@ export function Review({ processId }: { processId: string }) {
 function ReviewForm({ draft }: { draft: ProcessDto }) {
   const router = useRouter();
   const steps = draft.versions[0].steps;
+  const stills = useStepStills(draft.id, steps);
   const form = useForm<ReviewInput, unknown, ReviewValues>({
     resolver: zodResolver(reviewSchema),
     defaultValues: {
@@ -86,7 +71,7 @@ function ReviewForm({ draft }: { draft: ProcessDto }) {
   });
   const { fields } = useFieldArray({ control: form.control, name: 'steps' });
   const publish = useWorkspaceMutation(
-    (values: ReviewValues) => api.publish(draft.id, reviewedSteps(steps, values)),
+    (values: ReviewValues) => api.publish(draft.id, withReviewedText(steps, values.steps)),
     () => router.push(`/processes/${draft.id}/published`),
   );
 
@@ -139,6 +124,7 @@ function ReviewForm({ draft }: { draft: ProcessDto }) {
                         placeholder="Expected result"
                       />
                     </TwoFields>
+                    <StepStill url={stills[steps[i].id]} label={`step ${i + 1}`} />
                   </div>
                 </StepRow>
               ))}

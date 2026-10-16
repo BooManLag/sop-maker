@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { ProcessStep } from '@/lib/domain/types';
+import { StepStill } from './step-still';
 
 export const stepNumber = (sequence: number) => String(sequence).padStart(2, '0');
 
@@ -13,7 +14,7 @@ export function StepRow({ number, children }: { number: number; children: ReactN
   );
 }
 
-export function StepView({ step }: { step: ProcessStep }) {
+export function StepView({ step, stillUrl }: { step: ProcessStep; stillUrl?: string }) {
   return (
     <StepRow number={step.sequence}>
       <div>
@@ -27,6 +28,7 @@ export function StepView({ step }: { step: ProcessStep }) {
             {step.warning}
           </div>
         )}
+        <StepStill url={stillUrl} label={`step ${step.sequence}`} />
       </div>
     </StepRow>
   );
