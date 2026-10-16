@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import type { ExpertCapture } from '../domain/types';
 import type {
   MediaJob,
@@ -11,12 +11,13 @@ import type {
 import { inspectMedia } from './media-inspector';
 import { mediaPaths } from './media-paths';
 import * as processes from './process-service';
-import { adjustMediaSeconds } from './store';
+import { adjustMediaSeconds, reserveMediaSeconds } from './store';
+import { ApiError } from '../server/errors';
 import { transcriptionSchema } from '../server/contracts';
 import { LIMITS } from '../server/config';
 
 type Recording = ExpertCapture & { media: NonNullable<ExpertCapture['media']> };
-const reservedSeconds = (recording: Recording) => Math.ceil(recording.media.declaredSeconds);
+const chargedSeconds = (seconds = 0) => Math.ceil(seconds);
 
 /**
  * Turns one uploaded recording into a draft. Safe to repeat: a capture that is no longer
@@ -36,12 +37,14 @@ export class MediaWorker {
     const repository = this.repositories.forTenant(organizationId);
     const recording = await this.pendingRecording(repository, job.objectPath);
     if (!recording) return;
-    const clean = recording.media.cleanPath ?? (await this.admit(repository, recording));
-    if (!clean) return;
-    await this.storage.promote(recording.media.objectPath, clean);
-    const transcription = await this.transcribe(repository, recording, clean);
-    if (transcription) await this.applyDraft(repository, recording, transcription);
-    else await this.fail(repository, recording, finalAttempt);
+    const admitted = recording.media.cleanPath
+      ? recording
+      : await this.admit(repository, recording);
+    if (!admitted) return;
+    await this.storage.promote(admitted.media.objectPath, admitted.media.cleanPath!);
+    const transcription = await this.transcribe(repository, admitted);
+    if (transcription) await this.applyDraft(repository, admitted, transcription);
+    else await this.fail(repository, admitted, finalAttempt);
   }
   private pendingRecording(repository: Repository, objectPath: string) {
     return repository.query(
@@ -51,38 +54,42 @@ export class MediaWorker {
         ) as Recording | undefined,
     );
   }
-  /** Inspects the quarantined bytes; returns the clean path, or undefined once rejected. */
+  /** Inspects and charges the quarantined recording; returns it measured, or undefined once rejected. */
   private async admit(repository: Repository, recording: Recording) {
-    const { objectPath, contentType, declaredSeconds } = recording.media;
-    const bytes = await this.storage.read(objectPath);
-    const inspection = inspectMedia(bytes, contentType, declaredSeconds);
-    if (!inspection.ok) {
-      await this.storage.remove(objectPath);
+    const { objectPath, contentType } = recording.media;
+    const inspection = await inspectMedia(await this.storage.open(objectPath), contentType);
+    if (!inspection.ok) return this.reject(repository, recording, inspection.reason);
+    const { seconds } = inspection;
+    if (seconds > LIMITS.mediaSecondsCeiling)
+      return this.reject(repository, recording, 'The recording is too long to process.');
+    const sha256 = await this.storage.sha256(objectPath);
+    const media = { ...recording.media, seconds, sha256, cleanPath: mediaPaths.clean(objectPath) };
+    try {
+      // Recorded before the move, so a crash after it still finds the clean copy on retry.
       await repository.transact((s) => {
-        processes.getCapture(s, recording.id).status = 'rejected';
-        adjustMediaSeconds(s, -reservedSeconds(recording));
+        reserveMediaSeconds(s, chargedSeconds(seconds));
+        processes.getCapture(s, recording.id).media = media;
       });
-      this.log({
-        severity: 'WARNING',
-        event: 'media_rejected',
-        captureId: recording.id,
-        reason: inspection.reason,
-      });
-      return undefined;
+    } catch (error) {
+      if (!(error instanceof ApiError && error.status === 429)) throw error;
+      return this.reject(repository, recording, 'The monthly recording allowance is used up.');
     }
-    const clean = mediaPaths.clean(objectPath);
-    // Recorded before the move, so a crash after it still finds the clean copy on retry.
+    return { ...recording, media };
+  }
+  private async reject(repository: Repository, recording: Recording, reason: string) {
+    await this.storage.remove(recording.media.objectPath);
     await repository.transact((s) => {
-      const media = processes.getCapture(s, recording.id).media!;
-      media.cleanPath = clean;
-      media.sha256 = createHash('sha256').update(bytes).digest('hex');
+      const capture = processes.getCapture(s, recording.id);
+      capture.status = 'rejected';
+      capture.rejection = reason;
     });
-    return clean;
+    this.log({ severity: 'WARNING', event: 'media_rejected', captureId: recording.id, reason });
+    return undefined;
   }
   /** A validated transcription, reusing an identical recording's when one exists. */
-  private async transcribe(repository: Repository, recording: Recording, clean: string) {
+  private async transcribe(repository: Repository, recording: Recording) {
+    const { cleanPath, contentType, seconds, sha256 } = recording.media;
     const earlier = await repository.query((s) => {
-      const sha256 = processes.getCapture(s, recording.id).media?.sha256;
       return sha256
         ? s.captures.find(
             (c) =>
@@ -96,12 +103,9 @@ export class MediaWorker {
     const candidate = earlier
       ? { segments: earlier.segments, steps: earlier.suggestedSteps, audioSeconds: 0 }
       : await this.transcriber
-          .transcribe(clean, recording.media.contentType, {
-            durationSeconds: recording.media.declaredSeconds,
-          })
+          .transcribe(cleanPath!, contentType, { durationSeconds: seconds })
           .catch(() => undefined);
-    const recordingMs = Math.ceil(recording.media.declaredSeconds * 1000);
-    const parsed = transcriptionSchema(recordingMs).safeParse(candidate);
+    const parsed = transcriptionSchema(processes.recordingMs(recording)).safeParse(candidate);
     return parsed.success ? parsed.data : undefined;
   }
   private async fail(repository: Repository, recording: Recording, finalAttempt: boolean) {
@@ -129,8 +133,11 @@ export class MediaWorker {
       capture.segments = transcription.segments;
       capture.suggestedSteps = transcription.steps;
       capture.status = 'transcribed';
-      const billedSeconds = Math.min(Math.ceil(transcription.audioSeconds), LIMITS.mediaSeconds);
-      adjustMediaSeconds(s, billedSeconds - reservedSeconds(recording));
+      const billedSeconds = Math.min(
+        chargedSeconds(transcription.audioSeconds),
+        LIMITS.mediaSecondsCeiling,
+      );
+      adjustMediaSeconds(s, billedSeconds - chargedSeconds(recording.media.seconds));
       const version = draft.versions[0];
       if (!version.steps.length) version.steps = transcription.steps.map(toDraftStep);
     });

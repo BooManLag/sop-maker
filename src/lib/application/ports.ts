@@ -1,4 +1,5 @@
 import type { Store } from './store';
+import type { ByteSource } from './media-inspector';
 import type {
   Execution,
   MediaContentType,
@@ -33,7 +34,10 @@ export interface UploadSigner {
   }): Promise<{ url: string }>;
 }
 export interface MediaStorage {
-  read(objectPath: string): Promise<Uint8Array>;
+  /** Ranged access to a stored object; never loads it whole. */
+  open(objectPath: string): Promise<ByteSource>;
+  /** Hex SHA-256 of a stored object, computed by streaming it. */
+  sha256(objectPath: string): Promise<string>;
   /** Moves an inspected object out of quarantine. Idempotent: a finished move is a no-op. */
   promote(from: string, to: string): Promise<void>;
   remove(objectPath: string): Promise<void>;
@@ -63,7 +67,7 @@ export interface MediaTranscriber {
   transcribe(
     objectPath: string,
     contentType: MediaContentType,
-    /** `durationSeconds` is the inspected recording length that segment times must fit. */
+    /** `durationSeconds` is the measured recording length that segment times must fit. */
     options?: { signal?: AbortSignal; durationSeconds?: number },
   ): Promise<Transcription>;
 }

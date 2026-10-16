@@ -3,7 +3,8 @@ import type { TaskQueue } from '../../src/lib/server/cloud-tasks';
 import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
+import { wholeFile } from './media-fixtures';
 import { Backend } from '../../src/lib/application/backend';
 import type { MediaStorage, MediaTranscriber, UploadSigner } from '../../src/lib/application/ports';
 import { MediaWorker } from '../../src/lib/application/media-worker';
@@ -32,6 +33,14 @@ export const transcript = {
   ],
   audioSeconds: 9,
 };
+/** A valid upload request body; tests override only what they exercise. */
+export const recordingRequest = (overrides: Record<string, unknown> = {}) => ({
+  expertReference: 'expert_1',
+  contentType: 'audio/webm',
+  bytes: 1000,
+  consent: true,
+  ...overrides,
+});
 /** Backend and media worker over a temp JSON store, with in-memory storage and model fakes. */
 export async function mediaHarness(output: unknown = transcript) {
   const directory = await mkdtemp(path.join(tmpdir(), 'ge-media-'));
@@ -51,10 +60,15 @@ export async function mediaHarness(output: unknown = transcript) {
     async exists(objectPath) {
       return objects.has(objectPath);
     },
-    async read(objectPath) {
+    async open(objectPath) {
       const bytes = objects.get(objectPath);
       if (!bytes) throw new Error('missing object');
-      return bytes;
+      return wholeFile(bytes);
+    },
+    async sha256(objectPath) {
+      const bytes = objects.get(objectPath);
+      if (!bytes) throw new Error('missing object');
+      return createHash('sha256').update(bytes).digest('hex');
     },
     async promote(from, to) {
       if (objects.has(from)) {
@@ -71,9 +85,11 @@ export async function mediaHarness(output: unknown = transcript) {
     },
   };
   const transcribed: string[] = [];
+  const durations: (number | undefined)[] = [];
   const transcriber: MediaTranscriber = {
-    async transcribe(objectPath) {
+    async transcribe(objectPath, _contentType, options) {
       transcribed.push(objectPath);
+      durations.push(options?.durationSeconds);
       return structuredClone(output) as Awaited<ReturnType<MediaTranscriber['transcribe']>>;
     },
   };
@@ -105,7 +121,7 @@ export async function mediaHarness(output: unknown = transcript) {
     jobs,
   );
   const worker = new MediaWorker(repositories, storage, transcriber, () => undefined);
-  return { backend, worker, objects, transcribed, repositories, faults, signed, queued };
+  return { backend, worker, objects, transcribed, durations, repositories, faults, signed, queued };
 }
 export type MediaHarness = Awaited<ReturnType<typeof mediaHarness>>;
 export async function execute(

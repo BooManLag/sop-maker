@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { Store } from './store';
 /** Raw capture content (walkthrough text, recordings, transcripts) expires after 30 days. */
 const rawContentRetentionMs = 30 * 86400_000;
-import type { ProcessStep } from '../domain/types';
+import { isVideo, type ExpertCapture, type ProcessStep } from '../domain/types';
 import type { Actor } from '../server/auth';
 import { requireCondition } from '../server/errors';
 import { transcriptionSchema, type schemas } from '../server/contracts';
@@ -67,33 +67,32 @@ export function createMediaCapture(
   id: string,
   upload: { uploadId: string; objectPath: string },
   body: Input<'uploadRequest'>,
+  actor: Actor,
 ) {
   const p = getProcess(s, id);
   requireDraft(p);
+  const now = new Date();
   s.captures.push({
     id: upload.uploadId,
     processId: p.id,
-    kind: body.kind,
+    kind: isVideo(body.contentType) ? 'video' : 'audio',
     expertReference: body.expertReference,
-    media: {
-      objectPath: upload.objectPath,
-      contentType: body.contentType,
-      declaredSeconds: body.durationSeconds,
-    },
+    media: { objectPath: upload.objectPath, contentType: body.contentType },
+    consent: { confirmedBy: actor.userId, confirmedAt: now.toISOString() },
     status: 'awaiting_upload',
-    createdAt: new Date().toISOString(),
-    expiresAt: new Date(Date.now() + rawContentRetentionMs).toISOString(),
+    createdAt: now.toISOString(),
+    expiresAt: new Date(now.getTime() + rawContentRetentionMs).toISOString(),
   });
 }
+/** The inspected recording length; zero until the media worker has read it. */
+export const recordingMs = (capture: ExpertCapture) =>
+  Math.ceil((capture.media?.seconds ?? 0) * 1000);
 export function getFrameStep(s: Store, id: string, body: Input<'frameRequest'>) {
   const p = getProcess(s, id);
   requireDraft(p);
   const capture = s.captures.find((c) => c.id === body.captureId && c.processId === p.id);
   requireCondition(capture?.media, 'Recording not found.', 404);
-  requireCondition(
-    body.atMs <= capture.media.declaredSeconds * 1000,
-    'The frame time is outside the recording.',
-  );
+  requireCondition(body.atMs <= recordingMs(capture), 'The frame time is outside the recording.');
   const step = p.versions[0].steps.find((step) => step.id === body.stepId);
   requireCondition(step, 'Step not found.', 404);
   return step;
@@ -107,8 +106,9 @@ export function saveTranscript(s: Store, id: string, body: Input<'transcriptSave
     'Only a finished transcription can be edited.',
     409,
   );
-  const recordingMs = Math.ceil(capture.media.declaredSeconds * 1000);
-  const segments = transcriptionSchema(recordingMs).shape.segments.safeParse(body.segments);
+  const segments = transcriptionSchema(recordingMs(capture)).shape.segments.safeParse(
+    body.segments,
+  );
   requireCondition(
     segments.success,
     'Transcript times must stay inside the recording, in order and without overlaps.',
@@ -197,11 +197,14 @@ export function captureDraftDto(s: Store, id?: string) {
   return {
     id: capture.id,
     processId: capture.processId,
+    kind: capture.kind,
+    ...(capture.consent ? { consent: capture.consent } : {}),
     ...(capture.status
       ? {
           status: capture.status,
           segments: capture.segments ?? [],
-          durationMs: Math.ceil((capture.media?.declaredSeconds ?? 0) * 1000),
+          durationMs: recordingMs(capture),
+          ...(capture.rejection ? { rejection: capture.rejection } : {}),
         }
       : {}),
     questions: capture.questions ?? [],

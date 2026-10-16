@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, type Ref } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowRight } from 'lucide-react';
@@ -17,7 +17,7 @@ import type { DraftCapture, TranscriptSegment } from '@/lib/client/api';
 import { useCapture, useWorkspace, useWorkspaceMutation } from '@/lib/client/queries';
 import { WithDraft } from './draft-steps';
 import { draftPath } from './paths';
-import { formatClock, recordingUrl } from './recording';
+import { formatClock, localRecording } from './recording';
 
 type TranscriptProps = { processId: string; captureId: string };
 
@@ -52,7 +52,7 @@ function TranscriptState(props: TranscriptProps & { capture: DraftCapture }) {
       return (
         <EmptyState
           title="The recording was not accepted."
-          description="Its contents did not match an audio recording of the stated length. Nothing was transcribed."
+          description={`${props.capture.rejection ?? 'Its contents could not be checked.'} Nothing was transcribed.`}
           action={startOver}
         />
       );
@@ -84,8 +84,8 @@ function TranscriptForm({
   const router = useRouter();
   const demo = useWorkspace().data?.demo;
   const [segments, setSegments] = useState<TranscriptSegment[]>(capture.segments ?? []);
-  const player = useRef<HTMLAudioElement>(null);
-  const audio = recordingUrl(captureId);
+  const player = useRef<HTMLMediaElement>(null);
+  const playback = localRecording(captureId);
   const save = useWorkspaceMutation((next: TranscriptSegment[]) =>
     api.saveTranscript(captureId, next),
   );
@@ -106,20 +106,34 @@ function TranscriptForm({
       {demo && (
         <Alert variant="warning">
           Demo transcript: this is sample narration spread across your recording&apos;s length, not
-          what was said. Speech-to-text is not connected.
+          what was said. Gemini transcription is not connected.
         </Alert>
       )}
       <Card className="grid gap-5">
-        {audio && (
+        {playback?.video && (
           // eslint-disable-next-line jsx-a11y/media-has-caption -- the editable transcript below is the caption.
-          <audio ref={player} src={audio} controls className="w-full" />
+          <video
+            ref={player as Ref<HTMLVideoElement>}
+            src={playback.url}
+            controls
+            className="max-h-[50vh] w-full rounded-md bg-black"
+          />
+        )}
+        {playback && !playback.video && (
+          // eslint-disable-next-line jsx-a11y/media-has-caption -- the editable transcript below is the caption.
+          <audio
+            ref={player as Ref<HTMLAudioElement>}
+            src={playback.url}
+            controls
+            className="w-full"
+          />
         )}
         <ol className="grid gap-4">
           {segments.map((segment, i) => (
             <li key={segment.startMs} className="grid gap-2 sm:grid-cols-[6.5rem_1fr] sm:gap-4">
               <button
                 type="button"
-                disabled={!audio}
+                disabled={!playback}
                 onClick={() => seek(segment.startMs)}
                 className="justify-self-start pt-2 text-left font-mono text-tiny text-brand-400 enabled:hover:text-foreground enabled:hover:underline"
                 aria-label={`Play from ${formatClock(segment.startMs)}`}

@@ -1,6 +1,7 @@
 import type {
   ChangeRequest,
   Finding,
+  MediaContentType,
   ProcessStep,
   ProcessVersion,
   Readiness,
@@ -33,7 +34,10 @@ export type DraftCapture = {
   questions: string[];
   answers: { question: string; answer: string }[];
   /** Present for recordings only. */
+  kind: 'text' | 'video' | 'audio' | 'document';
   status?: 'awaiting_upload' | 'transcribed' | 'rejected' | 'failed';
+  /** Why a recording was rejected, safe to show. */
+  rejection?: string;
   segments?: TranscriptSegment[];
   durationMs?: number;
 };
@@ -44,11 +48,11 @@ export type UploadTarget = {
   headers: Record<string, string>;
 };
 export type RecordingUpload = {
-  kind: 'audio';
   expertReference: string;
-  contentType: 'audio/webm' | 'audio/mp4';
+  contentType: MediaContentType;
   bytes: number;
-  durationSeconds: number;
+  /** Everyone in the recording agreed to be recorded. */
+  consent: true;
 };
 export type Extraction = { steps: ProcessStep[]; questions: string[]; notice: string };
 export type ScanDetail = {
@@ -129,23 +133,6 @@ export function createApiClient({
     capture: (id: string) => get<DraftCapture>(`captures/${id}`),
     requestUpload: (processId: string, body: RecordingUpload) =>
       post<UploadTarget>(`processes/${processId}/uploads`, body),
-    /** PUTs the bytes to the signed target; storage, not the API, receives them. */
-    async upload(target: UploadTarget, file: Blob) {
-      const response = await send(target.url, {
-        method: target.method,
-        headers: target.headers,
-        body: file,
-      });
-      if (!response.ok) {
-        const payload = await response.json().catch(() => ({}));
-        throw new ApiRequestError(
-          payload.error ?? 'The recording could not be uploaded. Try again.',
-          response.status,
-          payload.code,
-          payload.requestId,
-        );
-      }
-    },
     /** Tells the server the upload finished; it checks storage before transcribing. */
     completeUpload: (captureId: string) => post<DraftCapture>(`captures/${captureId}/uploaded`, {}),
     saveTranscript: (captureId: string, segments: TranscriptSegment[]) =>

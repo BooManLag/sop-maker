@@ -221,13 +221,7 @@ export function consumeQuota(
   amount = 1,
 ) {
   let quota = activeQuota(s, key, now);
-  if (quota && quota.count + amount > limit)
-    throw new ApiError(
-      429,
-      'The request quota has been reached. Try again later.',
-      'RATE_LIMITED',
-      Math.max(1, Math.ceil((quota.expiresAt - now) / 1000)),
-    );
+  if (quota && quota.count + amount > limit) throw quotaReached(quota, now);
   if (!quota) {
     requireCondition(s.quotas.length < 1000, 'Quota capacity reached. Try again later.', 429);
     quota = { key, count: 0, expiresAt: now + windowMs };
@@ -235,9 +229,21 @@ export function consumeQuota(
   }
   quota.count += amount;
 }
+const quotaReached = (quota: { expiresAt: number }, now: number) =>
+  new ApiError(
+    429,
+    'The request quota has been reached. Try again later.',
+    'RATE_LIMITED',
+    Math.max(1, Math.ceil((quota.expiresAt - now) / 1000)),
+  );
 const mediaQuotaKey = 'media:tenant:seconds';
 const mediaQuotaWindowMs = 30 * 86400_000;
-/** Reserves recording seconds against the tenant's monthly allowance before an upload. */
+/** Refuses a new upload once the tenant's monthly recording allowance is spent. */
+export function requireMediaAllowance(s: Store, now = Date.now()) {
+  const quota = activeQuota(s, mediaQuotaKey, now);
+  if (quota && quota.count >= LIMITS.mediaSecondsPerMonth) throw quotaReached(quota, now);
+}
+/** Charges inspected recording seconds against the tenant's monthly allowance. */
 export function reserveMediaSeconds(s: Store, seconds: number, now = Date.now()) {
   consumeQuota(s, mediaQuotaKey, LIMITS.mediaSecondsPerMonth, mediaQuotaWindowMs, now, seconds);
 }

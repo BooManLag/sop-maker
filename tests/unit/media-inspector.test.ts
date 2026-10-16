@@ -1,28 +1,56 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { inspectMedia } from '../../src/lib/application/media-inspector';
-import { box, cluster, ebml, mp4, webm } from '../support/media-fixtures';
-test('recorded audio is accepted when its bytes match the declared type', () => {
-  assert.deepEqual(inspectMedia(webm(0, 5000), 'audio/webm', 10), { ok: true });
-  assert.deepEqual(inspectMedia(mp4(10), 'audio/mp4', 10), { ok: true });
+import {
+  box,
+  cluster,
+  ebml,
+  mp4,
+  mp4MoovLast,
+  webm,
+  webmLastClusterAt,
+  webmWithDuration,
+  wholeFile,
+} from '../support/media-fixtures';
+const megabytes = (n: number) => n * 1_000_000;
+test('audio and video recordings report the length read from the file', async () => {
+  assert.deepEqual(await inspectMedia(wholeFile(webm(0, 5000)), 'audio/webm'), {
+    ok: true,
+    seconds: 5,
+  });
+  assert.deepEqual(await inspectMedia(wholeFile(mp4(10)), 'audio/mp4'), { ok: true, seconds: 10 });
+  assert.deepEqual(await inspectMedia(wholeFile(webm(0, 7000)), 'video/webm'), {
+    ok: true,
+    seconds: 7,
+  });
+  assert.deepEqual(await inspectMedia(wholeFile(mp4(12, 44100)), 'video/mp4'), {
+    ok: true,
+    seconds: 12,
+  });
 });
-test('files whose bytes do not match the declared type are refused', () => {
-  assert.equal(inspectMedia(mp4(10), 'audio/webm', 10).ok, false);
-  assert.equal(inspectMedia(webm(0), 'audio/mp4', 10).ok, false);
-  assert.equal(inspectMedia(Buffer.from('<html>'), 'audio/webm', 10).ok, false);
-  assert.equal(inspectMedia(ebml('matroska', ...cluster(0)), 'audio/webm', 10).ok, false);
+test('a WebM Duration element is preferred over scanning clusters', async () => {
+  assert.deepEqual(await inspectMedia(wholeFile(webmWithDuration(95_500)), 'video/webm'), {
+    ok: true,
+    seconds: 95.5,
+  });
 });
-test('audio longer than its declared duration is refused', () => {
-  assert.equal(inspectMedia(mp4(70, 44100), 'audio/mp4', 60).ok, false);
-  assert.equal(inspectMedia(mp4(60, 44100), 'audio/mp4', 60).ok, true);
-  assert.equal(inspectMedia(webm(0, 30_000, 75_000), 'audio/webm', 60).ok, false);
-  assert.equal(inspectMedia(webm(0, 30_000, 55_000), 'audio/webm', 60).ok, true);
+test('a 100 MB recording is measured from a bounded number of bytes', async () => {
+  const camera = mp4MoovLast(1800, megabytes(100));
+  assert.deepEqual(await inspectMedia(camera, 'video/mp4'), { ok: true, seconds: 1800 });
+  assert.ok(camera.bytesRead < megabytes(2), `read ${camera.bytesRead} bytes`);
+  const screen = webmLastClusterAt(1_200_000, megabytes(100));
+  assert.deepEqual(await inspectMedia(screen, 'video/webm'), { ok: true, seconds: 1200 });
+  assert.ok(screen.bytesRead < megabytes(2), `read ${screen.bytesRead} bytes`);
 });
-test('audio whose duration cannot be read is refused', () => {
-  assert.equal(inspectMedia(webm(), 'audio/webm', 60).ok, false);
-  assert.equal(inspectMedia(webm(0, 30_000, 10_000), 'audio/webm', 60).ok, false);
-  assert.equal(
-    inspectMedia(Uint8Array.from(box('ftyp', [...Buffer.from('M4A ')])), 'audio/mp4', 60).ok,
-    false,
-  );
+test('files whose bytes do not match the declared type are refused', async () => {
+  assert.equal((await inspectMedia(wholeFile(mp4(10)), 'audio/webm')).ok, false);
+  assert.equal((await inspectMedia(wholeFile(webm(0)), 'video/mp4')).ok, false);
+  assert.equal((await inspectMedia(wholeFile(Buffer.from('<html>')), 'video/webm')).ok, false);
+  const matroska = ebml('matroska', ...cluster(0));
+  assert.equal((await inspectMedia(wholeFile(matroska), 'video/webm')).ok, false);
+});
+test('a recording whose length cannot be read is refused', async () => {
+  assert.equal((await inspectMedia(wholeFile(webm()), 'audio/webm')).ok, false);
+  const noMoov = Uint8Array.from(box('ftyp', [...Buffer.from('M4A ')]));
+  assert.equal((await inspectMedia(wholeFile(noMoov), 'audio/mp4')).ok, false);
 });
