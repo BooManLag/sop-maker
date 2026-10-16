@@ -77,6 +77,8 @@ export interface ExpertCapture {
 export const mediaContentTypes = ['audio/webm', 'audio/mp4', 'video/webm', 'video/mp4'] as const;
 /** Largest recording upload, shared by the upload form and the signed URL's size range. */
 export const maxMediaBytes = 100_000_000;
+/** Largest stored step image. */
+export const maxFrameBytes = 500_000;
 export const isVideo = (contentType: MediaContentType) => contentType.startsWith('video/');
 export type MediaContentType = (typeof mediaContentTypes)[number];
 export interface SuggestedStep {

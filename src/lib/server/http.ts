@@ -10,7 +10,7 @@ import { AdmissionControl, readJson } from './limits';
 import { Observability } from './observability';
 import { withDeadline } from './deadline';
 import { localRequestOrigin } from './origin';
-import type { LocalMediaUploads } from '../infrastructure/local-media';
+import type { LocalMediaLibrary, LocalMediaUploads } from '../infrastructure/local-media';
 import type { MediaWorker } from '../application/media-worker';
 import type { MediaJob } from '../application/ports';
 export interface HttpDependencies {
@@ -25,6 +25,8 @@ export interface HttpDependencies {
   mediaTasks?: { worker: MediaWorker; verify: (request: Request) => Promise<boolean> };
   /** Loopback only: receives uploads addressed by locally signed URLs. */
   mediaUploads?: LocalMediaUploads;
+  /** Serves signed media reads on the loopback server, where bucket URLs cannot be signed. */
+  mediaFiles?: LocalMediaLibrary;
 }
 /**
  * Cloud Tasks retries a failed delivery (infra/tasks.tf `max_attempts`); the last attempt records
@@ -137,6 +139,18 @@ export function createHttpHandler(dependencies: HttpDependencies) {
         await dependencies.mediaUploads.receive(request);
         status = 204;
         return new Response(null, { status, headers });
+      }
+      if (path.join('/') === 'internal/media-file' && request.method === 'GET') {
+        route = 'internal/media-file';
+        // The signed grant authorizes the read, as a Cloud Storage signed URL would.
+        if (!dependencies.mediaFiles || !localOrigin)
+          throw new ApiError(404, 'Endpoint not found.');
+        const file = await dependencies.mediaFiles.serve(request);
+        status = file.status;
+        headers.set('Content-Type', file.contentType);
+        headers.set('Accept-Ranges', 'bytes');
+        if (file.contentRange) headers.set('Content-Range', file.contentRange);
+        return new Response(Buffer.from(file.bytes), { status, headers });
       }
       actor = await authenticate(request, config, verifier);
       admission.rate(`actor:${actor.organizationId}:${actor.userId}`);

@@ -15,8 +15,9 @@ import { GcsMedia } from '../infrastructure/gcs-media';
 import { GeminiTranscriber } from './gemini-transcriber';
 import { InlineMediaJobs, QueuedMediaJobs } from './media-jobs';
 import { MediaWorker } from '../application/media-worker';
-import type { MediaJobs, UploadSigner } from '../application/ports';
+import type { MediaJobs, MediaLibrary, UploadSigner } from '../application/ports';
 import {
+  LocalMediaLibrary,
   LocalMediaStore,
   LocalMediaUploads,
   LocalUploadSigner,
@@ -28,6 +29,10 @@ interface MediaWiring {
   signer?: UploadSigner;
   /** Loopback only: receives uploads addressed by locally signed URLs. */
   uploads?: LocalMediaUploads;
+  /** Reads and copies for step images and frame picking. */
+  library?: MediaLibrary;
+  /** Loopback only: serves reads addressed by locally signed URLs. */
+  files?: LocalMediaLibrary;
   jobs?: MediaJobs;
   tasks?: { worker: MediaWorker; verify: (request: Request) => Promise<boolean> };
 }
@@ -61,21 +66,35 @@ function compose() {
       const signer = new LocalUploadSigner();
       const store = new LocalMediaStore(path.join(config.dataDir, 'media'));
       const worker = new MediaWorker(repositories, store, new DemoTranscriber());
-      return { signer, uploads: new LocalMediaUploads(signer, store, worker) };
+      const files = new LocalMediaLibrary(signer, store);
+      return {
+        signer,
+        uploads: new LocalMediaUploads(signer, store, worker),
+        library: files,
+        files,
+      };
     }
     if (!config.mediaBucket || !vertex) return {};
     const bucket = new GcsMedia(config.mediaBucket);
     const worker = new MediaWorker(repositories, bucket, new GeminiTranscriber(vertex, bucket));
-    // A developer's own credentials cannot sign bucket URLs, so local uploads come through the
-    // dev server, which writes to the bucket and transcribes inline.
+    // A developer's own credentials cannot sign bucket URLs, so local uploads and reads come
+    // through the dev server, which talks to the bucket and transcribes inline.
     if (config.local) {
       const signer = new LocalUploadSigner();
-      return { signer, uploads: new LocalMediaUploads(signer, bucket, worker) };
+      const files = new LocalMediaLibrary(signer, bucket);
+      return {
+        signer,
+        uploads: new LocalMediaUploads(signer, bucket, worker),
+        library: files,
+        files,
+      };
     }
-    if (!config.tasks) return { signer: bucket, jobs: new InlineMediaJobs(bucket, worker) };
+    if (!config.tasks)
+      return { signer: bucket, library: bucket, jobs: new InlineMediaJobs(bucket, worker) };
     const url = mediaWorkerUrl(config.tasks);
     return {
       signer: bucket,
+      library: bucket,
       jobs: new QueuedMediaJobs(bucket, new CloudTasksQueue(config.tasks), url),
       tasks: { worker, verify: cloudTasksVerifier(config.tasks, url) },
     };
@@ -93,6 +112,7 @@ function compose() {
     queue,
     media.signer,
     media.jobs,
+    media.library,
   );
   const admission = new AdmissionControl();
   return {
@@ -106,6 +126,7 @@ function compose() {
       analysisTasks:
         worker && config.tasks ? { worker, verify: cloudTasksVerifier(config.tasks) } : undefined,
       mediaUploads: media.uploads,
+      mediaFiles: media.files,
       mediaTasks: media.tasks,
     }),
   };
