@@ -16,7 +16,7 @@ export function PageTitle({
     <div className="mt-5.5 mb-7.5 flex flex-col items-start gap-4.5 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
       <div>
         <Eyebrow>{eyebrow}</Eyebrow>
-        <h1 className="mt-3.5 mb-3 max-w-[750px] text-2xl leading-[1.13] tracking-[-1.6px] md:text-3xl">
+        <h1 className="mt-3.5 mb-3 max-w-[750px] font-serif text-2xl leading-[1.1] font-normal tracking-[-0.5px] text-balance md:text-4xl">
           {title}
         </h1>
         <p className="mb-0 max-w-[670px] text-lead">{description}</p>
