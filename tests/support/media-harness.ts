@@ -1,3 +1,5 @@
+import { QueuedMediaJobs } from '../../src/lib/server/media-jobs';
+import type { CloudTasksQueue } from '../../src/lib/server/cloud-tasks';
 import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -46,6 +48,9 @@ export async function mediaHarness(output: unknown = transcript) {
   const objects = new Map<string, Uint8Array>();
   const faults = { crashAfterPromote: false };
   const storage: MediaStorage = {
+    async exists(objectPath) {
+      return objects.has(objectPath);
+    },
     async read(objectPath) {
       const bytes = objects.get(objectPath);
       if (!bytes) throw new Error('missing object');
@@ -73,6 +78,16 @@ export async function mediaHarness(output: unknown = transcript) {
     },
   };
   const signed: Parameters<UploadSigner['sign']>[0][] = [];
+  const queued: { url: string; job: object }[] = [];
+  const jobs = new QueuedMediaJobs(
+    storage,
+    {
+      async post(url: string, job: object) {
+        queued.push({ url, job });
+      },
+    } as unknown as CloudTasksQueue,
+    'https://app.example/api/v1/internal/media',
+  );
   const repositories = new JsonRepositoryProvider(directory);
   const backend = new Backend(
     repositories,
@@ -85,9 +100,10 @@ export async function mediaHarness(output: unknown = transcript) {
         return { url: `https://storage.example/${request.objectPath}?sig=1` };
       },
     },
+    jobs,
   );
   const worker = new MediaWorker(repositories, storage, transcriber, () => undefined);
-  return { backend, worker, objects, transcribed, repositories, faults, signed };
+  return { backend, worker, objects, transcribed, repositories, faults, signed, queued };
 }
 export type MediaHarness = Awaited<ReturnType<typeof mediaHarness>>;
 export async function execute(

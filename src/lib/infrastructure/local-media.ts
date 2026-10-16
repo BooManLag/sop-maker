@@ -43,6 +43,9 @@ export class LocalMediaStore implements MediaStorage {
   async remove(objectPath: string) {
     await rm(this.file(objectPath), { force: true });
   }
+  async exists(objectPath: string) {
+    return exists(this.file(objectPath));
+  }
 }
 const exists = (file: string) =>
   stat(file).then(
@@ -90,11 +93,14 @@ export class LocalUploadSigner implements UploadSigner {
   }
 }
 
-/** Receives a demo upload PUT, stores it in quarantine and processes recordings inline. */
+/**
+ * Receives an upload PUT on the loopback server, stores it in quarantine and processes recordings
+ * inline. The demo stores on disk; local development stores in the live bucket.
+ */
 export class LocalMediaUploads {
   constructor(
     private signer: LocalUploadSigner,
-    private store: LocalMediaStore,
+    private store: MediaStorage & { write(objectPath: string, bytes: Uint8Array): Promise<void> },
     private worker: MediaWorker,
   ) {}
   async receive(request: Request) {

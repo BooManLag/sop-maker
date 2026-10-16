@@ -10,10 +10,18 @@ export interface TasksSettings {
   invokerEmail: string;
 }
 
+/** The media worker endpoint sits beside the analysis one and shares its queue and invoker. */
+export const mediaWorkerUrl = (settings: TasksSettings) =>
+  settings.workerUrl.replace(/\/analysis$/, '/media');
+
 export class CloudTasksQueue implements AnalysisQueue {
   private auth = new GoogleAuth({ scopes: ['https://www.googleapis.com/auth/cloud-platform'] });
   constructor(private settings: TasksSettings) {}
-  async enqueue(job: AnalysisJob) {
+  enqueue(job: AnalysisJob) {
+    return this.post(this.settings.workerUrl, job);
+  }
+  /** Delivers any job body to a worker endpoint, signed for that endpoint's audience. */
+  async post(url: string, job: object) {
     const client = await this.auth.getClient();
     await client.request({
       url: `https://cloudtasks.googleapis.com/v2/${this.settings.queue}/tasks`,
@@ -23,12 +31,12 @@ export class CloudTasksQueue implements AnalysisQueue {
           dispatchDeadline: '300s',
           httpRequest: {
             httpMethod: 'POST',
-            url: this.settings.workerUrl,
+            url,
             headers: { 'Content-Type': 'application/json' },
             body: Buffer.from(JSON.stringify(job)).toString('base64'),
             oidcToken: {
               serviceAccountEmail: this.settings.invokerEmail,
-              audience: this.settings.workerUrl,
+              audience: url,
             },
           },
         },
@@ -38,13 +46,13 @@ export class CloudTasksQueue implements AnalysisQueue {
 }
 
 /** Accepts only requests carrying a Google-signed ID token for the Cloud Tasks invoker account. */
-export function cloudTasksVerifier(settings: TasksSettings) {
+export function cloudTasksVerifier(settings: TasksSettings, audience = settings.workerUrl) {
   const client = new OAuth2Client();
   return async (request: Request) => {
     const token = request.headers.get('authorization')?.match(/^Bearer (.+)$/)?.[1];
     if (!token) return false;
     try {
-      const ticket = await client.verifyIdToken({ idToken: token, audience: settings.workerUrl });
+      const ticket = await client.verifyIdToken({ idToken: token, audience });
       const payload = ticket.getPayload();
       return payload?.email === settings.invokerEmail && payload.email_verified === true;
     } catch {

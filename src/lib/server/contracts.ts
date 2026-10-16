@@ -118,6 +118,7 @@ export const schemas = {
   processCreate: z.object({ title: short, equipment: short }).strict(),
   processGet: empty,
   captureGet: empty,
+  uploadComplete: empty,
   captureCreate: z
     .object({
       kind: z.enum(['text', 'video', 'audio', 'document']),
@@ -250,6 +251,12 @@ export const endpoints: Endpoint[] = [
     create: true,
   },
   { operation: 'captureGet', method: 'GET', path: 'captures/:id', permission: 'read' },
+  {
+    operation: 'uploadComplete',
+    method: 'POST',
+    path: 'captures/:id/uploaded',
+    permission: 'write',
+  },
   {
     operation: 'transcriptSave',
     method: 'POST',
