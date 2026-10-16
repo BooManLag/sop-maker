@@ -97,7 +97,7 @@ function Funnel({ counts, demo }: { counts: number[]; demo: boolean }) {
     <div className="mx-auto my-11 max-w-[650px]">
       <Eyebrow>{demo ? 'SAMPLE SCAN' : 'SCAN RESULTS'}</Eyebrow>
       <h1
-        className="mt-5.5 text-2xl leading-[1.13] tracking-[-1.6px] sm:text-3xl"
+        className="mt-5.5 font-serif text-2xl leading-[1.1] font-normal tracking-[-0.5px] sm:text-3xl"
         aria-live="polite"
       >
         {done

@@ -3,13 +3,13 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const badgeVariants = cva(
-  'inline-flex w-fit shrink-0 items-center gap-1.5 rounded-xs px-2 py-1.5 text-2xs leading-none font-semibold tracking-[0.5px] whitespace-nowrap uppercase',
+  'inline-flex h-6 w-fit shrink-0 items-center rounded-full border px-2.5 text-xs leading-none font-semibold whitespace-nowrap',
   {
     variants: {
       tone: {
-        green: 'bg-muted text-brand-500',
-        amber: 'bg-warning-surface text-warning',
-        gray: 'bg-background text-muted-foreground',
+        green: 'border-border-strong bg-brand-100 text-brand-700',
+        amber: 'border-warning-border bg-warning-surface text-warning',
+        gray: 'border-border bg-card text-muted-foreground',
       },
     },
     defaultVariants: { tone: 'green' },
@@ -24,7 +24,6 @@ function Badge({
 }: React.ComponentProps<'span'> & VariantProps<typeof badgeVariants>) {
   return (
     <span data-slot="badge" className={cn(badgeVariants({ tone }), className)} {...props}>
-      <span aria-hidden className="size-1 rounded-full bg-current" />
       {children}
     </span>
   );
