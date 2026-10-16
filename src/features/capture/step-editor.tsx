@@ -10,7 +10,7 @@ import { ErrorBanner } from '@/components/common/error-banner';
 import { FormActions } from '@/components/common/layouts';
 import { api } from '@/lib/client/browser';
 import { useProcess, useWorkspace, useWorkspaceMutation } from '@/lib/client/queries';
-import type { ProcessStep } from '@/lib/domain/types';
+import type { ProcessStep, StepImageLinks } from '@/lib/domain/types';
 import { addStep, mergeWithNext, moveStep, removeStep } from '@/lib/domain/steps';
 import { draftPath } from './paths';
 import { StepImagePicker } from './step-image-picker';
@@ -44,12 +44,16 @@ export function StepEditor({
   const video = useRef<HTMLVideoElement>(null);
   const picker = useFramePicker({ processId, captureId, video, onStored: setImage });
   const [videoReady, setVideoReady] = useState(false);
-  useAutoCapture(steps, picker, videoReady);
-  const imageUrls = useImageUrls(processId, picker.links);
-  const serverSteps = useProcess(processId).data?.versions[0].steps;
+  useAutoCapture(steps, {
+    ready: videoReady,
+    busy: picker.busy !== undefined,
+    capture: picker.capture,
+  });
+  const serverSteps = useProcess(processId).data?.versions[0].steps ?? [];
+  const imageUrls = imageUrlsByPath(serverSteps, picker.links);
   /** A step added here exists only in this screen until the draft is saved. */
   async function ensureSaved(stepId: string) {
-    if (!serverSteps?.some((s) => s.id === stepId)) await api.saveDraft(processId, steps);
+    if (!serverSteps.some((s) => s.id === stepId)) await api.saveDraft(processId, steps);
   }
 
   return (
@@ -169,8 +173,7 @@ export function StepEditor({
 }
 
 /** Signed links are keyed by the server's step ids; a merge can move an image to another step. */
-function useImageUrls(processId: string, links: Record<string, string>) {
-  const stored = useProcess(processId).data?.versions[0].steps ?? [];
+function imageUrlsByPath(stored: ProcessStep[], links: StepImageLinks) {
   return Object.fromEntries(
     stored.flatMap((s) =>
       s.frameObjectPath && links[s.id] ? [[s.frameObjectPath, links[s.id]]] : [],
