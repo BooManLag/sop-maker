@@ -74,6 +74,7 @@ export function readConfig(env: Record<string, string | undefined> = process.env
       'Invalid backend configuration. Check documented environment variable names and formats.',
     );
   const e = parsed.data;
+  const local = e.GOOD_EXCEPTION_LOCAL === 'true';
   const origins = e.GOOD_EXCEPTION_ALLOWED_ORIGINS.split(',')
     .map((x) => x.trim())
     .filter(Boolean);
@@ -96,13 +97,12 @@ export function readConfig(env: Record<string, string | undefined> = process.env
     (!e.GOOGLE_CLOUD_PROJECT ||
       !e.GOOD_EXCEPTION_PSEUDONYM_KEY ||
       // Against the local emulators the app is served from loopback, which is always allowed.
-      (!origins.length && !e.FIRESTORE_EMULATOR_HOST && e.GOOD_EXCEPTION_LOCAL !== 'true'))
+      (!origins.length && !e.FIRESTORE_EMULATOR_HOST && !local))
   )
     throw new Error(
       'Production requires GOOGLE_CLOUD_PROJECT, GOOD_EXCEPTION_PSEUDONYM_KEY and GOOD_EXCEPTION_ALLOWED_ORIGINS.',
     );
-  if (e.K_SERVICE && e.GOOD_EXCEPTION_LOCAL === 'true')
-    throw new Error('Local development mode is forbidden on Cloud Run.');
+  if (e.K_SERVICE && local) throw new Error('Local development mode is forbidden on Cloud Run.');
   if (e.K_SERVICE && (e.FIRESTORE_EMULATOR_HOST || e.FIREBASE_AUTH_EMULATOR_HOST))
     throw new Error('Emulator connections are forbidden on Cloud Run.');
   const taskFields = [
@@ -155,7 +155,7 @@ export function readConfig(env: Record<string, string | undefined> = process.env
       ? { organizationId: e.GOOD_EXCEPTION_OPEN_ORGANIZATION, role: e.GOOD_EXCEPTION_OPEN_ROLE }
       : undefined,
     emulator: Boolean(e.FIRESTORE_EMULATOR_HOST),
-    local: e.GOOD_EXCEPTION_LOCAL === 'true',
+    local,
     mediaBucket: e.GOOD_EXCEPTION_MEDIA_BUCKET,
   };
 }

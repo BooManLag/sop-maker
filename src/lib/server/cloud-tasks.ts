@@ -11,23 +11,41 @@ export interface TasksSettings {
 }
 
 /** The media worker endpoint sits beside the analysis one and shares its queue and invoker. */
-export const mediaWorkerUrl = (settings: TasksSettings) =>
-  settings.workerUrl.replace(/\/analysis$/, '/media');
+export function mediaWorkerUrl(settings: TasksSettings) {
+  const url = new URL(settings.workerUrl);
+  url.pathname = '/api/v1/internal/media';
+  return url.toString();
+}
+/** Enqueues a job body for a worker endpoint. */
+export interface TaskQueue {
+  /** A `taskId` makes the enqueue idempotent: Cloud Tasks refuses a second task with that name. */
+  post(url: string, job: object, taskId?: string): Promise<void>;
+}
 
-export class CloudTasksQueue implements AnalysisQueue {
+export class CloudTasksQueue implements AnalysisQueue, TaskQueue {
   private auth = new GoogleAuth({ scopes: ['https://www.googleapis.com/auth/cloud-platform'] });
   constructor(private settings: TasksSettings) {}
   enqueue(job: AnalysisJob) {
     return this.post(this.settings.workerUrl, job);
   }
   /** Delivers any job body to a worker endpoint, signed for that endpoint's audience. */
-  async post(url: string, job: object) {
+  async post(url: string, job: object, taskId?: string) {
+    try {
+      await this.create(url, job, taskId);
+    } catch (error) {
+      // A named task that already exists means this job was already queued.
+      if (taskId && (error as { status?: number }).status === 409) return;
+      throw error;
+    }
+  }
+  private async create(url: string, job: object, taskId?: string) {
     const client = await this.auth.getClient();
     await client.request({
       url: `https://cloudtasks.googleapis.com/v2/${this.settings.queue}/tasks`,
       method: 'POST',
       data: {
         task: {
+          ...(taskId ? { name: `${this.settings.queue}/tasks/${taskId}` } : {}),
           dispatchDeadline: '300s',
           httpRequest: {
             httpMethod: 'POST',

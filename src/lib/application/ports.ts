@@ -39,9 +39,19 @@ export interface MediaStorage {
   remove(objectPath: string): Promise<void>;
   exists(objectPath: string): Promise<boolean>;
 }
+/** One uploaded recording to inspect and transcribe. */
+export interface MediaJob {
+  /** Object written through a signed upload URL (see `mediaPaths.recording`). */
+  objectPath: string;
+}
 /** Starts processing an uploaded recording, off the request path where storage allows. */
 export interface MediaJobs {
-  start(job: { objectPath: string }): Promise<void>;
+  /** Safe to repeat for the same recording: a started job is never started twice. */
+  start(job: MediaJob): Promise<void>;
+}
+/** Storage the loopback upload receiver can write into. */
+export interface WritableMediaStorage extends MediaStorage {
+  write(objectPath: string, bytes: Uint8Array): Promise<void>;
 }
 export interface Transcription {
   segments: TranscriptSegment[];

@@ -154,9 +154,13 @@ export class Backend {
     if (endpoint.operation === 'uploadComplete') {
       const media = await repository.query((s) => {
         const capture = processes.getCapture(s, id);
-        return capture.status === 'awaiting_upload' ? capture.media : undefined;
+        // Once the worker records a clean copy it owns the recording; a repeat call is a no-op.
+        return capture.status === 'awaiting_upload' && !capture.media?.cleanPath
+          ? capture.media
+          : undefined;
       });
-      // The demo processes recordings as they arrive, so there is nothing left to start.
+      // Starting is idempotent, so a retried or replayed request never transcribes twice. The demo
+      // processes recordings as they arrive, so there is nothing left to start.
       if (media && this.mediaJobs) await this.mediaJobs.start({ objectPath: media.objectPath });
     }
     /** Work to start only after this request's own change commits. */
