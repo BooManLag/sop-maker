@@ -2,9 +2,9 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Leaf, LogOut } from 'lucide-react';
+import { ChevronsUpDown, Leaf } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Avatar, useAccount, useNavCounts } from './account';
+import { AccountMenu, Avatar, useAccount, useNavCounts } from './account';
 import { LogoMark, Wordmark } from './logo';
 import { navItems, sectionFor, sectionLabels } from './sections';
 
@@ -73,32 +73,22 @@ export function SidebarContent() {
   );
 }
 
-/** The signed-in person; clicking signs out. */
+/** The signed-in person; opens the account menu. */
 function UserCard({ account }: { account: ReturnType<typeof useAccount> }) {
-  const content = (
-    <>
-      <Avatar initials={account.initials} photo={account.photo} />
-      <span className="min-w-0 flex-1">
-        <span className="block truncate">{account.name}</span>
-        <small className="block text-tiny text-muted-foreground">{account.role}</small>
-      </span>
-      {account.signOut && <LogOut size={16} aria-hidden />}
-    </>
-  );
-  const className =
-    'flex w-full items-center gap-2.5 border-t border-border py-5.5 text-left text-xs';
-  const { signOut } = account;
-  return signOut ? (
-    <button
-      type="button"
-      title="Sign out"
-      aria-label={`Sign out ${account.name}`}
-      onClick={() => void signOut()}
-      className={className}
-    >
-      {content}
-    </button>
-  ) : (
-    <div className={className}>{content}</div>
+  return (
+    <AccountMenu side="top">
+      <button
+        type="button"
+        aria-label={`Account: ${account.name}`}
+        className="flex w-full items-center gap-2.5 border-t border-border py-5.5 text-left text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <Avatar initials={account.initials} photo={account.photo} />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate">{account.name}</span>
+          <small className="block text-tiny text-muted-foreground">{account.role}</small>
+        </span>
+        <ChevronsUpDown size={16} className="text-muted-foreground" aria-hidden />
+      </button>
+    </AccountMenu>
   );
 }
