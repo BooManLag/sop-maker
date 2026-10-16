@@ -101,3 +101,36 @@ export function webmLastClusterAt(ms: number, size: number) {
     { at: size - tail.length, bytes: tail },
   ]);
 }
+/**
+ * A fragmented MP4 as ffmpeg and screen recorders write it: the movie header's duration is zero,
+ * and each fragment gives its start (tfdt) and per-sample durations (trun) in the track timescale.
+ */
+export const fragmentedMp4 = (
+  fragments: { startTicks: number; sampleTicks: number[] }[],
+  trackTimescale = 90_000,
+) => {
+  const fullBox = (type: string, flags: number, body: number[]) =>
+    box(type, [0, (flags >> 16) & 255, (flags >> 8) & 255, flags & 255, ...body]);
+  const trak = box('trak', [
+    ...fullBox('tkhd', 0, [...u32(0), ...u32(0), ...u32(1)]),
+    ...box('mdia', fullBox('mdhd', 0, [...u32(0), ...u32(0), ...u32(trackTimescale)])),
+  ]);
+  const moof = ({ startTicks, sampleTicks }: (typeof fragments)[number]) =>
+    box('moof', [
+      ...fullBox('mfhd', 0, u32(1)),
+      ...box('traf', [
+        ...fullBox('tfhd', 0, u32(1)),
+        ...fullBox('tfdt', 0, u32(startTicks)),
+        ...fullBox('trun', 0x100, [...u32(sampleTicks.length), ...sampleTicks.flatMap(u32)]),
+      ]),
+    ]);
+  return Uint8Array.from([
+    ...box('ftyp', [...Buffer.from('iso6'), 0, 0, 0, 0]),
+    ...box('moov', [
+      ...fullBox('mvhd', 0, [...u32(0), ...u32(0), ...u32(1000), ...u32(0)]),
+      ...trak,
+      ...box('mvex', []),
+    ]),
+    ...fragments.flatMap((f) => [...moof(f), ...box('mdat', [0, 0, 0, 0])]),
+  ]);
+};
