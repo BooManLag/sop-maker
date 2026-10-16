@@ -177,7 +177,6 @@ export function publishProcess(
   keptFrames = new Map<string, string>(),
 ) {
   const p = getProcess(s, id);
-  requireCondition(body.approved, 'Explicit human approval is required.');
   requireDraft(p);
   requireCondition(
     body.steps.every((step) => step.source !== 'validated_field_practice'),

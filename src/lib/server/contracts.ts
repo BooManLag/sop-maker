@@ -173,7 +173,8 @@ export const schemas = {
   processDraftSave: z.object({ steps: uniqueSteps }).strict(),
   processPublish: z
     .object({
-      approved: z.literal(true, { error: 'Explicit human approval is required.' }),
+      /** No longer required: publishing is itself the reviewer's approval. Kept for old clients. */
+      approved: z.literal(true).optional(),
       steps: uniqueSteps,
     })
     .strict(),

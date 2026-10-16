@@ -31,17 +31,20 @@ test('sample size is calculated rather than using the historical matched sample'
   assert(requiredSamplePerGroup() > 1000);
   assert(requiredSamplePerGroup(0.1, 0.05) < requiredSamplePerGroup());
 });
-test('human approval and a validated trial are required for process changes', async () => {
+test('publishing needs no separate approval flag; the publisher is recorded', async () => {
   const process = (await handleApi('POST', ['processes'], {
     title: 'Test isolated baseline',
     equipment: 'Valve X',
   })) as { id: string };
-  await assert.rejects(
-    handleApi('POST', ['processes', process.id, 'publish'], {
-      steps: [{ id: 'a', action: 'Check' }],
-    }),
-    /approval/,
-  );
+  const published = (await handleApi('POST', ['processes', process.id, 'publish'], {
+    steps: [
+      { id: 'a', sequence: 1, action: 'Check', required: true, source: 'expert_walkthrough' },
+    ],
+  })) as { currentVersion: number; versions: { approved: boolean }[] };
+  assert.equal(published.currentVersion, 1);
+  assert.equal(published.versions[0].approved, true);
+});
+test('a validated trial is required for process changes', async () => {
   await assert.rejects(handleApi('POST', ['change-requests'], { trialId: 'missing' }), /validated/);
 });
 test('complete demo loop preserves published baseline while submitting proposed v2', async () => {

@@ -8,7 +8,6 @@ import { Check } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   Form,
   FormControl,
@@ -42,7 +41,6 @@ const reviewSchema = z.object({
       evidence: optionalDetail,
     }),
   ),
-  approved: z.boolean().refine(Boolean, 'Approve the procedure before publishing it.'),
 });
 type ReviewInput = z.input<typeof reviewSchema>;
 type ReviewValues = z.output<typeof reviewSchema>;
@@ -66,7 +64,6 @@ function ReviewForm({ draft }: { draft: ProcessDto }) {
         warning: s.warning ?? '',
         evidence: s.evidence ?? '',
       })),
-      approved: false,
     },
   });
   const { fields } = useFieldArray({ control: form.control, name: 'steps' });
@@ -137,30 +134,10 @@ function ReviewForm({ draft }: { draft: ProcessDto }) {
               ))}
             </Card>
             <Card className={`${sideRailClass} md:sticky md:top-6`}>
-              <Badge tone="amber">Awaiting approval</Badge>
+              <Badge tone="amber">Ready to publish</Badge>
               <h3>Make it the baseline.</h3>
               <p>Review the steps, safety requirements, and expert rationale before publishing.</p>
-              <FormField
-                control={form.control}
-                name="approved"
-                render={({ field }) => (
-                  <FormItem className="my-5.5">
-                    <div className="flex items-start gap-2">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={(checked) => field.onChange(checked === true)}
-                        />
-                      </FormControl>
-                      <FormLabel className="text-xs leading-[1.7] font-normal text-brand-500">
-                        I have reviewed this procedure and approve it as the baseline SOP.
-                      </FormLabel>
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" disabled={publish.isPending}>
+              <Button type="submit" className="mt-5.5" disabled={publish.isPending}>
                 {publish.isPending ? 'Publishing…' : 'Publish baseline SOP'}
                 <Check size={16} aria-hidden />
               </Button>
