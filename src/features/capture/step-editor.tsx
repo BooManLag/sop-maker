@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowDown, ArrowRight, ArrowUp, GripVertical, Plus, X } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
@@ -11,7 +11,7 @@ import { FormActions } from '@/components/common/layouts';
 import { api } from '@/lib/client/browser';
 import { useProcess, useWorkspace, useWorkspaceMutation } from '@/lib/client/queries';
 import type { ProcessStep, StepImageLinks } from '@/lib/domain/types';
-import { addStep, mergeWithNext, moveStep, removeStep } from '@/lib/domain/steps';
+import { addStep, mergeWithNext, moveStep, removeStep, withImage } from '@/lib/domain/steps';
 import { draftPath } from './paths';
 import { StepImagePicker } from './step-image-picker';
 import { useAutoCapture, useFramePicker } from './use-frame-picker';
@@ -38,26 +38,57 @@ export function StepEditor({
     setSteps((prev) => prev.map((s, i) => (i === index ? { ...s, action } : s)));
   const setImage = useCallback(
     (stepId: string, image: Pick<ProcessStep, 'frameAtMs' | 'frameObjectPath'>) =>
-      setSteps((prev) => prev.map((s) => (s.id === stepId ? { ...s, ...image } : s))),
+      setSteps((prev) => prev.map((s) => (s.id === stepId ? withImage(s, image) : s))),
     [],
   );
   const video = useRef<HTMLVideoElement>(null);
   const picker = useFramePicker({ processId, captureId, video, onStored: setImage });
   const [videoReady, setVideoReady] = useState(false);
-  useAutoCapture(steps, {
-    ready: videoReady,
-    busy: picker.busy !== undefined,
-    // A step added here must reach the server before its still can be stored.
-    capture: async (stepId, atMs) => {
-      await ensureSaved(stepId);
-      await picker.capture(stepId, atMs);
-    },
-  });
   const serverSteps = useProcess(processId).data?.versions[0].steps ?? [];
   const imageUrls = imageUrlsByPath(serverSteps, picker.links);
-  /** A step added here exists only in this screen until the draft is saved. */
-  async function ensureSaved(stepId: string) {
-    if (!serverSteps.some((s) => s.id === stepId)) await api.saveDraft(processId, steps);
+  // Saves read the latest steps, not the ones a slow capture started with.
+  const latestSteps = useRef(steps);
+  useEffect(() => {
+    latestSteps.current = steps;
+  }, [steps]);
+  const savedIds = useRef(new Set(initialSteps.map((s) => s.id)));
+  const saving = useRef<Promise<void> | undefined>(undefined);
+  /**
+   * A step added here exists only in this screen until the draft is saved. Callers share one save
+   * at a time, so a burst of captures never sends overlapping drafts.
+   */
+  const ensureSaved = useCallback(
+    async (stepId: string) => {
+      // Loops because a step added while a save was in flight needs one more.
+      // A step removed meanwhile is never saved, so stop once it is gone.
+      while (!savedIds.current.has(stepId) && latestSteps.current.some((s) => s.id === stepId)) {
+        saving.current ??= (async () => {
+          const sent = latestSteps.current;
+          await api.saveDraft(processId, sent);
+          for (const s of sent) savedIds.current.add(s.id);
+        })().finally(() => (saving.current = undefined));
+        await saving.current;
+      }
+    },
+    [processId],
+  );
+  const { capture } = picker;
+  const autoCapture = useCallback(
+    async (stepId: string, atMs: number) => {
+      await ensureSaved(stepId);
+      await capture(stepId, atMs);
+    },
+    [ensureSaved, capture],
+  );
+  const retryCapture = useAutoCapture(steps, {
+    ready: videoReady,
+    busy: picker.busy !== undefined,
+    capture: autoCapture,
+  });
+  function retry(stepId: string) {
+    // Reloading fires onLoadedData, which marks the video ready and lets the retry run.
+    if (!videoReady) video.current?.load();
+    retryCapture(stepId);
   }
 
   return (
@@ -145,6 +176,7 @@ export function StepEditor({
                   await ensureSaved(step.id);
                   await picker.upload(step.id, atMs, file);
                 }}
+                onRetry={() => retry(step.id)}
                 onRemove={() => setImage(step.id, { frameObjectPath: undefined })}
                 onWaive={(imageWaived) =>
                   setSteps((prev) =>

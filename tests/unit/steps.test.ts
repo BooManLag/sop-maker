@@ -8,6 +8,7 @@ import {
   mergeWithNext,
   moveStep,
   removeStep,
+  withImage,
   withReviewedText,
 } from '../../src/lib/domain/steps';
 
@@ -109,4 +110,20 @@ test('clarifying and reviewing a step keep its image', () => {
 test('a merged step keeps the first image, or the next one when the first has none', () => {
   assert.deepEqual(frames(mergeWithNext(withFrames, 0)), { a: original.a, c: original.c });
   assert.deepEqual(frames(mergeWithNext(withFrames, 1)), { a: original.a, b: original.c });
+});
+
+test('a merged step needs no picture only when neither part had one and the next was marked so', () => {
+  const waived = { ...step('b', 'Wait 3–5 minutes', 2), imageWaived: true };
+  const merged = mergeWithNext([step('a', 'Isolate supply', 1), waived], 0)[0];
+  assert.equal(merged.imageWaived, true);
+});
+
+test('adding a picture clears the no-picture mark, so removing it later asks again', () => {
+  const waived = { ...step('a', 'Wait 3–5 minutes', 1), imageWaived: true };
+  const pictured = withImage(waived, { frameAtMs: 2000, frameObjectPath: 'quarantine/t/p/f.jpg' });
+  assert.equal(pictured.imageWaived, undefined);
+  assert.equal(pictured.frameObjectPath, 'quarantine/t/p/f.jpg');
+  const removed = withImage(pictured, { frameObjectPath: undefined });
+  assert.equal(removed.frameObjectPath, undefined);
+  assert.equal(removed.imageWaived, undefined);
 });
