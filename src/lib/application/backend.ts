@@ -15,6 +15,8 @@ import { type Endpoint, type ListQuery, parseInput } from '../server/contracts';
 import { ApiError, requireCondition } from '../server/errors';
 import type { GuardedCaptureAdapter } from '../server/ai';
 import * as processes from './process-service';
+import type { StoredRecording } from './process-service';
+import type { StepImageLinks } from '../domain/types';
 import { mediaPaths } from './media-paths';
 import * as evidence from './evidence-service';
 function canonical(value: unknown): string {
@@ -61,6 +63,10 @@ const uploadTarget = (upload: SignedUpload) => ({
     'x-goog-content-length-range': `0,${upload.maxBytes}`,
   },
 });
+/** A stored recording as the browser sees it: a short-lived link instead of a storage path. */
+async function signedRecording(media: MediaLibrary, { objectPath, ...recording }: StoredRecording) {
+  return { ...recording, url: await media.signRead(objectPath, recording.contentType) };
+}
 export class Backend {
   constructor(
     readonly repositories: RepositoryProvider,
@@ -81,7 +87,7 @@ export class Backend {
     authorize(context.actor, endpoint.permission, this.config);
     const input = parseInput(endpoint.operation, raw);
     const repository = this.repositories.forTenant(context.actor.organizationId);
-    if (endpoint.operation === 'processMedia') return this.mediaLinks(repository, id);
+    if (endpoint.operation === 'processMedia') return this.mediaLinks(repository, id!);
     if (endpoint.method === 'GET')
       return repository.query((s) => this.read(s, endpoint.operation, id, query, context.actor));
     if (this.config.mode === 'production' && !context.idempotencyKey)
@@ -229,39 +235,41 @@ export class Backend {
    * Returns each draft image path mapped to its kept copy. Copying again on a retry is harmless.
    */
   private async keepFrames(repository: Repository, organizationId: string, id: string) {
-    const frames = await repository.query((s) => {
+    const { version, frames } = await repository.query((s) => {
       processes.requireDraft(processes.getProcess(s, id));
-      return processes.mediaObjects(s, id).frames;
+      return processes.mediaObjects(s, id);
     });
-    const kept = new Map<string, string>();
-    if (!frames.length) return kept;
+    if (!frames.length) return new Map<string, string>();
     const media = this.media;
     requireCondition(media, 'Media storage is not configured.', 503);
-    for (const { stepId, objectPath } of frames) {
-      const copy = mediaPaths.published(organizationId, id, 1, stepId);
-      await media.copy(objectPath, copy);
-      kept.set(objectPath, copy);
-    }
-    return kept;
+    const kept = await Promise.all(
+      frames.map(async ({ stepId, objectPath }) => {
+        const copy = mediaPaths.published(organizationId, id, version, stepId);
+        await media.copy(objectPath, copy);
+        return [objectPath, copy] as const;
+      }),
+    );
+    return new Map(kept);
   }
   /** Signs read links outside the store query, which must not perform I/O. */
-  private async mediaLinks(repository: Repository, id?: string) {
+  private async mediaLinks(repository: Repository, id: string) {
     const media = this.media;
     requireCondition(media, 'Media storage is not configured.', 503);
     const { frames, video } = await repository.query((s) => processes.mediaObjects(s, id));
-    const frameLinks: Record<string, string> = {};
-    for (const frame of frames)
-      frameLinks[frame.stepId] = await media.signRead(frame.objectPath, 'image/jpeg');
-    return {
-      frames: frameLinks,
-      ...(video && {
-        video: {
-          captureId: video.captureId,
-          contentType: video.contentType,
-          url: await media.signRead(video.objectPath, video.contentType),
-        },
-      }),
+    const [frameLinks, videoLink] = await Promise.all([
+      Promise.all(
+        frames.map(async ({ stepId, objectPath }) => [
+          stepId,
+          await media.signRead(objectPath, 'image/jpeg'),
+        ]),
+      ),
+      video && signedRecording(media, video),
+    ]);
+    const links: { frames: StepImageLinks; video?: Awaited<ReturnType<typeof signedRecording>> } = {
+      frames: Object.fromEntries(frameLinks),
     };
+    if (videoLink) links.video = videoLink;
+    return links;
   }
   private async signUpload(
     objectPathFor: (uploadId: string) => string,
@@ -401,6 +409,7 @@ export class Backend {
       case 'processDraftSave':
         return processes.processDto(processes.saveDraftSteps(s, id!, parseInput(operation, input)));
       case 'processPublish':
+        requireCondition(keptFrames, 'Step images were not prepared for publishing.', 500);
         return processes.processDto(
           processes.publishProcess(s, id!, parseInput(operation, input), ctx.actor, keptFrames),
         );
