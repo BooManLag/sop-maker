@@ -9,6 +9,8 @@ export interface AiUsage {
   calls: number;
   durationMs: number;
   ok: boolean;
+  /** Why a failed call failed; the message only, never the request. */
+  error?: string;
 }
 export interface UsageMetadata {
   promptTokenCount?: number;
@@ -52,7 +54,10 @@ export async function metered<T>(
       calls: 1,
       durationMs: Math.round(performance.now() - started),
       ok: false,
+      error: describeError(error),
     });
     throw error;
   }
 }
+const describeError = (error: unknown) =>
+  (error instanceof Error ? `${error.name}: ${error.message}` : String(error)).slice(0, 300);
