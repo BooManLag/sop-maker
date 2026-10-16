@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { Backend } from '../../src/lib/application/backend';
+import { mediaWorkerUrl } from '../../src/lib/server/cloud-tasks';
 import { actor, execute, mediaHarness } from '../support/media-harness';
 test('an expert gets a signed upload target for recorded audio within limits', async () => {
   const { backend, signed } = await mediaHarness();
@@ -95,10 +96,34 @@ test('a finished upload is queued for transcription only once storage holds it',
     status: string;
   };
   assert.equal(capture.status, 'awaiting_upload');
+  await execute(backend, 'POST', `captures/${target.uploadId}/uploaded`);
   assert.deepEqual(queued, [
     {
       url: 'https://app.example/api/v1/internal/media',
       job: { objectPath: `quarantine/tenant_a/${id}/${target.uploadId}` },
+      taskId: `media-${target.uploadId}`,
     },
   ]);
+});
+test('a recording the worker has taken is not queued again', async () => {
+  const { backend, objects, queued, worker } = await mediaHarness();
+  const id = await draft(backend);
+  const target = (await execute(backend, 'POST', `processes/${id}/uploads`, audio)) as {
+    uploadId: string;
+  };
+  const objectPath = `quarantine/tenant_a/${id}/${target.uploadId}`;
+  objects.set(objectPath, new Uint8Array([1]));
+  await worker.process({ objectPath }, true).catch(() => undefined);
+  await execute(backend, 'POST', `captures/${target.uploadId}/uploaded`);
+  assert.equal(queued.length, 0);
+});
+test('the media worker URL sits beside the analysis worker', () => {
+  assert.equal(
+    mediaWorkerUrl({
+      queue: 'projects/p/locations/r/queues/q',
+      workerUrl: 'https://app.run.app/api/v1/internal/analysis',
+      invokerEmail: 'tasks@p.iam.gserviceaccount.com',
+    }),
+    'https://app.run.app/api/v1/internal/media',
+  );
 });

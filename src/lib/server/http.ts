@@ -12,6 +12,7 @@ import { withDeadline } from './deadline';
 import { localRequestOrigin } from './origin';
 import type { LocalMediaUploads } from '../infrastructure/local-media';
 import type { MediaWorker } from '../application/media-worker';
+import type { MediaJob } from '../application/ports';
 export interface HttpDependencies {
   backend: Backend;
   config: ServerConfig;
@@ -25,12 +26,17 @@ export interface HttpDependencies {
   /** Loopback only: receives uploads addressed by locally signed URLs. */
   mediaUploads?: LocalMediaUploads;
 }
-/** Cloud Tasks retries a failed delivery; the last attempt records the failure on the scan. */
-export const ANALYSIS_MAX_ATTEMPTS = 3;
+/**
+ * Cloud Tasks retries a failed delivery (infra/tasks.tf `max_attempts`); the last attempt records
+ * the failure on the scan or recording. Analysis and media share the queue, so they share this.
+ */
+export const TASK_MAX_ATTEMPTS = 3;
 const jobSchema = z
   .object({ organizationId: z.string().min(1).max(128), scanId: z.string().uuid() })
   .strict();
-const mediaJobSchema = z.object({ objectPath: z.string().min(1).max(512) }).strict();
+const mediaJobSchema: z.ZodType<MediaJob> = z
+  .object({ objectPath: z.string().min(1).max(512) })
+  .strict();
 export function createHttpHandler(dependencies: HttpDependencies) {
   const { backend, config, verifier } = dependencies;
   const admission = dependencies.admission ?? new AdmissionControl();
@@ -108,7 +114,7 @@ export function createHttpHandler(dependencies: HttpDependencies) {
         const job = jobSchema.safeParse(await readJson(request));
         if (!job.success) throw new ApiError(400, 'Invalid analysis job.');
         const retries = Number(request.headers.get('x-cloudtasks-taskretrycount') ?? 0);
-        await tasks.worker.process(job.data, retries + 1 >= ANALYSIS_MAX_ATTEMPTS);
+        await tasks.worker.process(job.data, retries + 1 >= TASK_MAX_ATTEMPTS);
         status = 204;
         return new Response(null, { status, headers });
       }
@@ -119,7 +125,7 @@ export function createHttpHandler(dependencies: HttpDependencies) {
         const job = mediaJobSchema.safeParse(await readJson(request));
         if (!job.success) throw new ApiError(400, 'Invalid media job.');
         const retries = Number(request.headers.get('x-cloudtasks-taskretrycount') ?? 0);
-        await tasks.worker.process(job.data, retries + 1 >= ANALYSIS_MAX_ATTEMPTS);
+        await tasks.worker.process(job.data, retries + 1 >= TASK_MAX_ATTEMPTS);
         status = 204;
         return new Response(null, { status, headers });
       }

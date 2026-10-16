@@ -1,5 +1,5 @@
 import { Storage } from '@google-cloud/storage';
-import type { MediaStorage, UploadSigner } from '../application/ports';
+import type { UploadSigner, WritableMediaStorage } from '../application/ports';
 
 const uploadTtlMs = 15 * 60_000;
 const readTtlMs = 15 * 60_000;
@@ -9,7 +9,7 @@ const notFound = (error: unknown) => (error as { code?: number }).code === 404;
  * Media objects in the Cloud Storage bucket. Signing uses the runtime service account through
  * IAM signBlob, so the account needs Token Creator on itself.
  */
-export class GcsMedia implements MediaStorage, UploadSigner {
+export class GcsMedia implements WritableMediaStorage, UploadSigner {
   private bucket;
   constructor(bucketName: string) {
     this.bucket = new Storage().bucket(bucketName);
