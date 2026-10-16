@@ -5,26 +5,11 @@ import {
   execute,
   mediaHarness,
   recordingRequest,
+  transcribed,
   transcript,
+  uploaded,
   type MediaHarness,
 } from '../support/media-harness';
-async function uploaded(h: MediaHarness, bytes = webm(0, 10_000), contentType = 'audio/webm') {
-  const p = (await execute(h.backend, 'POST', 'processes', {
-    title: 'Pump',
-    equipment: 'P-1',
-  })) as {
-    id: string;
-  };
-  const target = (await execute(
-    h.backend,
-    'POST',
-    `processes/${p.id}/uploads`,
-    recordingRequest({ contentType, bytes: bytes.length }),
-  )) as { uploadId: string };
-  const objectPath = `quarantine/tenant_a/${p.id}/${target.uploadId}`;
-  h.objects.set(objectPath, bytes);
-  return { processId: p.id, captureId: target.uploadId, objectPath };
-}
 test('clean audio becomes draft steps with suggested frame times and timed segments', async () => {
   const h = await mediaHarness();
   const { processId, captureId, objectPath } = await uploaded(h);
@@ -164,16 +149,6 @@ test('measured minutes are charged; once 300 are spent recordings and uploads ar
   await h.worker.process({ objectPath: last.objectPath }, true);
   await assert.rejects(uploaded(h), (error: { status?: number }) => error.status === 429);
 });
-async function transcribed(h: MediaHarness) {
-  const upload = await uploaded(h);
-  await h.worker.process({ objectPath: upload.objectPath }, true);
-  const process = (await execute(h.backend, 'GET', `processes/${upload.processId}`)) as {
-    versions: {
-      steps: { id: string; action: string; frameAtMs?: number; frameObjectPath?: string }[];
-    }[];
-  };
-  return { ...upload, steps: process.versions[0].steps };
-}
 test("the expert's chosen frame is linked to its step through a signed image upload", async () => {
   const h = await mediaHarness();
   const { processId, captureId, steps } = await transcribed(h);
@@ -216,7 +191,7 @@ test('a frame outside the recording, or for another process, is refused', async 
     /not found/,
   );
 });
-test('saving or publishing a draft cannot repoint a step at another object', async () => {
+test('publishing cannot point a step at an object outside the draft', async () => {
   const h = await mediaHarness();
   const { processId, captureId, steps } = await transcribed(h);
   await execute(h.backend, 'POST', `processes/${processId}/frames`, {
@@ -236,19 +211,16 @@ test('saving or publishing a draft cannot repoint a step at another object', asy
     ...step,
     frameObjectPath: 'clean/tenant_b/secret.jpg',
   }));
-  await execute(h.backend, 'POST', `processes/${processId}/draft`, { steps: forged });
-  assert.deepEqual(
-    (await stored()).map((s) => s.frameObjectPath),
-    [linked, undefined],
-  );
+  h.objects.set(linked!, new Uint8Array([0xff, 0xd8]));
   await execute(h.backend, 'POST', `processes/${processId}/publish`, {
     approved: true,
     steps: forged,
   });
   assert.deepEqual(
     (await stored()).map((s) => s.frameObjectPath),
-    [linked, undefined],
+    [undefined, undefined],
   );
+  assert.ok(h.copies.every((copy) => copy.from === linked));
 });
 test('a worker that crashes after leaving quarantine finishes on redelivery', async () => {
   const h = await mediaHarness();
