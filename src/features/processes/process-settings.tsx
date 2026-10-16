@@ -27,7 +27,8 @@ import {
 } from '@/components/ui/sheet';
 import { api } from '@/lib/client/browser';
 import type { ProcessDto } from '@/lib/client/api';
-import { useWorkspaceMutation } from '@/lib/client/queries';
+import { useQueryClient } from '@tanstack/react-query';
+import { queryKeys, useWorkspaceMutation } from '@/lib/client/queries';
 import { shortText } from '@/lib/domain/validation';
 
 const detailsSchema = z.object({ title: shortText, equipment: shortText });
@@ -47,10 +48,14 @@ export function ProcessSettings({ process }: { process: ProcessDto }) {
     (values: Details) => api.updateProcess(process.id, values),
     () => setOpen(false),
   );
-  // Leave the page before the refresh, so it never refetches a process that is gone.
+  const queryClient = useQueryClient();
+  // Drop the deleted process from the cache and leave before the refresh, so nothing refetches it.
   const remove = useWorkspaceMutation(
     () => api.deleteProcess(process.id),
-    () => router.push('/processes'),
+    () => {
+      queryClient.removeQueries({ queryKey: queryKeys.process(process.id) });
+      router.push('/processes');
+    },
   );
   return (
     <Sheet

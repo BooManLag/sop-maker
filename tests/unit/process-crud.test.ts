@@ -97,11 +97,7 @@ test('deleting a draft removes it and its captures', async () => {
     expertReference: 'expert_1',
     text: 'Open the bleed valve.',
   });
-  assert.deepEqual(await execute('DELETE', `processes/${id}`), {
-    id,
-    deleted: true,
-    archived: false,
-  });
+  assert.deepEqual(await execute('DELETE', `processes/${id}`), { id, outcome: 'deleted' });
   const left = await tenant.query((s) => ({
     processes: s.processes.length,
     captures: s.captures.length,
@@ -114,8 +110,9 @@ test('deleting a published process archives it out of the lists', async () => {
   const { execute, create, publish } = await harness();
   const id = await create();
   await publish(id);
-  const result = (await execute('DELETE', `processes/${id}`)) as { archived: boolean };
-  assert.equal(result.archived, true);
+  assert.deepEqual(await execute('DELETE', `processes/${id}`), { id, outcome: 'archived' });
+  // Deleting again is a no-op with the same answer.
+  assert.deepEqual(await execute('DELETE', `processes/${id}`), { id, outcome: 'archived' });
   const workspace = (await execute('GET', 'workspace')) as { processes: unknown[] };
   assert.equal(workspace.processes.length, 0);
   const kept = (await execute('GET', `processes/${id}`)) as { archivedAt?: string };
@@ -141,5 +138,22 @@ test('viewers manage processes only when roles are not enforced', async () => {
       actor('viewer'),
     ),
     /role does not permit/,
+  );
+});
+
+test('an archived process takes no new work', async () => {
+  const { execute, create, tenant } = await harness();
+  const id = await create();
+  // A draft that evidence points at is archived, not deleted.
+  await tenant.transact((s) => {
+    s.processes.find((x) => x.id === id)!.archivedAt = new Date().toISOString();
+  });
+  await assert.rejects(
+    execute('POST', `processes/${id}/captures`, {
+      kind: 'text',
+      expertReference: 'expert_1',
+      text: 'Open the bleed valve.',
+    }),
+    /archived/,
   );
 });
