@@ -8,6 +8,7 @@ import {
   mergeWithNext,
   moveStep,
   removeStep,
+  withReviewedText,
 } from '../../src/lib/domain/steps';
 
 const step = (id: string, action: string, sequence: number): ProcessStep => ({
@@ -72,4 +73,40 @@ test('without a wait or repeat step, clarifications explain the first step', () 
     applyClarifications(plain, ['Seals crack.']).map((s) => s.rationale),
     ['Seals crack.', undefined],
   );
+});
+
+const framed = (s: ProcessStep, atMs: number): ProcessStep => ({
+  ...s,
+  frameAtMs: atMs,
+  frameObjectPath: `quarantine/t/p/frames/${s.id}`,
+});
+const withFrames = [framed(draft[0], 1000), draft[1], framed(draft[2], 3000)];
+const frames = (steps: ProcessStep[]) =>
+  Object.fromEntries(
+    steps.map((s) => [s.id, s.frameObjectPath && `${s.frameAtMs}@${s.frameObjectPath}`]),
+  );
+const original = frames(withFrames);
+
+test('moving, removing and adding steps keep every step image with its step', () => {
+  assert.deepEqual(frames(moveStep(withFrames, 2, 'up')), original);
+  assert.deepEqual(frames(removeStep(withFrames, 'b')), { a: original.a, c: original.c });
+  assert.deepEqual(frames(addStep(withFrames, 'd')), { ...original, d: undefined });
+});
+test('clarifying and reviewing a step keep its image', () => {
+  assert.deepEqual(frames(applyClarifications(withFrames, ['Why', 'When'])), original);
+  const reviewed = withReviewedText(
+    withFrames,
+    withFrames.map((s) => ({
+      action: `${s.action}.`,
+      condition: '',
+      rationale: 'r',
+      warning: '',
+      evidence: '',
+    })),
+  );
+  assert.deepEqual(frames(reviewed), original);
+});
+test('a merged step keeps the first image, or the next one when the first has none', () => {
+  assert.deepEqual(frames(mergeWithNext(withFrames, 0)), { a: original.a, c: original.c });
+  assert.deepEqual(frames(mergeWithNext(withFrames, 1)), { a: original.a, b: original.c });
 });
