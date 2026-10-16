@@ -1,0 +1,7 @@
+1. Stop the line and remove the stencil
+2. Clean the stencil and wipe the underside
+3. Replace the squeegee blades and vacuum filter
+4. Refit the stencil and run vision calibration
+5. Load fresh solder paste and note its expiry
+6. Print a test board and check alignment
+7. Release the lot and record the service
