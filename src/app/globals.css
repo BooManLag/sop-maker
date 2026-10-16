@@ -75,6 +75,11 @@
   --text-6xl: 51px;
   --text-7xl: 60px;
 
+  --spacing-sidebar: 205px;
+  --spacing-sidebar-wide: 237px;
+
+  --tracking-eyebrow: 1.6px;
+
   --breakpoint-sm: 651px;
   --breakpoint-md: 901px;
   --breakpoint-lg: 1151px;
@@ -139,7 +144,9 @@
     @apply bg-background font-sans text-base text-foreground antialiased;
   }
   h1,
-  h2,
+  h2 {
+    @apply font-serif font-normal;
+  }
   h3 {
     @apply font-medium;
   }
