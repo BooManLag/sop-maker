@@ -98,9 +98,7 @@ function QuestionForm({
       <span className="mt-7 block text-xs text-brand-400">
         Question {index + 1} of {capture.questions.length}
       </span>
-      <h1 className="mt-4 font-serif text-2xl leading-[1.2] font-normal tracking-[-0.5px] sm:text-3xl">
-        {question}
-      </h1>
+      <h1 className="mt-4 text-2xl leading-[1.2] tracking-[-0.5px] sm:text-3xl">{question}</h1>
       <p className="mb-7.5 text-lead">
         You know the judgment behind the action. Help the next person understand it.
       </p>
