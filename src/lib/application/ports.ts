@@ -43,6 +43,12 @@ export interface MediaStorage {
   remove(objectPath: string): Promise<void>;
   exists(objectPath: string): Promise<boolean>;
 }
+/** Stored media the app's own pages display, and the copies publishing keeps. */
+export interface MediaLibrary {
+  /** A short-lived link the browser can read the object from. */
+  signRead(objectPath: string, contentType: string): Promise<string>;
+  copy(from: string, to: string): Promise<void>;
+}
 /** One uploaded recording to inspect and transcribe. */
 export interface MediaJob {
   /** Object written through a signed upload URL (see `mediaPaths.recording`). */
@@ -56,6 +62,7 @@ export interface MediaJobs {
 /** Storage the loopback upload receiver can write into. */
 export interface WritableMediaStorage extends MediaStorage {
   write(objectPath: string, bytes: Uint8Array): Promise<void>;
+  copy(from: string, to: string): Promise<void>;
 }
 export interface Transcription {
   segments: TranscriptSegment[];

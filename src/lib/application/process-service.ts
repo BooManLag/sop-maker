@@ -144,13 +144,24 @@ export function createClarification(s: Store, id: string, body: Input<'clarifica
   s.clarifications.push(result);
   return result;
 }
-/** Frame objects are linked only by `frameRequest`; client-sent paths are discarded. */
+/**
+ * Images enter a draft only through `frameRequest`. A save may keep, move or drop the draft's own
+ * images; any other object path a client sends is discarded.
+ */
 function withServerFrames(current: ProcessStep[], incoming: ProcessStep[]): ProcessStep[] {
-  const frames = new Map(current.map((step) => [step.id, step.frameObjectPath]));
-  return incoming.map(({ frameObjectPath: _, ...step }, i) => {
-    const frameObjectPath = frames.get(step.id);
-    return { ...step, sequence: i + 1, ...(frameObjectPath ? { frameObjectPath } : {}) };
-  });
+  const draftImages = new Set(current.flatMap((step) => step.frameObjectPath ?? []));
+  return incoming.map(({ frameObjectPath, ...step }, i) => ({
+    ...step,
+    sequence: i + 1,
+    ...(frameObjectPath && draftImages.has(frameObjectPath) ? { frameObjectPath } : {}),
+  }));
+}
+/** Points a step at the kept copy of its image; an image changed since copying stops publication. */
+function withKeptFrame(step: ProcessStep, keptFrames: Map<string, string>): ProcessStep {
+  if (!step.frameObjectPath) return step;
+  const kept = keptFrames.get(step.frameObjectPath);
+  requireCondition(kept, 'A step image changed while publishing. Publish again.', 409);
+  return { ...step, frameObjectPath: kept };
 }
 export function saveDraftSteps(s: Store, id: string, body: Input<'processDraftSave'>) {
   const p = getProcess(s, id);
@@ -158,7 +169,13 @@ export function saveDraftSteps(s: Store, id: string, body: Input<'processDraftSa
   p.versions[0].steps = withServerFrames(p.versions[0].steps, body.steps);
   return p;
 }
-export function publishProcess(s: Store, id: string, body: Input<'processPublish'>, actor: Actor) {
+export function publishProcess(
+  s: Store,
+  id: string,
+  body: Input<'processPublish'>,
+  actor: Actor,
+  keptFrames = new Map<string, string>(),
+) {
   const p = getProcess(s, id);
   requireCondition(body.approved, 'Explicit human approval is required.');
   requireDraft(p);
@@ -168,12 +185,37 @@ export function publishProcess(s: Store, id: string, body: Input<'processPublish
   );
   p.versions[0] = {
     ...p.versions[0],
-    steps: withServerFrames(p.versions[0].steps, body.steps),
+    steps: withServerFrames(p.versions[0].steps, body.steps).map((step) =>
+      withKeptFrame(step, keptFrames),
+    ),
     status: 'published',
     approvedBy: actor.userId,
   };
   p.currentVersion = 1;
   return p;
+}
+/** Objects behind a process's step images and, while it is a draft, its latest recording. */
+export function mediaObjects(s: Store, id?: string) {
+  const p = getProcess(s, id);
+  const frames = p.versions[0].steps.flatMap((step) =>
+    step.frameObjectPath ? [{ stepId: step.id, objectPath: step.frameObjectPath }] : [],
+  );
+  const recording =
+    p.currentVersion === 0
+      ? s.captures.findLast(
+          (c) =>
+            c.processId === p.id &&
+            c.status === 'transcribed' &&
+            c.media?.cleanPath &&
+            (!c.expiresAt || Date.parse(c.expiresAt) > Date.now()),
+        )
+      : undefined;
+  const video = recording?.media && {
+    captureId: recording.id,
+    objectPath: recording.media.cleanPath!,
+    contentType: recording.media.contentType,
+  };
+  return { frames, video };
 }
 export function processDto(process: ReturnType<typeof getProcess>) {
   return {
