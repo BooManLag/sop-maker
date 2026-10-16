@@ -118,6 +118,7 @@ export const schemas = {
   processCreate: z.object({ title: short, equipment: short }).strict(),
   processGet: empty,
   captureGet: empty,
+  processMedia: empty,
   uploadComplete: empty,
   captureCreate: z
     .object({
@@ -229,6 +230,7 @@ export const endpoints: Endpoint[] = [
     create: true,
   },
   { operation: 'processGet', method: 'GET', path: 'processes/:id', permission: 'read' },
+  { operation: 'processMedia', method: 'GET', path: 'processes/:id/media', permission: 'read' },
   {
     operation: 'captureCreate',
     method: 'POST',

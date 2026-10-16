@@ -1,5 +1,6 @@
 'use client';
 
+import type { ProcessStep } from '@/lib/domain/types';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +14,7 @@ import { QueryState } from '@/components/common/query-state';
 import { WithSideRail, sideRailClass } from '@/components/common/layouts';
 import { useProcess } from '@/lib/client/queries';
 import { StepView } from './step-view';
+import { useStepStills } from './step-still';
 
 export function LivingSop({ processId }: { processId: string }) {
   return (
@@ -32,7 +34,7 @@ export function LivingSop({ processId }: { processId: string }) {
               <WithSideRail>
                 <Card>
                   {latest?.steps.length ? (
-                    latest.steps.map((step) => <StepView key={step.id} step={step} />)
+                    <PublishedSteps processId={process.id} steps={latest.steps} />
                   ) : (
                     <EmptyState
                       title="This draft is waiting for a walkthrough."
@@ -76,4 +78,9 @@ export function LivingSop({ processId }: { processId: string }) {
       </QueryState>
     </>
   );
+}
+
+function PublishedSteps({ processId, steps }: { processId: string; steps: ProcessStep[] }) {
+  const stills = useStepStills(processId, steps);
+  return steps.map((step) => <StepView key={step.id} step={step} stillUrl={stills[step.id]} />);
 }
