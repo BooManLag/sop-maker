@@ -38,7 +38,14 @@ test('publishing needs no separate approval flag; the publisher is recorded', as
   })) as { id: string };
   const published = (await handleApi('POST', ['processes', process.id, 'publish'], {
     steps: [
-      { id: 'a', sequence: 1, action: 'Check', required: true, source: 'expert_walkthrough' },
+      {
+        id: 'a',
+        sequence: 1,
+        action: 'Check',
+        required: true,
+        source: 'expert_walkthrough',
+        imageWaived: true,
+      },
     ],
   })) as { currentVersion: number; versions: { approved: boolean }[] };
   assert.equal(published.currentVersion, 1);

@@ -31,7 +31,12 @@ export function removeStep(steps: ProcessStep[], id: string) {
   return renumber(steps.filter((s) => s.id !== id));
 }
 
-export function addStep(steps: ProcessStep[], id: string): ProcessStep[] {
+/**
+ * Appends a step. With a recording, it gets a picture moment halfway between the last step's
+ * moment and the end, so its still can be grabbed like the others and adjusted from there.
+ */
+export function addStep(steps: ProcessStep[], id: string, recordingMs?: number): ProcessStep[] {
+  const after = steps.at(-1)?.frameAtMs ?? 0;
   return [
     ...steps,
     {
@@ -40,9 +45,14 @@ export function addStep(steps: ProcessStep[], id: string): ProcessStep[] {
       action: 'New step',
       required: true,
       source: 'expert_walkthrough',
+      ...(recordingMs ? { frameAtMs: Math.round((after + recordingMs) / 2) } : {}),
     },
   ];
 }
+
+/** Steps that still need a picture: none stored, and the expert has not said none is needed. */
+export const stepsMissingPictures = (steps: ProcessStep[]) =>
+  steps.filter((s) => !s.frameObjectPath && !s.imageWaived);
 
 /** The step whose expert judgment the clarifying questions ask about. */
 export function clarificationTarget(steps: ProcessStep[]) {

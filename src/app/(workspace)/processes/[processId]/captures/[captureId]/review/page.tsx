@@ -11,7 +11,7 @@ export default async function ReviewPage(
     <>
       <BackLink href={draftPath(processId, captureId, 'clarify')} />
       <FlowSteps items={createFlow} current={2} />
-      <Review processId={processId} />
+      <Review processId={processId} captureId={captureId} />
     </>
   );
 }

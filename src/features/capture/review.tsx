@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useFieldArray, useForm, type Control } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -26,9 +27,10 @@ import { StepStill, useStepStills } from '@/features/processes/step-still';
 import { api } from '@/lib/client/browser';
 import type { ProcessDto } from '@/lib/client/api';
 import { useWorkspaceMutation } from '@/lib/client/queries';
-import { withReviewedText } from '@/lib/domain/steps';
+import { stepsMissingPictures, withReviewedText } from '@/lib/domain/steps';
 import { shortText } from '@/lib/domain/validation';
 import { WithDraft } from './draft-steps';
+import { draftPath } from './paths';
 
 const optionalDetail = z.string().trim().max(2000);
 const reviewSchema = z.object({
@@ -46,13 +48,19 @@ type ReviewInput = z.input<typeof reviewSchema>;
 type ReviewValues = z.output<typeof reviewSchema>;
 type DetailField = 'condition' | 'rationale' | 'warning' | 'evidence';
 
-export function Review({ processId }: { processId: string }) {
-  return <WithDraft processId={processId}>{(draft) => <ReviewForm draft={draft} />}</WithDraft>;
+export function Review({ processId, captureId }: { processId: string; captureId: string }) {
+  return (
+    <WithDraft processId={processId}>
+      {(draft) => <ReviewForm draft={draft} captureId={captureId} />}
+    </WithDraft>
+  );
 }
 
-function ReviewForm({ draft }: { draft: ProcessDto }) {
+function ReviewForm({ draft, captureId }: { draft: ProcessDto; captureId: string }) {
   const router = useRouter();
   const steps = draft.versions[0].steps;
+  // The server refuses the same steps; listing them here saves a failed publish.
+  const missing = stepsMissingPictures(steps);
   const stills = useStepStills(draft.id, steps);
   const form = useForm<ReviewInput, unknown, ReviewValues>({
     resolver: zodResolver(reviewSchema),
@@ -134,10 +142,33 @@ function ReviewForm({ draft }: { draft: ProcessDto }) {
               ))}
             </Card>
             <Card className={`${sideRailClass} md:sticky md:top-6`}>
-              <Badge tone="amber">Ready to publish</Badge>
-              <h3>Make it the baseline.</h3>
-              <p>Review the steps, safety requirements, and expert rationale before publishing.</p>
-              <Button type="submit" className="mt-5.5" disabled={publish.isPending}>
+              {missing.length ? (
+                <>
+                  <Badge tone="amber">Pictures needed</Badge>
+                  <h3>Every step needs a picture.</h3>
+                  <p>
+                    Step {missing.map((s) => s.sequence).join(', ')}{' '}
+                    {missing.length === 1 ? 'has' : 'have'} no picture. Add one, or mark the step as
+                    needing none.
+                  </p>
+                  <Button variant="secondary" asChild>
+                    <Link href={draftPath(draft.id, captureId, 'steps')}>Back to steps</Link>
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Badge tone="amber">Ready to publish</Badge>
+                  <h3>Make it the baseline.</h3>
+                  <p>
+                    Review the steps, safety requirements, and expert rationale before publishing.
+                  </p>
+                </>
+              )}
+              <Button
+                type="submit"
+                className="mt-5.5"
+                disabled={publish.isPending || missing.length > 0}
+              >
                 {publish.isPending ? 'Publishing…' : 'Publish baseline SOP'}
                 <Check size={16} aria-hidden />
               </Button>

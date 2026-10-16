@@ -87,7 +87,12 @@ test('publishing copies each step image out of expiring storage and points the s
   const { processId, steps } = await framed(h);
   const draftFrame = steps[0].frameObjectPath!;
   h.objects.set(draftFrame, new Uint8Array([0xff, 0xd8]));
-  const published = await publish(h, processId, steps);
+  // The second step has no image; marking it as needing none lets the draft publish.
+  const published = await publish(
+    h,
+    processId,
+    steps.map((step, i) => (i ? { ...step, imageWaived: true } : step)),
+  );
   const kept = `published/tenant_a/${processId}/v1/${steps[0].id}`;
   assert.deepEqual(h.copies, [{ from: draftFrame, to: kept }]);
   assert.equal(published.versions[0].steps[0].frameObjectPath, kept);

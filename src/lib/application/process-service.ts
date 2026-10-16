@@ -12,6 +12,7 @@ import type { Actor } from '../server/auth';
 import { requireCondition } from '../server/errors';
 import { transcriptionSchema, type schemas } from '../server/contracts';
 import type { z } from 'zod';
+import { stepsMissingPictures } from '../domain/steps';
 type Input<K extends keyof typeof schemas> = z.infer<(typeof schemas)[K]>;
 export function getProcess(s: Store, id?: string) {
   const process = s.processes.find((p) => p.id === id);
@@ -132,9 +133,10 @@ export function getFrameStep(s: Store, id: string, body: Input<'frameRequest'>) 
   const p = getProcess(s, id);
   requireDraft(p);
   const capture = s.captures.find((c) => c.id === body.captureId && c.processId === p.id);
-  requireCondition(capture?.media, 'Recording not found.', 404);
+  requireCondition(capture, 'Capture not found.', 404);
+  // A photo for a text walkthrough has no moment in a recording to point at.
   requireCondition(
-    body.atMs <= recordingLengthMs(capture),
+    capture.media ? body.atMs <= recordingLengthMs(capture) : body.atMs === 0,
     'The frame time is outside the recording.',
   );
   const step = p.versions[0].steps.find((step) => step.id === body.stepId);
@@ -227,11 +229,16 @@ export function publishProcess(
     body.steps.every((step) => step.source !== 'validated_field_practice'),
     'Baseline publication cannot claim controlled-trial validation.',
   );
+  const steps = withServerFrames(p.versions[0].steps, body.steps);
+  const missing = stepsMissingPictures(steps);
+  requireCondition(
+    !missing.length,
+    `Add a picture to step ${missing.map((s) => s.sequence).join(', ')}, or mark it as needing none.`,
+    409,
+  );
   p.versions[0] = {
     ...p.versions[0],
-    steps: withServerFrames(p.versions[0].steps, body.steps).map((step) =>
-      withKeptFrame(step, keptFrames),
-    ),
+    steps: steps.map((step) => withKeptFrame(step, keptFrames)),
     status: 'published',
     approvedBy: actor.userId,
   };
