@@ -60,16 +60,24 @@ export interface ExpertCapture {
     /** SHA-256 of the recording, so identical uploads reuse one transcription. */
     sha256?: string;
     contentType: MediaContentType;
-    declaredSeconds: number;
+    /** Length read from the file by the media worker; absent until inspection. */
+    seconds?: number;
   };
+  /** Who confirmed that everyone in the recording agreed to be recorded. */
+  consent?: { confirmedBy: string; confirmedAt: string };
   status?: 'awaiting_upload' | 'transcribed' | 'rejected' | 'failed';
+  /** Why a recording was rejected, in words safe to show the expert. */
+  rejection?: string;
   segments?: TranscriptSegment[];
   /** Steps as the model suggested them, kept apart from the expert's later edits. */
   suggestedSteps?: SuggestedStep[];
   createdAt?: string;
   expiresAt?: string;
 }
-export const mediaContentTypes = ['audio/webm', 'audio/mp4'] as const;
+export const mediaContentTypes = ['audio/webm', 'audio/mp4', 'video/webm', 'video/mp4'] as const;
+/** Largest recording upload, shared by the upload form and the signed URL's size range. */
+export const maxMediaBytes = 100_000_000;
+export const isVideo = (contentType: MediaContentType) => contentType.startsWith('video/');
 export type MediaContentType = (typeof mediaContentTypes)[number];
 export interface SuggestedStep {
   action: string;
