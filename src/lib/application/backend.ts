@@ -300,10 +300,7 @@ export class Backend {
     switch (operation) {
       case 'workspace':
         return {
-          processes: s.processes
-            .filter((p) => !p.archivedAt)
-            .slice(0, 50)
-            .map(processes.processDto),
+          processes: processes.activeProcesses(s).slice(0, 50).map(processes.processDto),
           findings: s.findings.slice(0, 50),
           trials: s.trials.slice(0, 50),
           changes: s.changes.slice(0, 50),
@@ -311,14 +308,14 @@ export class Backend {
           organization: actor.organizationId,
           role: actor.role,
           hasMore: {
-            processes: s.processes.filter((p) => !p.archivedAt).length > 50,
+            processes: processes.activeProcesses(s).length > 50,
             findings: s.findings.length > 50,
             trials: s.trials.length > 50,
             changes: s.changes.length > 50,
           },
         };
       case 'processList':
-        return page(s.processes.filter((p) => !p.archivedAt).map(processes.processDto), q);
+        return page(processes.activeProcesses(s).map(processes.processDto), q);
       case 'findingList':
         return page(s.findings, q);
       case 'trialList':

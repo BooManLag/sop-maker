@@ -19,6 +19,8 @@ export type ProcessDto = {
   versions: (Omit<ProcessVersion, 'approvedBy'> & { approved: boolean })[];
   archivedAt?: string;
 };
+/** A draft is deleted outright; a published or referenced process is archived. */
+export type ProcessDeletion = { id: string; outcome: 'deleted' | 'archived' };
 export type Workspace = {
   processes: ProcessDto[];
   findings: Finding[];
@@ -124,6 +126,8 @@ export function createApiClient({
   }
   const get = <T>(path: string) => request<T>(path, 'GET');
   const post = <T>(path: string, body: unknown = {}) => request<T>(path, 'POST', body);
+  const patch = <T>(path: string, body: unknown) => request<T>(path, 'PATCH', body);
+  const del = <T>(path: string) => request<T>(path, 'DELETE');
 
   return {
     workspace: () => get<Workspace>('workspace'),
@@ -132,9 +136,8 @@ export function createApiClient({
     createProcess: (body: { title: string; equipment: string }) =>
       post<ProcessDto>('processes', body),
     updateProcess: (id: string, body: { title?: string; equipment?: string }) =>
-      request<ProcessDto>(`processes/${id}`, 'PATCH', body),
-    deleteProcess: (id: string) =>
-      request<{ id: string; deleted: boolean; archived: boolean }>(`processes/${id}`, 'DELETE'),
+      patch<ProcessDto>(`processes/${id}`, body),
+    deleteProcess: (id: string) => del<ProcessDeletion>(`processes/${id}`),
     createCapture: (
       processId: string,
       body: { kind: 'text'; expertReference: string; text: string },
