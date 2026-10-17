@@ -56,6 +56,17 @@
 }
 
 @theme inline {
+  /* A bar segment that sweeps across its track, for work whose length is unknown. */
+  --animate-indeterminate: indeterminate 1.6s ease-in-out infinite;
+  @keyframes indeterminate {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(250%);
+    }
+  }
+
   --font-sans: Arial, Helvetica, sans-serif;
   --font-serif: Georgia, serif;
 
