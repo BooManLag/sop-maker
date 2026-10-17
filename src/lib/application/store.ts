@@ -45,6 +45,7 @@ export interface Store {
   results: TrialResult[];
   changes: ChangeRequest[];
   responses: TechnicianResponse[];
+  /** Events not yet in the audit log; each commit moves them out of the bounded state. */
   auditEvents: AuditEvent[];
   idempotency: IdempotencyRecord[];
   quotas: Quota[];
@@ -71,6 +72,19 @@ const collectionLabels: Record<(typeof collectionNames)[number], string> = {
   changes: 'change requests',
   responses: 'technician responses',
 };
+/** The audit log keeps each event this long; Firestore's TTL policy deletes it after. */
+export const AUDIT_RETENTION_MS = 90 * 86400_000;
+/** Bounds one Firestore commit's audit writes; a larger backlog moves out over the next commits. */
+export const AUDIT_EVENTS_PER_COMMIT = 400;
+/** Removes the events this commit writes to the audit log, oldest first. */
+export function takeAuditEvents(s: Store, limit = AUDIT_EVENTS_PER_COMMIT) {
+  return s.auditEvents.splice(0, limit);
+}
+export interface AuditPage {
+  items: AuditEvent[];
+  nextCursor: string | null;
+  total: number;
+}
 const kilobytes = (bytes: number) => Math.ceil(bytes / 1000);
 export function initialStore(
   organizationId = 'demo-org',
@@ -218,9 +232,6 @@ export function validateStore(s: Store, organizationId: string) {
 export function pruneExpired(s: Store, now = Date.now()) {
   s.idempotency = s.idempotency.filter((x) => x.expiresAt > now);
   s.quotas = s.quotas.filter((x) => x.expiresAt > now);
-  const retained = s.auditEvents.filter((x) => Date.parse(x.timestamp) > now - 90 * 86400_000);
-  // Bounded foundation history: never silently discard unexpired audit evidence.
-  s.auditEvents = retained;
   return s;
 }
 const activeQuota = (s: Store, key: string, now: number) =>

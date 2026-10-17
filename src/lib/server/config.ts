@@ -175,7 +175,6 @@ export const LIMITS = Object.freeze({
   responseBytes: 800_000,
   stateBytes: 750_000,
   recordsPerTenant: 500,
-  auditRecords: 1000,
   idempotencyRecords: 1000,
   requestsPerMinute: 120,
   mutationsPerMinute: 40,

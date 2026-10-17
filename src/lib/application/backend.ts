@@ -88,6 +88,7 @@ export class Backend {
     const input = parseInput(endpoint.operation, raw);
     const repository = this.repositories.forTenant(context.actor.organizationId);
     if (endpoint.operation === 'processMedia') return this.mediaLinks(repository, id!);
+    if (endpoint.operation === 'auditList') return repository.listAudit(query);
     if (endpoint.method === 'GET')
       return repository.query((s) => this.read(s, endpoint.operation, id, query, context.actor));
     if (this.config.mode === 'production' && !context.idempotencyKey)
@@ -193,11 +194,6 @@ export class Backend {
       if (cached) return cached.response;
       consumeQuota(s, `write:${context.actor.userId}`, LIMITS.mutationsPerMinute, 60_000);
       consumeQuota(s, 'write:tenant', LIMITS.mutationsPerMinute * 5, 60_000);
-      requireCondition(
-        s.auditEvents.length < LIMITS.auditRecords,
-        'Audit capacity reached. Export audit events and complete retention before accepting more changes.',
-        503,
-      );
       if (key)
         requireCondition(
           s.idempotency.length < LIMITS.idempotencyRecords,
@@ -338,8 +334,6 @@ export class Backend {
         return page(s.trials, q);
       case 'changeList':
         return page(s.changes, q);
-      case 'auditList':
-        return page(s.auditEvents, q);
       case 'processGet':
         return processes.processDto(processes.getProcess(s, id));
       case 'captureGet':

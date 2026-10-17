@@ -3,7 +3,16 @@ import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import lockfile from 'proper-lockfile';
 import type { Repository, RepositoryProvider } from '../application/ports';
-import { type Store, initialStore, migrateStore, validateStore } from '../application/store';
+import {
+  AUDIT_RETENTION_MS,
+  type AuditEvent,
+  type Store,
+  initialStore,
+  migrateStore,
+  takeAuditEvents,
+  validateStore,
+} from '../application/store';
+import type { ListQuery } from '../server/contracts';
 import { ApiError, requireCondition } from '../server/errors';
 import { LIMITS } from '../server/config';
 export class JsonRepository implements Repository {
@@ -16,6 +25,26 @@ export class JsonRepository implements Repository {
   ) {}
   private get file() {
     return path.join(this.directory, 'store.json');
+  }
+  /** One JSON event per line, appended before the state that drops them is written. */
+  get auditFile() {
+    return path.join(this.directory, 'audit.jsonl');
+  }
+  /** Events within retention, oldest first; a repeated line from an interrupted commit counts once. */
+  async auditEvents(now = Date.now()): Promise<AuditEvent[]> {
+    let text = '';
+    try {
+      text = await readFile(this.auditFile, 'utf8');
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e;
+    }
+    const events = new Map<string, AuditEvent>();
+    for (const line of text.split('\n')) {
+      if (!line) continue;
+      const event = JSON.parse(line) as AuditEvent;
+      if (Date.parse(event.timestamp) > now - AUDIT_RETENTION_MS) events.set(event.id, event);
+    }
+    return [...events.values()].sort((a, b) => a.timestamp.localeCompare(b.timestamp));
   }
   async read(): Promise<Store> {
     try {
@@ -69,7 +98,17 @@ export class JsonRepository implements Repository {
           500,
         );
         store.revision++;
+        const events = takeAuditEvents(store, Infinity);
         validateStore(store, this.organizationId);
+        if (events.length) {
+          const log = await open(this.auditFile, 'a', 0o600);
+          try {
+            await log.writeFile(events.map((e) => JSON.stringify(e) + '\n').join(''));
+            await log.sync();
+          } finally {
+            await log.close();
+          }
+        }
         const handle = await open(temporary, 'wx', 0o600);
         try {
           await handle.writeFile(JSON.stringify(store));
@@ -92,6 +131,19 @@ export class JsonRepository implements Repository {
         await unlink(temporary).catch(() => {});
         await release();
       }
+    });
+  }
+  listAudit(query: ListQuery) {
+    return this.enqueue(async () => {
+      const events = await this.auditEvents();
+      if (query.sort === 'desc') events.reverse();
+      const offset = Number(query.cursor);
+      const end = offset + query.limit;
+      return {
+        items: events.slice(offset, end),
+        nextCursor: end < events.length ? String(end) : null,
+        total: events.length,
+      };
     });
   }
   async health() {
