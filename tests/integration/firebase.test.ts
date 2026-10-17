@@ -143,3 +143,25 @@ after(async () => {
   await database.terminate();
   await Promise.all(getApps().map((app) => deleteApp(app)));
 });
+test('Firestore audit log moves embedded events out and hides events TTL has not yet deleted', async () => {
+  const org = `audit_${randomUUID().replaceAll('-', '')}`;
+  const repository = new FirestoreRepositoryProvider(database).forTenant(org);
+  const event = (id: string, daysAgo: number) => ({
+    id,
+    actorId: 'test',
+    action: id,
+    requestId: id,
+    timestamp: new Date(Date.now() - daysAgo * 86400_000).toISOString(),
+    result: 'success' as const,
+  });
+  await repository.transact((s) => {
+    s.auditEvents.push(event('expired', 91), event('recent', 1));
+  });
+  assert.equal((await repository.read()).auditEvents.length, 0);
+  const audit = await repository.listAudit({ limit: 50, cursor: '0', sort: 'asc' });
+  assert.deepEqual(
+    audit.items.map((e) => e.action),
+    ['recent'],
+  );
+  assert.equal(audit.total, 1);
+});
