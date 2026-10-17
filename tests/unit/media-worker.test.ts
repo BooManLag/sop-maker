@@ -233,6 +233,28 @@ test('a worker that crashes after leaving quarantine finishes on redelivery', as
   const capture = (await execute(h.backend, 'GET', `captures/${captureId}`)) as { status: string };
   assert.equal(capture.status, 'transcribed');
 });
+test('a duplicate delivery while an attempt is transcribing is retried, never transcribed twice', async () => {
+  const h = await mediaHarness();
+  const { captureId, objectPath } = await uploaded(h);
+  const first = h.worker.process({ objectPath }, false);
+  await assert.rejects(h.worker.process({ objectPath }, false), /Another attempt/);
+  await first;
+  await h.worker.process({ objectPath }, false);
+  assert.equal(h.transcribed.length, 1);
+  const capture = (await execute(h.backend, 'GET', `captures/${captureId}`)) as { status: string };
+  assert.equal(capture.status, 'transcribed');
+});
+test('the final attempt takes over a claim left by an instance that died', async () => {
+  const h = await mediaHarness();
+  const { captureId, objectPath } = await uploaded(h);
+  await h.repositories.forTenant(objectPath.split('/')[1]).transact((s) => {
+    const media = s.captures.find((c) => c.id === captureId)!.media!;
+    media.transcribingUntil = new Date(Date.now() + 600_000).toISOString();
+  });
+  await assert.rejects(h.worker.process({ objectPath }, false), /Another attempt/);
+  await h.worker.process({ objectPath }, true);
+  assert.equal(h.transcribed.length, 1);
+});
 test('a recording never overwrites steps already in the draft; they stay as suggestions', async () => {
   const h = await mediaHarness();
   const { processId, steps } = await transcribed(h);
