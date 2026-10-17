@@ -63,7 +63,7 @@ run "budget_dry_run" {
     error_message = "Budget monitoring must not have billing shutoff authority by default."
   }
   assert {
-    condition     = google_pubsub_topic_iam_member.budget_publisher[0].member == "serviceAccount:billing-budget-notifications@system.gserviceaccount.com"
+    condition     = google_pubsub_topic_iam_member.budget_publisher[0].member == "serviceAccount:billing-budget-alert@system.gserviceaccount.com"
     error_message = "Budget updates need the official publisher identity."
   }
 }
