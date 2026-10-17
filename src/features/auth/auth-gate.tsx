@@ -73,7 +73,7 @@ function SignIn({ auth }: { auth: AuthService }) {
   return (
     <main className="mx-auto flex min-h-screen max-w-md items-center px-4">
       <Card className="w-full space-y-4">
-        <h1 className="text-xl font-semibold">Sign in to Good Exception</h1>
+        <h1 className="text-xl font-semibold">Sign in to Sopify</h1>
         <p className="text-sm text-muted-foreground">Use your work Google account.</p>
         {error && (
           <p role="alert" className="text-sm text-destructive">
