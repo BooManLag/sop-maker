@@ -1,5 +1,5 @@
 /**
- * Generates deterministic manufacturing dummy data under test-data/manufacturing/.
+ * Generates deterministic dummy data under test-data/manufacturing/ and test-data/processes/.
  * Run with `npm run testdata:generate`; the output is committed, so reruns only show a diff
  * when this file changes.
  *
@@ -12,7 +12,8 @@ import * as XLSX from 'xlsx';
 import { evaluatePractice } from '../src/lib/application/analysis/stats';
 import { EvidenceEngine, normalizeRecords } from '../src/lib/application/evidence-engine';
 
-const outDir = join(import.meta.dirname, '..', 'test-data', 'manufacturing');
+const dataDir = join(import.meta.dirname, '..', 'test-data');
+const outDir = join(dataDir, 'manufacturing');
 
 function rng(seed: number) {
   return () => (seed = (seed * 1664525 + 1013904223) % 2 ** 32) / 2 ** 32;
@@ -33,6 +34,8 @@ const columns = [
 ] as const;
 
 interface Scenario {
+  /** Folder under test-data/; defaults to manufacturing. */
+  dir?: string;
   file: string;
   seed: number;
   prefix: string;
@@ -215,6 +218,178 @@ const scenarios: Scenario[] = [
   },
 ];
 
+const tags = (prefix: string, count: number) =>
+  Array.from({ length: count }, (_, i) => `${prefix}-${String(i + 1).padStart(3, '0')}`);
+
+/** One dataset per process in the shared prototype workspace, scanned against its published SOP. */
+const processScenarios: Scenario[] = [
+  {
+    dir: 'processes',
+    file: 'soldering-202.csv',
+    seed: 221,
+    prefix: 'SLD',
+    jobs: 240,
+    technicians: tags('bt', 7),
+    models: [
+      { name: 'Hakko FX-888D', assets: tags('BENCH-A', 3), partsUsed: 'SAC305 solder 0.8mm' },
+      { name: 'Weller WE1010', assets: tags('BENCH-B', 2), partsUsed: 'Sn63Pb37 solder 0.6mm' },
+    ],
+    jobType: 'through-hole joint rework',
+    checklist: ['esd_strap', 'tip_tinned', 'joint_inspected'],
+    practice: [
+      'Cleaned the pads with isopropyl alcohol and added fresh flux before reflowing each joint',
+      'IPA wipe and fresh flux on every pad first, joints came out shiny and concave',
+      'Wiped pads with IPA and re-fluxed before soldering, then checked joints under the magnifier',
+    ],
+    harmful: [
+      'Skipped the magnifier inspection, batch was due',
+      'Reflowed old joints without cleaning off the burnt flux',
+    ],
+    standard: [
+      'Joints reworked per checklist',
+      'Soldered and visually checked',
+      'Standard rework, no issues',
+    ],
+    noise: [
+      'Fume extractor filter was clogged',
+      'Waited for the iron to come up to temperature',
+      'Board arrived with conformal coating already removed',
+    ],
+    rates: { base: 0.12, practice: 0.025, harmful: 0.28 },
+    adopters: 0.7,
+    start: '2026-03-02',
+    end: '2026-09-04',
+  },
+  {
+    dir: 'processes',
+    file: 'iphone-11-screen-repair.csv',
+    seed: 402,
+    prefix: 'IPH',
+    jobs: 220,
+    technicians: tags('rt', 6),
+    models: [
+      {
+        name: 'iPhone 11 (A2111)',
+        assets: tags('DEV', 40),
+        partsUsed: 'aftermarket LCD assembly, adhesive gasket',
+      },
+      {
+        name: 'iPhone 11 (A2221)',
+        assets: tags('DEV', 40),
+        partsUsed: 'refurbished OEM LCD, adhesive gasket',
+      },
+    ],
+    jobType: 'screen replacement',
+    checklist: ['battery_disconnected', 'true_tone_checked', 'touch_tested'],
+    practice: [
+      'Tested touch across the whole panel and checked Face ID before sealing the phone',
+      'Ran a full-screen touch grid test and Face ID check with the display loose, then sealed it',
+      'Checked touch, Face ID and the earpiece with the screen unsealed before pressing the new gasket',
+    ],
+    harmful: [
+      'Sealed the phone before testing, customer was waiting',
+      'Reused the old adhesive strips instead of a new gasket',
+    ],
+    standard: [
+      'Screen replaced, phone powers on',
+      'Display assembly swapped per guide',
+      'Routine screen swap',
+    ],
+    noise: [
+      'Back glass was cracked as well',
+      'Phone arrived with a flat battery',
+      'Waited for the parts delivery',
+    ],
+    rates: { base: 0.14, practice: 0.055, harmful: 0.3 },
+    adopters: 0.6,
+    start: '2026-03-09',
+    end: '2026-09-04',
+  },
+  {
+    dir: 'processes',
+    file: 'shed-building.csv',
+    seed: 307,
+    prefix: 'SHD',
+    jobs: 200,
+    technicians: tags('cr', 6),
+    models: [
+      {
+        name: '8x10 gable shed kit',
+        assets: tags('SITE', 60),
+        partsUsed: 'treated 2x4 framing, OSB sheathing',
+      },
+      {
+        name: '10x12 lean-to shed kit',
+        assets: tags('SITE', 60),
+        partsUsed: 'treated 2x6 framing, metal roof panels',
+      },
+    ],
+    jobType: 'shed assembly',
+    checklist: ['site_cleared', 'foundation_level', 'door_adjusted'],
+    practice: [
+      'Checked the base with a laser level and squared the floor frame by matching the diagonals before sheathing',
+      'Measured both diagonals and shimmed the skids level before raising the walls',
+      'Squared the floor frame by its diagonals and re-levelled the blocks before sheathing',
+    ],
+    harmful: [
+      'Built on the old slab without checking level, customer in a hurry',
+      'Skipped shimming the skids to finish before the rain',
+    ],
+    standard: [
+      'Shed assembled per kit instructions',
+      'Walls raised and roof installed per plan',
+      'Standard build, doors hung',
+    ],
+    noise: [
+      'Rain delay in the afternoon',
+      'Delivery truck arrived late',
+      'Customer moved the door position',
+    ],
+    rates: { base: 0.15, practice: 0.025, harmful: 0.35 },
+    adopters: 0.7,
+    start: '2026-03-02',
+    end: '2026-09-04',
+  },
+  {
+    dir: 'processes',
+    file: 'reset-bios.csv',
+    seed: 504,
+    prefix: 'BIO',
+    jobs: 240,
+    technicians: tags('it', 7),
+    models: [
+      { name: 'Dell OptiPlex 7090', assets: tags('PC-D', 30), partsUsed: 'none' },
+      { name: 'Lenovo ThinkCentre M70q', assets: tags('PC-L', 30), partsUsed: 'none' },
+      { name: 'HP EliteDesk 800 G6', assets: tags('PC-H', 30), partsUsed: 'CR2032 CMOS battery' },
+    ],
+    jobType: 'BIOS reset to defaults',
+    checklist: ['data_backed_up', 'boot_tested'],
+    practice: [
+      'Suspended BitLocker and photographed the boot settings before the reset, then restored UEFI and Secure Boot',
+      'Took photos of the BIOS settings first and re-applied boot mode and Secure Boot after resetting',
+      'Suspended BitLocker before clearing CMOS and set Secure Boot back afterwards',
+    ],
+    harmful: [
+      'Pulled the CMOS battery without suspending BitLocker',
+      'Loaded defaults without checking the boot mode, user waiting',
+    ],
+    standard: [
+      'BIOS reset to factory defaults per guide',
+      'Cleared CMOS and confirmed POST',
+      'Loaded optimized defaults and rebooted',
+    ],
+    noise: [
+      'User was away from the desk, rescheduled',
+      'Docking station firmware was also outdated',
+      'Swapped the keyboard while on site',
+    ],
+    rates: { base: 0.13, practice: 0.035, harmful: 0.3 },
+    adopters: 0.65,
+    start: '2026-03-02',
+    end: '2026-09-04',
+  },
+];
+
 function buildRows(s: Scenario): Row[] {
   const rand = rng(s.seed);
   const pick = <T>(items: T[]) => items[Math.floor(rand() * items.length)];
@@ -273,14 +448,15 @@ const toCsv = (rows: Row[], header: readonly string[] = columns) =>
   ].join('\n') + '\n';
 
 mkdirSync(join(outDir, 'walkthroughs'), { recursive: true });
+mkdirSync(join(dataDir, 'processes'), { recursive: true });
 const engine = new EvidenceEngine();
 const summary: string[] = [];
 const built = new Map<string, Row[]>();
 
-for (const scenario of scenarios) {
+for (const scenario of [...scenarios, ...processScenarios]) {
   const rows = buildRows(scenario);
   built.set(scenario.file, rows);
-  writeFileSync(join(outDir, scenario.file), toCsv(rows));
+  writeFileSync(join(dataDir, scenario.dir ?? 'manufacturing', scenario.file), toCsv(rows));
   const records = normalizeRecords(rows as unknown as Record<string, unknown>[]);
   const { eligible } = engine.readiness(records);
   const practiceIds = new Set(

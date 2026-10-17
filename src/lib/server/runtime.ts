@@ -10,6 +10,11 @@ import { createHttpHandler } from './http';
 import { AdmissionControl } from './limits';
 import { AnalysisWorker, InlineAnalysisQueue } from '../application/analysis/worker';
 import { adkDriver, vertexEmbedder } from './scan-agent';
+import {
+  OFFLINE_ANALYSIS,
+  OfflineEmbedder,
+  offlineDriver,
+} from '../infrastructure/offline-analysis';
 import { CloudTasksQueue, cloudTasksVerifier, mediaWorkerUrl } from './cloud-tasks';
 import { GcsMedia } from '../infrastructure/gcs-media';
 import { GeminiTranscriber } from './gemini-transcriber';
@@ -47,13 +52,22 @@ function compose() {
     config.mode === 'production' && config.gemini && config.projectId
       ? { projectId: config.projectId, ...config.gemini }
       : undefined;
+  // The loopback demo analyzes imported records offline, with labelled word-based grouping.
   const worker = vertex
     ? new AnalysisWorker(
         repositories,
         vertexEmbedder({ ...vertex, model: vertex.agentModel }),
         adkDriver({ ...vertex, model: vertex.agentModel }),
       )
-    : undefined;
+    : config.mode === 'demo'
+      ? new AnalysisWorker(
+          repositories,
+          new OfflineEmbedder(),
+          offlineDriver,
+          undefined,
+          OFFLINE_ANALYSIS,
+        )
+      : undefined;
   const queue = worker
     ? config.tasks
       ? new CloudTasksQueue(config.tasks)
