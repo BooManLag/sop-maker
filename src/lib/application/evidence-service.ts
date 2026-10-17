@@ -71,6 +71,7 @@ export function scanDto(scan: ReturnType<typeof getScan>) {
     demo: scan.demo,
     status: scan.status,
     recordCount: scan.recordCount ?? scan.records.length,
+    recordsCleared: scan.recordCount !== undefined,
     createdAt: scan.createdAt,
   };
 }
@@ -92,7 +93,8 @@ export function checkReadiness(s: Store, id: string) {
     'Imported records expired. Import a fresh dataset.',
     409,
   );
-  if (scan.status === 'complete' || scan.status === 'analyzing') return scan.readiness;
+  if (scan.status === 'complete' || scan.status === 'analyzing' || scan.recordCount !== undefined)
+    return scan.readiness;
   scan.readiness = scan.demo
     ? {
         eligible: true,
@@ -124,6 +126,11 @@ export function runScan(s: Store, id: string, liveAnalysis: boolean) {
   const scan = getScan(s, id);
   if (scan.status === 'analyzing' || (scan.status === 'complete' && !scan.demo))
     return { id: scan.id, demo: false, status: scan.status, started: false };
+  requireCondition(
+    scan.recordCount === undefined,
+    "This scan's records were cleared after it stopped. Import the file again to run a new scan.",
+    409,
+  );
   requireCondition(scan.readiness?.eligible, 'Not enough evidence to run a reliable scan.', 422);
   requireCondition(
     !scan.expiresAt || Date.parse(scan.expiresAt) > Date.now(),
@@ -137,6 +144,7 @@ export function runScan(s: Store, id: string, liveAnalysis: boolean) {
         'Live evidence analysis is not connected. Your data has not been replaced with sample findings.',
       );
     scan.status = 'analyzing';
+    scan.analysisStartedAt = new Date().toISOString();
     return { id: scan.id, demo: false, status: scan.status, started: true };
   }
   scan.status = 'complete';
@@ -225,12 +233,29 @@ function exampleRecords(scan: Scan, finding: Finding) {
   }
   return records;
 }
+/** Longer than every Cloud Tasks attempt and backoff combined; past this the worker is gone. */
+export const STUCK_ANALYSIS_MS = 3600_000;
+/** How long a failed scan keeps its rows so it can be run again. */
+export const FAILED_RETRY_MS = 86400_000;
+const since = (...times: (string | undefined)[]) => Date.parse(times.find(Boolean) ?? '');
 /**
  * A finished scan is never analyzed again, so it keeps only the rows its findings show as
- * examples. Imported rows otherwise fill the tenant's bounded state within a few scans.
+ * examples; a failed one keeps its rows for a day of retries, then none. Imported rows otherwise
+ * fill the tenant's bounded state within a few scans.
  */
-export function compactScan(s: Store, scan: Scan) {
-  if (scan.status !== 'complete' || scan.demo || scan.recordCount !== undefined) return;
+export function compactScan(s: Store, scan: Scan, now = Date.now()) {
+  if (scan.demo || scan.recordCount !== undefined) return;
+  if (
+    scan.status === 'analyzing' &&
+    since(scan.analysisStartedAt, scan.createdAt) < now - STUCK_ANALYSIS_MS
+  ) {
+    scan.status = 'failed';
+    scan.failedAt = new Date(now).toISOString();
+  }
+  const retryable =
+    scan.status === 'failed' &&
+    !(since(scan.failedAt, scan.analysisStartedAt, scan.createdAt) < now - FAILED_RETRY_MS);
+  if ((scan.status !== 'complete' && scan.status !== 'failed') || retryable) return;
   const keep = new Set(
     s.findings
       .filter((f) => scan.findingIds.includes(f.id))
@@ -239,9 +264,9 @@ export function compactScan(s: Store, scan: Scan) {
   scan.recordCount = scan.records.length;
   scan.records = scan.records.filter((r) => keep.has(r.id));
 }
-/** Compacts scans that finished before compaction existed; a no-op once each is compacted. */
-export function compactScans(s: Store) {
-  for (const scan of s.scans) compactScan(s, scan);
+/** Compacts every finished, failed or stuck scan; a no-op once each is compacted. */
+export function compactScans(s: Store, now = Date.now()) {
+  for (const scan of s.scans) compactScan(s, scan, now);
 }
 /** A finding with up to four distinct job notes behind it, while its scan's records are kept. */
 export function findingDetailDto(s: Store, id?: string) {
@@ -251,7 +276,9 @@ export function findingDetailDto(s: Store, id?: string) {
 }
 export function failAnalysis(s: Store, id: string) {
   const scan = s.scans.find((x) => x.id === id);
-  if (scan?.status === 'analyzing') scan.status = 'failed';
+  if (scan?.status !== 'analyzing') return;
+  scan.status = 'failed';
+  scan.failedAt = new Date().toISOString();
 }
 const percent = (rate: number) => Math.round(rate * 1000) / 10;
 export function dismissFinding(s: Store, id: string) {
