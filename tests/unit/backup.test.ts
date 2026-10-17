@@ -22,3 +22,25 @@ test('backup restores a separate store and rejects corrupt backups without overw
   await assert.rejects(restoreDemo(file, target), /checksum/);
   assert.equal((await new JsonRepository(target).read()).processes[0].title, 'Recovery fixture');
 });
+test('backup carries the audit log, which lives outside the store', async () => {
+  const base = await mkdtemp(path.join(tmpdir(), 'ge-restore-'));
+  const source = path.join(base, 'source'),
+    target = path.join(base, 'restored');
+  await new JsonRepository(source).transact((s) => {
+    s.auditEvents.push({
+      id: 'event-1',
+      actorId: 'test',
+      action: 'backup-fixture',
+      requestId: 'request-1',
+      timestamp: new Date().toISOString(),
+      result: 'success',
+    });
+  });
+  const file = await backupDemo(source, path.join(base, 'backups'));
+  await restoreDemo(file, target);
+  const audit = await new JsonRepository(target).listAudit({ limit: 50, cursor: '0', sort: 'asc' });
+  assert.deepEqual(
+    audit.items.map((e) => e.action),
+    ['backup-fixture'],
+  );
+});
