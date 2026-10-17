@@ -115,6 +115,7 @@ function memoryRepositories(store: Store): RepositoryProvider {
       read: async () => store,
       query: async (fn) => fn(store),
       transact: async (fn) => fn(store),
+      listAudit: async () => ({ items: [], nextCursor: null, total: 0 }),
       health: async () => undefined,
     }),
   };

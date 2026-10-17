@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, stat } from 'node:fs/promises';
+import { mkdtemp, readFile, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -15,7 +15,11 @@ import { normalizeRecords } from '../../src/lib/application/evidence-engine';
 import { readConfig, type ServerConfig } from '../../src/lib/server/config';
 import { demoActor, type Actor } from '../../src/lib/server/auth';
 import { resolveEndpoint } from '../../src/lib/server/contracts';
-import { initialStore } from '../../src/lib/application/store';
+import {
+  AUDIT_EVENTS_PER_COMMIT,
+  initialStore,
+  takeAuditEvents,
+} from '../../src/lib/application/store';
 import { demoFindings, demoProcess } from '../../src/lib/domain/demo-data';
 import type { AnalysisQueue } from '../../src/lib/application/analysis/worker';
 const actor = (organizationId = 'tenant_a', role: Actor['role'] = 'admin'): Actor => ({
@@ -183,7 +187,15 @@ test('concurrent replay commits once and conflicting key payloads are rejected',
   assert.equal(new Set(calls.map((x) => asId(x).id)).size, 1);
   const store = await repositories.forTenant('tenant_a').read();
   assert.equal(store.processes.length, 1);
-  assert.equal(store.auditEvents.length, 1);
+  assert.equal(store.auditEvents.length, 0);
+  assert.equal(
+    (
+      await repositories
+        .forTenant('tenant_a')
+        .listAudit({ limit: 50, cursor: '0', sort: 'desc' as const })
+    ).total,
+    1,
+  );
   await assert.rejects(
     execute(backend, 'POST', 'processes', { title: 'Changed', equipment: 'X' }, actor(), key),
     /different request/,
@@ -209,7 +221,8 @@ test('local repository persists across instances and rolls back failures without
     ),
   );
   const before = await readFile(path.join(directory, 'store.json'), 'utf8');
-  assert.equal((await b.read()).auditEvents.length, 8);
+  assert.equal((await b.read()).auditEvents.length, 0);
+  assert.equal((await b.listAudit({ limit: 50, cursor: '0', sort: 'desc' as const })).total, 8);
   await assert.rejects(
     a.transact((s) => {
       s.auditEvents = [];
@@ -301,7 +314,10 @@ test('retention purges expired captured text and imported rows and records an au
   await execute(backend, 'POST', 'maintenance/retention');
   const s = await repositories.forTenant('tenant_a').read();
   assert.equal(s.captures[0].text, undefined);
-  assert.equal(s.auditEvents.at(-1)?.action, 'retention');
+  const audit = await repositories
+    .forTenant('tenant_a')
+    .listAudit({ limit: 50, cursor: '0', sort: 'desc' as const });
+  assert.equal(audit.items[0].action, 'retention');
 });
 test('production mode fails closed for missing config, emulator on Cloud Run and cloud demo', () => {
   assert.throws(() => readConfig({ GOOD_EXCEPTION_MODE: 'production' }), /Production requires/);
@@ -539,4 +555,41 @@ test("a reviewer records the technicians' explanation on a finding, replacing th
   );
   const updated = (await execute(backend, 'GET', `findings/${finding.id}`)) as { status: string };
   assert.equal(updated.status, 'investigate');
+});
+test('audit events embedded before the audit log move out on the next commit', async () => {
+  const directory = await mkdtemp(path.join(tmpdir(), 'ge-audit-'));
+  const repo = new JsonRepository(directory, 'tenant_a', false);
+  const event = (i: number) => ({
+    id: `event-${i}`,
+    actorId: 'test',
+    action: 'legacy',
+    requestId: `request-${i}`,
+    timestamp: new Date(Date.now() - (1100 - i) * 1000).toISOString(),
+    result: 'success' as const,
+  });
+  // A workspace at the old 1,000-event cap no longer blocks writes.
+  await writeFile(
+    path.join(directory, 'store.json'),
+    JSON.stringify({
+      ...initialStore('tenant_a', false),
+      auditEvents: Array.from({ length: 1000 }, (_, i) => event(i)),
+    }),
+  );
+  await repo.transact((s) => {
+    s.auditEvents.push(event(1000));
+  });
+  assert.equal((await repo.read()).auditEvents.length, 0);
+  const page = await repo.listAudit({ limit: 2, cursor: '0', sort: 'desc' });
+  assert.equal(page.total, 1001);
+  assert.deepEqual(
+    page.items.map((e) => e.id),
+    ['event-1000', 'event-999'],
+  );
+  assert.equal(page.nextCursor, '2');
+});
+test('a Firestore commit moves at most a bounded batch of pending audit events', () => {
+  const s = initialStore('tenant_a', false);
+  s.auditEvents = Array.from({ length: 1000 }, (_, i) => ({ id: String(i) }) as never);
+  assert.equal(takeAuditEvents(s).length, AUDIT_EVENTS_PER_COMMIT);
+  assert.equal(s.auditEvents[0].id, String(AUDIT_EVENTS_PER_COMMIT));
 });

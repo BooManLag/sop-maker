@@ -213,12 +213,12 @@ Technician references in imported records are pseudonymized with an HMAC key fro
 
 ### Persistence
 
-Each tenant's state is one versioned aggregate (`Store` in `application/store.ts`), holding every collection above plus audit events, idempotency records and quotas.
+Each tenant's state is one versioned aggregate (`Store` in `application/store.ts`), holding every collection above plus idempotency records and quotas. Audit events live outside it, in `organizations/{id}/auditEvents`, written in the same transaction as the change they record.
 
 - **Firestore** (production): a single document at `organizations/{organizationId}/backend/state`, read with one point lookup and updated in a transaction that retries conflicts. Firestore rules deny all direct browser access; only the server's Admin SDK reaches it.
 - **JSON file** (demo and tests): the same aggregate in `.demo-data/store.json`, protected by a cross-process lease lock, revision numbers, fsync and atomic rename.
 
-The aggregate is deliberately bounded: 750 KB serialized, 500 entries per collection, 1,000 audit and idempotency records. Writes past a limit fail explicitly instead of discarding data. Retention: raw capture content and imported rows expire after 30 days, idempotency keys after 24 hours, audit events after 90 days; `POST maintenance/retention` purges them. Approved SOPs are kept. Growing past these limits means migrating to per-entity documents, as recorded in [ADR 001](docs/adr/001-backend-boundaries.md).
+The aggregate is deliberately bounded: 750 KB serialized, 500 entries per collection, 1,000 idempotency records. Writes past a limit fail explicitly instead of discarding data. Retention: raw capture content and imported rows expire after 30 days, idempotency keys after 24 hours, audit events after 90 days (a Firestore TTL policy deletes them); `POST maintenance/retention` purges the rest. A failed scan keeps its rows for a day of retries, a finished one only the rows its findings show. Approved SOPs are kept. Growing past these limits means migrating to per-entity documents, as recorded in [ADR 001](docs/adr/001-backend-boundaries.md).
 
 ### Media objects
 

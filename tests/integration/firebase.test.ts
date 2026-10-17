@@ -90,7 +90,12 @@ test('Firebase emulator verifies real tokens, claims, tenant isolation and disab
   );
   const stored = await new FirestoreRepositoryProvider(database).forTenant(org).read();
   assert.equal(stored.processes.length, 1);
-  assert.equal(stored.auditEvents.length, 1);
+  assert.equal(stored.auditEvents.length, 0);
+  const audit = await new FirestoreRepositoryProvider(database)
+    .forTenant(org)
+    .listAudit({ limit: 50, cursor: '0', sort: 'desc' as const });
+  assert.equal(audit.total, 1);
+  assert.equal(audit.items[0].action, 'processCreate');
   await a.auth.updateUser(a.uid, { disabled: true });
   assert.equal((await call(a.idToken, 'GET', 'workspace')).status, 401);
 });

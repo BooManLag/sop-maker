@@ -54,6 +54,16 @@ resource "google_firestore_database" "default" {
   depends_on              = [google_project_service.apis]
 }
 
+# The audit log lives outside each tenant's bounded state; Firestore deletes an event once its
+# expireAt (90 days after it happened) passes. The empty index config skips indexing the field.
+resource "google_firestore_field" "audit_event_ttl" {
+  database   = google_firestore_database.default.name
+  collection = "auditEvents"
+  field      = "expireAt"
+  ttl_config {}
+  index_config {}
+}
+
 resource "google_artifact_registry_repository" "images" {
   repository_id = var.app_name
   location      = var.region
