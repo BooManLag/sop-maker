@@ -16,13 +16,11 @@ export function SidebarContent() {
     <div className="flex h-full flex-col px-6 pt-9 max-lg:px-4">
       <Link
         href="/"
-        aria-label="Good Exception home"
-        className="flex items-center gap-3 text-xl leading-[0.98] font-bold tracking-[-1px] text-foreground"
+        aria-label="Sopify home"
+        className="flex items-center gap-3 text-2xl text-foreground"
       >
-        <span className="grid h-12 w-10 place-items-center">
-          <LogoMark size={23} />
-        </span>
-        <Wordmark stacked />
+        <LogoMark size={36} />
+        <Wordmark />
       </Link>
 
       <div className="mt-12 mb-3 text-2xs font-bold tracking-[1.5px] text-muted-foreground">

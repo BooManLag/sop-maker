@@ -4,7 +4,7 @@ import { Providers } from './providers';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Good Exception — A better way becomes the standard',
+  title: 'Sopify — A better way becomes the standard',
   description:
     'Capture expert know-how, find practices worth investigating, and validate better ways of working.',
 };

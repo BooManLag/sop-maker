@@ -14,10 +14,10 @@ export function MobileHeader() {
     <header className="flex h-14 items-center justify-between border-b border-border bg-topbar px-4 md:hidden">
       <Link
         href="/"
-        aria-label="Good Exception home"
-        className="flex items-center gap-1.5 text-md font-bold tracking-[-0.5px] text-foreground"
+        aria-label="Sopify home"
+        className="flex items-center gap-2 text-lg text-foreground"
       >
-        <LogoMark size={20} />
+        <LogoMark size={26} />
         <Wordmark />
       </Link>
       <AccountMenu>

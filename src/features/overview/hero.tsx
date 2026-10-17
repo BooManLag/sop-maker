@@ -4,7 +4,7 @@ import { LogoMark } from '@/components/layout/logo';
 export function Hero() {
   return (
     <div className="mb-8 flex flex-col items-center gap-3.5 pt-2 text-center">
-      <LogoMark size={40} />
+      <LogoMark size={52} />
       <Eyebrow>FROM KNOW-HOW TO A BETTER WAY</Eyebrow>
       <h1 className="m-0 max-w-[720px] text-3xl leading-[1.05] tracking-[-1px] text-balance md:text-7xl">
         Good work deserves to become the standard.

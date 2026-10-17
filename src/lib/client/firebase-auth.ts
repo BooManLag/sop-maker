@@ -7,7 +7,7 @@ import type { AuthService } from './auth';
  * fails and sign-in stays off. Local dev proxies the live project's config (next.config).
  */
 const HOSTING_CONFIG = '/__/firebase/init.json';
-const ISSUER = 'Good Exception';
+const ISSUER = 'Sopify';
 
 async function hostingConfig(): Promise<FirebaseOptions | null> {
   try {
