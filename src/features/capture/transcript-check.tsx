@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, type Ref } from 'react';
+import { useEffect, useRef, useState, type Ref } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowRight } from 'lucide-react';
@@ -43,11 +43,7 @@ const startOver = (
 function TranscriptState(props: TranscriptProps & { capture: DraftCapture }) {
   switch (props.capture.status) {
     case 'awaiting_upload':
-      return (
-        <p role="status" className="py-16 text-center text-sm text-subtle-foreground">
-          Checking and transcribing the recording…
-        </p>
-      );
+      return <Processing durationMs={props.capture.durationMs} />;
     case 'rejected':
       return (
         <EmptyState
@@ -74,6 +70,41 @@ function TranscriptState(props: TranscriptProps & { capture: DraftCapture }) {
         />
       );
   }
+}
+
+/**
+ * Shown while the recording is checked and transcribed. The server reports only that work is
+ * under way, not how far along it is, so the bar sweeps rather than claiming a percentage.
+ */
+function Processing({ durationMs }: { durationMs?: number }) {
+  const [started] = useState(() => Date.now());
+  const [now, setNow] = useState(started);
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+  return (
+    <Card className="grid gap-4 py-10 text-center">
+      <div role="status" aria-live="polite" className="grid gap-1.5">
+        <strong className="text-base font-medium">Checking and transcribing the recording…</strong>
+        <span className="text-xs text-subtle-foreground">
+          {formatClock(now - started)} elapsed
+          {durationMs ? ` · recording is ${formatClock(durationMs)} long` : ''}
+        </span>
+      </div>
+      <div
+        role="progressbar"
+        aria-label="Transcription in progress"
+        aria-valuetext="In progress"
+        className="relative mx-auto h-1.5 w-full max-w-md overflow-hidden rounded-full bg-border"
+      >
+        <div className="absolute inset-y-0 left-0 w-2/5 animate-indeterminate rounded-full bg-brand-600 motion-reduce:w-full motion-reduce:animate-pulse" />
+      </div>
+      <p className="mx-auto max-w-md text-xs text-subtle-foreground">
+        Longer recordings take longer. This page updates by itself when the transcript is ready.
+      </p>
+    </Card>
+  );
 }
 
 function TranscriptForm({
