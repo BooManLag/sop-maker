@@ -1,4 +1,5 @@
-import type { Store } from './store';
+import type { AuditPage, Store } from './store';
+import type { ListQuery } from '../server/contracts';
 import type { ByteSource } from './media-inspector';
 import type {
   Execution,
@@ -12,7 +13,10 @@ export type ReadOperation<T> = (store: Store) => T;
 export interface Repository {
   read(): Promise<Store>;
   query<T>(fn: ReadOperation<T>): Promise<T>;
+  /** Commits the store and moves its pending `auditEvents` into the audit log atomically. */
   transact<T>(fn: ReadOperation<T>): Promise<T>;
+  /** The tenant's audit log, ordered by time. */
+  listAudit(query: ListQuery): Promise<AuditPage>;
   health(): Promise<void>;
 }
 export interface RepositoryProvider {
