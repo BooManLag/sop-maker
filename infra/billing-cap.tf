@@ -116,12 +116,13 @@ resource "google_cloudfunctions2_function" "billing_cap" {
   depends_on = [google_project_iam_member.functions_build, google_project_iam_member.billing_cap, google_service_account_iam_member.budget_delivery_token]
 }
 
-# Billing sends notifications with this Google-managed identity.
+# Billing sends notifications with this Google-managed identity, and grants it on the topic
+# itself when a budget is linked; declaring it here keeps that grant managed.
 resource "google_pubsub_topic_iam_member" "budget_publisher" {
   count  = local.cap
   topic  = google_pubsub_topic.budget[0].id
   role   = "roles/pubsub.publisher"
-  member = "serviceAccount:billing-budget-notifications@system.gserviceaccount.com"
+  member = "serviceAccount:billing-budget-alert@system.gserviceaccount.com"
 }
 resource "google_project_service_identity" "pubsub" {
   provider   = google-beta
