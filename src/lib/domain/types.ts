@@ -76,10 +76,6 @@ export interface ExpertCapture {
   /** Steps as the model suggested them, kept apart from the expert's later edits. */
   suggestedSteps?: SuggestedStep[];
   createdAt?: string;
-  /** When the background analysis was queued; a scan analyzing far longer than that is stuck. */
-  analysisStartedAt?: string;
-  /** When the analysis failed; the rows stay for a retry until FAILED_RETRY_MS has passed. */
-  failedAt?: string;
   expiresAt?: string;
 }
 export const mediaContentTypes = ['audio/webm', 'audio/mp4', 'video/webm', 'video/mp4'] as const;
