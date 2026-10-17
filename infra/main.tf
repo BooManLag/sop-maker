@@ -2,6 +2,7 @@ locals {
   apis = [
     "aiplatform.googleapis.com",
     "artifactregistry.googleapis.com",
+    "bigquery.googleapis.com",
     "billingbudgets.googleapis.com",
     "cloudbilling.googleapis.com",
     "cloudbuild.googleapis.com",
