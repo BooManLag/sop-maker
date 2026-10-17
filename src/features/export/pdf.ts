@@ -193,7 +193,6 @@ function drawProcedure(w: Writer, doc: SopDocument, images: StepImages) {
   w.heading(4, 'Procedure', 7 + opening + 2 * cellPadding);
   const { pdf } = w;
   const tableWidth = content.right - content.left;
-  const body = tableWidth - columns.number - columns.check;
   const header = () => {
     pdf.setFillColor(...brand);
     pdf.rect(content.left, w.y, tableWidth, 7, 'F');
@@ -212,35 +211,80 @@ function drawProcedure(w: Writer, doc: SopDocument, images: StepImages) {
   w.ensure(30);
   header();
   for (const step of doc.steps) {
-    const jpeg = images[step.id];
-    drawStep(w, step, layoutStep(pdf, step, body, jpeg), header, jpeg);
+    drawStep(w, step, header, images[step.id]);
   }
   w.y += 4;
 }
 
-/** One line of a step's instruction column; rows break between lines, never inside one. */
-interface StepLine {
-  height: number;
-  draw: (y: number) => void;
-}
-interface StepLayout {
-  lines: StepLine[];
-  picture?: { width: number; height: number };
-}
-
 const cellPadding = 4;
-const detailLabelWidth = 20;
+const detailLabelWidth = 22;
 const bodyX = content.left + columns.number + 3;
-function layoutStep(pdf: jsPDF, step: SopPage, body: number, jpeg?: Uint8Array): StepLayout {
+/** Instruction text width: the whole column, or what is left beside the step picture. */
+const fullWidth = content.right - content.left - columns.number - columns.check - 6;
+const besidePicture = fullWidth - picture.width - 4;
+const detail = { size: 9.5, leading: 1.4 };
+
+/**
+ * Draws one step row. Text runs beside the picture only until it clears it, then uses the
+ * whole instruction column, so long instructions stay readable. A step too long for the rest
+ * of the page closes its row there and continues on the next page under a repeated table
+ * header, marked as continued, so nothing is cut off or drawn over the footer.
+ */
+function drawStep(w: Writer, step: SopPage, header: () => void, jpeg?: Uint8Array) {
+  const { pdf } = w;
   const fitted = jpeg ? fitPicture(pdf, jpeg) : undefined;
-  const textWidth = body - 6 - (fitted ? picture.width + 4 : 0);
-  const lines: StepLine[] = wrap(pdf, step.action, textWidth, 11, true).map((text) => ({
-    height: lineHeight(11),
-    draw: (y) => {
-      setText(pdf, 11, true, ink);
-      pdf.text(text, bodyX, y, { baseline: 'top' });
-    },
-  }));
+  w.ensure(Math.max(fitted?.height ?? 0, 10) + 2 * cellPadding, header);
+  let top = w.y;
+  let y = top + cellPadding;
+  let first = true;
+  let pictureBottom = 0;
+  if (jpeg && fitted) {
+    drawPicture(pdf, jpeg, fitted, y);
+    pictureBottom = y + fitted.height;
+  }
+  const widthAt = (at: number) => (at < pictureBottom ? besidePicture : fullWidth);
+
+  /** Makes room for a line; returns true when that meant starting a new page. */
+  const room = (height: number) => {
+    if (y + height <= content.bottom - cellPadding) return false;
+    drawStepFrame(pdf, step, top, Math.max(y, pictureBottom) + cellPadding - top, first);
+    first = false;
+    pictureBottom = 0;
+    w.newPage(header);
+    top = w.y;
+    y = top + cellPadding;
+    setText(pdf, 8, false, muted);
+    pdf.text(`Step ${step.number} (continued)`, bodyX, y, { baseline: 'top' });
+    y += lineHeight(8) + 2;
+    return true;
+  };
+
+  /** Flows text line by line at the width available where each line lands. */
+  const flow = (
+    text: string,
+    style: { size: number; bold: boolean; color: Rgb; indent?: number; leading?: number },
+    onLine?: (y: number, kind: 'first' | 'continued' | 'more') => void,
+  ) => {
+    const indent = style.indent ?? 0;
+    const height = lineHeight(style.size, style.leading);
+    let firstLine = true;
+    for (const paragraph of text.split(/\r?\n/)) {
+      let words = paragraph.split(/\s+/).filter(Boolean);
+      while (words.length) {
+        const broke = room(height);
+        setText(pdf, style.size, style.bold, style.color);
+        const fitted = fitLine(pdf, words, widthAt(y) - indent);
+        onLine?.(y, firstLine ? 'first' : broke ? 'continued' : 'more');
+        setText(pdf, style.size, style.bold, style.color);
+        pdf.text(fitted.line, bodyX + indent, y, { baseline: 'top' });
+        words = fitted.rest;
+        y += height;
+        firstLine = false;
+      }
+    }
+  };
+
+  flow(step.action, { size: 11, bold: true, color: ink });
   const tags = [
     step.required ? undefined : 'Optional',
     step.duration && `Expected time: ${step.duration}`,
@@ -248,76 +292,52 @@ function layoutStep(pdf: jsPDF, step: SopPage, body: number, jpeg?: Uint8Array):
   ]
     .filter(Boolean)
     .join('  ·  ');
-  if (tags)
-    lines.push({
-      height: lineHeight(8) + 1,
-      draw: (y) => {
-        setText(pdf, 8, false, step.validated ? brand : muted);
-        pdf.text(tags, bodyX, y + 1, { baseline: 'top' });
+  if (tags) {
+    y += 1;
+    flow(tags, { size: 8, bold: false, color: step.validated ? brand : muted });
+  }
+  step.details.forEach((item, i) => {
+    y += i === 0 ? 2.5 : 2;
+    const isWarning = item.label === 'Warning';
+    const color = isWarning ? warning : ink;
+    flow(
+      item.text,
+      { size: detail.size, bold: false, color, indent: detailLabelWidth, leading: detail.leading },
+      (lineY, kind) => {
+        if (kind !== 'more') {
+          setText(pdf, 7.5, true, isWarning ? warning : muted);
+          pdf.text(
+            kind === 'continued' ? `${item.label.toUpperCase()} (CONT.)` : item.label.toUpperCase(),
+            bodyX,
+            lineY + 0.6,
+            { baseline: 'top', maxWidth: detailLabelWidth - 1 },
+          );
+        }
       },
-    });
-  step.details.forEach((detail, d) => {
-    const isWarning = detail.label === 'Warning';
-    const wrapped = wrap(pdf, detail.text, textWidth - detailLabelWidth, 9);
-    wrapped.forEach((text, i) => {
-      const gap = d === 0 && i === 0 ? 2 : 0;
-      lines.push({
-        height: gap + lineHeight(9) + (i === wrapped.length - 1 ? 1.5 : 0),
-        draw: (y) => {
-          if (i === 0) {
-            setText(pdf, 8, true, isWarning ? warning : muted);
-            pdf.text(detail.label.toUpperCase(), bodyX, y + gap + 0.4, { baseline: 'top' });
-          }
-          setText(pdf, 9, false, isWarning ? warning : ink);
-          pdf.text(text, bodyX + detailLabelWidth, y + gap, { baseline: 'top' });
-        },
-      });
-    });
+    );
   });
-  return { lines, picture: fitted };
-}
-
-/**
- * Draws a step row line by line. A step too long for the rest of the page closes its row
- * there and continues on the next page under a repeated table header, so long instructions
- * are never cut off or drawn over the footer.
- */
-function drawStep(
-  w: Writer,
-  step: SopPage,
-  layout: StepLayout,
-  header: () => void,
-  jpeg?: Uint8Array,
-) {
-  const { pdf } = w;
-  const opening = Math.max(layout.picture?.height ?? 0, layout.lines[0]?.height ?? 0, 10);
-  w.ensure(opening + 2 * cellPadding, header);
-  let top = w.y;
-  let y = top + cellPadding;
-  let pictureBottom = 0;
-  if (jpeg && layout.picture) {
-    drawPicture(pdf, jpeg, layout.picture, top + cellPadding);
-    pictureBottom = top + cellPadding + layout.picture.height;
-  }
-  let first = true;
-  for (const stepLine of layout.lines) {
-    if (y + stepLine.height > content.bottom - cellPadding) {
-      drawStepFrame(pdf, step, top, Math.max(y, pictureBottom) + cellPadding - top, first);
-      first = false;
-      pictureBottom = 0;
-      w.newPage(header);
-      top = w.y;
-      y = top + cellPadding;
-      setText(pdf, 8, false, muted);
-      pdf.text(`Step ${step.number} (continued)`, bodyX, y, { baseline: 'top' });
-      y += lineHeight(8) + 1;
-    }
-    stepLine.draw(y);
-    y += stepLine.height;
-  }
   const bottom = Math.max(y, pictureBottom, top + 10) + cellPadding;
   drawStepFrame(pdf, step, top, bottom - top, first);
   w.y = bottom;
+}
+
+/** The words that fit on one line, and the rest; a word wider than the line is split. */
+function fitLine(pdf: jsPDF, words: string[], width: number) {
+  let line = '';
+  let count = 0;
+  for (const word of words) {
+    const candidate = line ? `${line} ${word}` : word;
+    if (pdf.getTextWidth(candidate) > width && line) break;
+    line = candidate;
+    count++;
+    if (pdf.getTextWidth(line) > width) {
+      // A single over-long word: keep what fits and carry the remainder to the next line.
+      let cut = word.length;
+      while (cut > 1 && pdf.getTextWidth(word.slice(0, cut)) > width) cut--;
+      return { line: word.slice(0, cut), rest: [word.slice(cut), ...words.slice(count)] };
+    }
+  }
+  return { line, rest: words.slice(count) };
 }
 
 /** Row borders, the step number and, on the row's first part, the sign-off box. */
@@ -546,7 +566,7 @@ function wrap(pdf: jsPDF, text: string, width: number, size = 10, bold = false) 
   pdf.setFontSize(size);
   return pdf.splitTextToSize(text, width) as string[];
 }
-const lineHeight = (size: number) => (size * 1.25 * 25.4) / 72;
+const lineHeight = (size: number, leading = 1.25) => (size * leading * 25.4) / 72;
 function line(
   pdf: jsPDF,
   x1: number,
