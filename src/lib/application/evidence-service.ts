@@ -5,7 +5,7 @@ import { ApiError, requireCondition } from '../server/errors';
 import { trialPrimaryOutcome, type Finding, type Scan } from '../domain/types';
 import type { AnalysisOutcome } from './analysis/toolkit';
 import { DISCOVERY_SHARE } from './analysis/stats';
-export const ANALYSIS_VERSION = 'agent-v1';
+export const ANALYSIS_VERSION = 'agent-v2';
 /** How a scan's jobs were grouped and analyzed; recorded on every finding it produces. */
 export interface AnalysisMethod {
   version: string;
@@ -13,7 +13,7 @@ export interface AnalysisMethod {
 }
 export const GEMINI_ANALYSIS: AnalysisMethod = {
   version: ANALYSIS_VERSION,
-  grouping: 'Jobs grouped by similar notes (Gemini embeddings)',
+  grouping: 'Jobs grouped by notes describing the same thing (grouped by Gemini)',
 };
 import { EvidenceEngine, normalizeRecords, requiredSamplePerGroup } from './evidence-engine';
 import type { schemas } from '../server/contracts';

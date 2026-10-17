@@ -1,12 +1,12 @@
 /**
  * Live eval against Vertex AI. Needs application default credentials and:
  *   GOOGLE_CLOUD_PROJECT, GOOD_EXCEPTION_GEMINI_MODEL, optional GOOD_EXCEPTION_AGENT_MODEL,
- *   GOOGLE_CLOUD_LOCATION (default global), GOOD_EXCEPTION_EMBEDDING_MODEL.
+ *   GOOGLE_CLOUD_LOCATION (default global).
  * Exits non-zero when quality drops below the bar, so it can gate a model change.
  */
-import { VertexGeminiAdapter } from '../src/lib/server/gemini';
+import { VertexGeminiAdapter, vertexGenerate } from '../src/lib/server/gemini';
 import { GuardedCaptureAdapter } from '../src/lib/server/ai';
-import { adkDriver, vertexEmbedder } from '../src/lib/server/scan-agent';
+import { adkDriver, geminiNoteGrouper } from '../src/lib/server/scan-agent';
 import { AnalysisToolkit, clusterSignals } from '../src/lib/application/analysis/toolkit';
 import { extractionCases, scoreExtraction } from './extraction-cases';
 import { scanRecords, scanSteps, scoreScan } from './scan-cases';
@@ -19,7 +19,6 @@ if (!projectId || !model) {
 }
 const location = process.env.GOOGLE_CLOUD_LOCATION ?? 'global';
 const agentModel = process.env.GOOD_EXCEPTION_AGENT_MODEL ?? model;
-const embeddingModel = process.env.GOOD_EXCEPTION_EMBEDDING_MODEL ?? 'gemini-embedding-001';
 const RUNS = Number(process.env.EVAL_RUNS ?? 2);
 
 async function main() {
@@ -51,7 +50,7 @@ async function main() {
   console.table(rows);
   const extractionRate = passed / total;
 
-  const settings = { projectId: projectId!, location, model: agentModel, embeddingModel };
+  const settings = { projectId: projectId!, location, model: agentModel };
   const records = scanRecords();
   const scanRows: Record<string, unknown>[] = [];
   let scanPassed = 0;
@@ -60,7 +59,7 @@ async function main() {
     const kit = new AnalysisToolkit(
       records,
       scanSteps,
-      await clusterSignals(records, vertexEmbedder(settings)),
+      await clusterSignals(records, geminiNoteGrouper(vertexGenerate(settings))),
     );
     await adkDriver(settings)(kit, new AbortController().signal);
     const score = scoreScan(kit.proposals);

@@ -61,7 +61,8 @@ const variants = {
 type Kind = keyof typeof variants;
 /**
  * 480 jobs over 8 technicians. Baseline callback rate ~12%. The planted practice cuts it to ~3%,
- * the harmful shortcut raises it to ~30%, and the decoy and noise have no effect.
+ * the harmful shortcut raises it to ~30%, and the decoy and noise have no effect. Like real
+ * records, every job carries the same parts and checklist, so grouping must look past them.
  */
 export function scanRecords(): Execution[] {
   const random = rng(42);
@@ -85,8 +86,8 @@ export function scanRecords(): Execution[] {
       equipmentModel: 'V-200',
       jobType: 'valve replacement',
       timestamp: new Date(Date.UTC(2026, 0, 1) + i * 4 * 3600_000).toISOString(),
-      checklistValues: '',
-      partsUsed: '',
+      checklistValues: `line_bled:true;gasket_replaced:true;leak_test:${kind !== 'harmful'}`,
+      partsUsed: 'V-200 valve kit, flange gasket',
       notes: kind === 'none' ? '' : variants[kind][Math.floor(random() * 3)],
       callback: random() < callbackRate,
     };

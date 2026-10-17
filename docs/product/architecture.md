@@ -15,7 +15,7 @@ Good Exception captures expert know-how into a human-approved SOP and investigat
 | Local infrastructure | Lease locking, fsync, atomic rename, backup/restore | `src/lib/infrastructure/json-repository.ts`, `backup.ts` |
 | Cloud infrastructure | Firebase revoked-token verification and Firestore transactions | `src/lib/infrastructure/firebase.ts`, `firestore-repository.ts` |
 | AI boundary | Input/output limits, strict candidate schema, failure isolation, usage metering | `src/lib/server/ai.ts`, `gemini.ts`, `ai-usage.ts` |
-| Scan analysis | Embedding clusters, ADK agent tools, code-computed statistics, idempotent background worker | `src/lib/application/analysis/`, `src/lib/server/scan-agent.ts`, `cloud-tasks.ts` |
+| Scan analysis | Gemini note groups, ADK agent tools, code-computed statistics, idempotent background worker | `src/lib/application/analysis/`, `src/lib/server/scan-agent.ts`, `cloud-tasks.ts` |
 | Runtime | Dependency composition, admission, health, logs and shutdown | `src/lib/server/runtime.ts`, `hooks.ts` |
 
 Configuration comes from validated environment names; secrets are never returned, logged or included in drafts. Local demo identities are accepted only for loopback requests. Production fails closed unless Firebase/project, allowed origins and HMAC configuration exist, and Cloud Run refuses demo/emulator mode. Production Firebase authentication is backend-only at present: the UI still uses the demo flow and needs a separate sign-in integration before public use.
@@ -32,7 +32,7 @@ Raw capture content and imported rows have 30-day expiration; the retention endp
 
 - **Implemented and emulator-tested:** Firebase Admin token verification including disabled/revoked users, trusted custom-claim roles, Firestore transactions, tenant isolation and deny-all client rules.
 - **Implemented locally:** both labeled demo product loops, import readiness, HMAC pseudonymization in configured mode, strict schemas, read/write limits, audit events, safe errors, health and diagnostic metrics, backup/restore, OpenAPI, CI and bounded load checks.
-- **Implemented, unit-tested, not yet run against a live project:** Gemini capture on Vertex AI, the ADK scan agent with Gemini embeddings, Cloud Tasks background analysis with OIDC-verified worker calls, AI usage metrics, and the Terraform stack. Live quality is measured by `npm run eval` (manual `Model eval` workflow).
+- **Implemented, unit-tested, not yet run against a live project:** Gemini capture on Vertex AI, the ADK scan agent with Gemini note grouping, Cloud Tasks background analysis with OIDC-verified worker calls, AI usage metrics, and the Terraform stack. Live quality is measured by `npm run eval` (manual `Model eval` workflow).
 - **Implemented in the local demo:** audio upload through locally signed URLs, filesystem media storage, inspection, a labelled sample transcriber and the transcript check screen. The Cloud Storage signer and adapter and a speech-to-text transcriber are not built, so production returns 503 for uploads.
 - **Explicitly unavailable:** video and document ingestion, BigQuery evidence computation, technician messaging, field-trial allocation/ingestion, cross-scan vector search and final organizational approval of v2. Production never substitutes sample evidence for these integrations.
 - **Not deployed or claimed:** a running Cloud Run/Firebase Hosting environment, live IAM/KMS/TLS validation, automated cloud backups, retention scheduling, Cloud Monitoring alert delivery, autoscaling validation, a production sign-in UI or legal/provider data-processing approval.
@@ -50,7 +50,7 @@ flowchart LR
   run -->|capture: structured JSON| gemini[Gemini on Vertex AI<br/>global endpoint]
   run -->|scan run| tasks[Cloud Tasks<br/>max 2 concurrent, 3 attempts]
   tasks -->|OIDC-signed| worker[Cloud Run<br/>/internal/analysis]
-  worker -->|embeddings| emb[Gemini embeddings]
+  worker -->|group notes| emb[Gemini note grouping]
   worker --> agent[ADK agent]
   agent -->|tool calls| stats[Code: rates, held-out check]
   agent --> gemini
