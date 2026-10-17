@@ -75,6 +75,8 @@ export type ScanDetail = {
   funnel?: number[];
 };
 export type TrialDetail = ValidationTrial & { result?: TrialResult; finding: Finding };
+/** A finding with a few of the job notes behind it, while the imported records are kept. */
+export type FindingDetail = Finding & { examples: string[] };
 export type ChangeRequestDetail = ChangeRequest & { trial: TrialDetail };
 export type ServiceRecord = Record<string, string | number | boolean>;
 
@@ -175,7 +177,7 @@ export function createApiClient({
         `scans/${scanId}/run`,
       ),
 
-    finding: (id: string) => get<Finding>(`findings/${id}`),
+    finding: (id: string) => get<FindingDetail>(`findings/${id}`),
     dismissFinding: (id: string) => post<Finding>(`findings/${id}/dismiss`),
     restoreFinding: (id: string) => post<Finding>(`findings/${id}/restore`),
     recordExplanation: (id: string, body: Omit<TechnicianResponse, 'id' | 'findingId'>) =>

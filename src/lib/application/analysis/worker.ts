@@ -23,6 +23,7 @@ export class AnalysisWorker {
     private embedder: Embedder,
     private driver: Driver,
     private log: (entry: Record<string, unknown>) => void = (e) => console.log(JSON.stringify(e)),
+    private method: evidence.AnalysisMethod = evidence.GEMINI_ANALYSIS,
   ) {}
   async process(job: AnalysisJob, finalAttempt: boolean) {
     const repository = this.repositories.forTenant(job.organizationId);
@@ -37,7 +38,7 @@ export class AnalysisWorker {
       if (clusters.length) await this.driver(toolkit, abort.signal);
       const outcome = { findings: toolkit.proposals, funnel: toolkit.funnel() };
       await repository.transact((s) =>
-        evidence.completeAnalysis(s, job.scanId, outcome, input.sopVersion),
+        evidence.completeAnalysis(s, job.scanId, outcome, input.sopVersion, this.method),
       );
       this.log({
         severity: 'INFO',
