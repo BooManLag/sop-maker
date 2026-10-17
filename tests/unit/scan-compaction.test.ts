@@ -99,7 +99,7 @@ test('scans finished before compaction are compacted once, freeing tenant state'
       status: 'complete',
       findingIds: [],
     });
-  assert.throws(() => validateStore(s, 'demo-org'), /storage limit/);
+  assert.throws(() => validateStore(s, 'demo-org'), /workspace holds 750 KB/);
   compactScans(s);
   assert.doesNotThrow(() => validateStore(s, 'demo-org'));
   const done = s.scans.filter((x) => x.status === 'complete');
@@ -134,4 +134,10 @@ test('a scan analyzing past the stuck cutoff is marked failed, keeping its rows 
   assert.equal(scan.records.length, 240);
   compactScans(s, STUCK_ANALYSIS_MS + 1 + FAILED_RETRY_MS + 1);
   assert.equal(scan.records.length, 0);
+});
+
+test('the per-type limit names the type in plain words', () => {
+  const s = initialStore();
+  s.responses = Array.from({ length: 501 }, (_, i) => ({ id: `r${i}` }) as never);
+  assert.throws(() => validateStore(s, 'demo-org'), /limit of 500 technician responses/);
 });
