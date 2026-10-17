@@ -15,6 +15,20 @@ const doc: SopDocument = {
     generatedAt: '2026-10-16 09:30 UTC',
     evidence: ['Finding f1'],
   },
+  control: {
+    documentId: 'SOP-P1',
+    versionDate: '2026-10-15',
+    approved: false,
+    published: false,
+  },
+  revisions: [
+    {
+      version: 1,
+      date: '2026-10-15',
+      status: 'Draft',
+      change: 'First issue, captured from expert walkthrough',
+    },
+  ],
   labels: ['DRAFT', 'DEMO'],
   steps: [
     {
@@ -23,8 +37,19 @@ const doc: SopDocument = {
       action: 'Isolate the supply',
       details: [{ label: 'Warning', text: 'Line may be pressurized' }],
       hasImage: true,
+      required: true,
+      validated: false,
     },
-    { id: 's2', number: 2, action: 'Wait 3–5 minutes', details: [], hasImage: false },
+    {
+      id: 's2',
+      number: 2,
+      action: 'Wait 3–5 minutes',
+      details: [],
+      hasImage: false,
+      required: false,
+      duration: '3–5 min',
+      validated: false,
+    },
   ],
   fileName: 'valve-replacement-draft',
 };
@@ -69,19 +94,40 @@ test('a step image is embedded in its slide; steps without one have none', async
 
 const pdfText = async (images: StepImages = { s1: jpeg }) =>
   new TextDecoder('latin1').decode(await renderPdf(doc, images));
-test('the PDF has the same pages, text and labels as the deck', async () => {
+test('the PDF is a controlled SOP document with the same steps and labels as the deck', async () => {
   const pdf = await pdfText();
-  assert.equal(pdf.match(/\/Type \/Page(?!s)/g)?.length, 3);
   for (const expected of [
+    'STANDARD OPERATING PROCEDURE',
     'Valve Replacement',
     'Valve X',
+    'SOP-P1',
     'Awaiting approval',
-    'Finding f1',
+    'PURPOSE',
+    'SCOPE',
+    'SAFETY AND WARNINGS',
+    'PROCEDURE',
     'Isolate the supply',
     'Line may be pressurized',
+    'Wait 3',
+    'Optional',
+    'REFERENCES',
+    'Finding f1',
+    'REVISION HISTORY',
+    'APPROVAL',
+    'Approved by',
+    'DRAFT · DEMO',
+    'Printed copies are uncontrolled',
   ])
     assert.ok(pdf.includes(expected), expected);
-  assert.equal(pdf.match(/DRAFT/g)?.length, 3);
+  const pages = pdf.match(/\/Type \/Page(?!s)/g)?.length ?? 0;
+  assert.ok(pages >= 1);
+  assert.ok(pdf.includes(`Page ${pages} of ${pages}`));
+});
+test('every page of an unpublished SOP carries the draft watermark and labels', async () => {
+  const pdf = await pdfText();
+  const pages = pdf.match(/\/Type \/Page(?!s)/g)?.length ?? 0;
+  assert.equal(pdf.match(/\(DRAFT\)/g)?.length, pages);
+  assert.equal(pdf.match(/DRAFT · DEMO/g)?.length, pages);
 });
 test('a step image is embedded in the PDF only when the step has one', async () => {
   assert.match(await pdfText(), /\/Subtype \/Image/);
