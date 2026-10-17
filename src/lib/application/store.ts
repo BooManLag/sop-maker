@@ -60,6 +60,18 @@ export const collectionNames = [
   'changes',
   'responses',
 ] as const;
+const collectionLabels: Record<(typeof collectionNames)[number], string> = {
+  processes: 'processes',
+  captures: 'captures',
+  clarifications: 'clarification questions',
+  findings: 'findings',
+  scans: 'scans',
+  trials: 'trials',
+  results: 'trial results',
+  changes: 'change requests',
+  responses: 'technician responses',
+};
+const kilobytes = (bytes: number) => Math.ceil(bytes / 1000);
 export function initialStore(
   organizationId = 'demo-org',
   seedDemo = organizationId === 'demo-org',
@@ -122,7 +134,7 @@ export function validateStore(s: Store, organizationId: string) {
     const rows = s[name];
     requireCondition(
       rows.length <= LIMITS.recordsPerTenant,
-      `The ${name} collection has reached the local foundation capacity limit.`,
+      `This workspace has reached its limit of ${LIMITS.recordsPerTenant} ${collectionLabels[name]}. Delete or archive some before adding more.`,
       413,
     );
     if (name !== 'results')
@@ -196,10 +208,11 @@ export function validateStore(s: Store, organizationId: string) {
   );
   for (const r of s.responses)
     requireCondition(findings.has(r.findingId), 'Missing response finding.', 409);
-  if (Buffer.byteLength(JSON.stringify(s)) > LIMITS.stateBytes)
+  const bytes = Buffer.byteLength(JSON.stringify(s));
+  if (bytes > LIMITS.stateBytes)
     throw new ApiError(
       413,
-      'The organization has reached the foundation storage limit. Export or apply retention before importing more data.',
+      `This change needs about ${kilobytes(bytes)} KB but the workspace holds ${kilobytes(LIMITS.stateBytes)} KB. Split the file into smaller imports or delete old scans, then try again.`,
     );
 }
 export function pruneExpired(s: Store, now = Date.now()) {
