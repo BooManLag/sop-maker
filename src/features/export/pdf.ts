@@ -446,7 +446,7 @@ function drawApproval(w: Writer, doc: SopDocument) {
   const { pdf } = w;
   w.paragraph(
     doc.control.approved
-      ? 'This version was approved in Good Exception. Sign below for local document control.'
+      ? 'This version was approved in Sopify. Sign below for local document control.'
       : 'This version is not approved. It must not be used as the standard until a reviewer approves it.',
     { color: doc.control.approved ? ink : warning },
   );

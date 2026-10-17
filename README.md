@@ -1,6 +1,12 @@
-# Good Exception
+<p align="center">
+  <img src="public/brand/sopify-logo.svg" alt="Sopify" width="360" />
+</p>
+
+# Sopify
 
 Create the standard from your best people. Improve it from what actually works.
+
+For how the whole system fits together (frontend, API, data, AI, media and analysis pipelines, infrastructure), start with [ARCHITECTURE.md](ARCHITECTURE.md).
 
 A working B2B product foundation for capturing expert know-how, finding promising field practices, and validating a proposed SOP change. All evidence and trial outcomes in the sample scenario are visibly labeled **demo data**. Live Gemini and deployed Google Cloud resources are not connected. Firebase authentication and Firestore backend adapters are implemented and tested with local emulators; the demo UI does not yet have a production sign-in flow.
 

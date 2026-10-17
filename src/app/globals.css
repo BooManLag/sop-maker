@@ -2,7 +2,7 @@
 @import 'tw-animate-css';
 
 /*
- * Good Exception design tokens. Every colour in the UI comes from this sheet;
+ * Sopify design tokens. Every colour in the UI comes from this sheet;
  * components never use arbitrary hex values. Variable names follow shadcn/ui.
  */
 :root {
@@ -36,6 +36,11 @@
   --brand-400: #8d9f7a;
   --brand-300: #9bb28c;
   --brand-100: #e8eedf;
+
+  /* The logo keeps its own fixed colours wherever it appears. */
+  --logo-leaf: #95bf47;
+  --logo-shade: #5e8e3e;
+  --logo-paper: #ffffff;
 
   --sidebar: #f1f3ed;
   --topbar: #fafbf7;
@@ -131,6 +136,9 @@
   --color-brand-400: var(--brand-400);
   --color-brand-300: var(--brand-300);
   --color-brand-100: var(--brand-100);
+  --color-logo-leaf: var(--logo-leaf);
+  --color-logo-shade: var(--logo-shade);
+  --color-logo-paper: var(--logo-paper);
   --color-sidebar: var(--sidebar);
   --color-topbar: var(--topbar);
   --color-surface-sunken: var(--surface-sunken);

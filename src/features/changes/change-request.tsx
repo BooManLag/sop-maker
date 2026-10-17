@@ -115,8 +115,8 @@ function ProposalForm({ change }: { change: ChangeRequestDetail }) {
               </Badge>
               <h3>Approval belongs to your organization.</h3>
               <p>
-                Good Exception does not change your SOP automatically. Final approval belongs to
-                your organization.
+                Sopify does not change your SOP automatically. Final approval belongs to your
+                organization.
               </p>
               <Button type="submit" disabled={submit.isPending || !isDraft}>
                 {isDraft ? 'Submit for approval' : 'Submitted for approval'}

@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Good Exception backend",
+    "title": "Sopify backend",
     "version": "1.0.0",
     "description": "Versioned REST contract. /api remains a v1 compatibility alias. Strict request schemas reject unknown properties. Body <= 1 MB; <= 1000 imported rows. Real provider, media ingestion, trial allocation and analytics integrations fail explicitly until configured."
   },
