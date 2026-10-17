@@ -81,23 +81,26 @@ export class FirestoreRepository implements Repository {
     }
   }
   async listAudit(query: ListQuery) {
+    // TTL deletion lags, so expired events are filtered here. expireAt is a fixed offset from
+    // the event time, so ordering by it is time order on one single-field index.
+    const live = this.audit.where('expireAt', '>', new Date());
+    const offset = Number(query.cursor);
+    let snapshot, count;
     try {
-      const ordered = this.audit.orderBy('timestamp', query.sort);
-      const offset = Number(query.cursor);
-      const [snapshot, count] = await Promise.all([
-        ordered.offset(offset).limit(query.limit).get(),
-        this.audit.count().get(),
+      [snapshot, count] = await Promise.all([
+        live.orderBy('expireAt', query.sort).offset(offset).limit(query.limit).get(),
+        live.count().get(),
       ]);
-      const total = count.data().count;
-      const items = snapshot.docs.map((doc) => {
-        const { expireAt: _, ...event } = doc.data();
-        return event as AuditEvent;
-      });
-      const end = offset + items.length;
-      return { items, nextCursor: end < total ? String(end) : null, total };
     } catch {
       throw new ApiError(503, 'The database is temporarily unavailable.');
     }
+    const total = count.data().count;
+    const items = snapshot.docs.map((doc) => {
+      const { expireAt: _, ...event } = doc.data();
+      return event as AuditEvent;
+    });
+    const end = offset + items.length;
+    return { items, nextCursor: end < total ? String(end) : null, total };
   }
   async health() {
     await this.read();

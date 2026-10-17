@@ -71,7 +71,7 @@ export function scanDto(scan: ReturnType<typeof getScan>) {
     demo: scan.demo,
     status: scan.status,
     recordCount: scan.recordCount ?? scan.records.length,
-    recordsCleared: scan.recordCount !== undefined,
+    recordsCleared: recordsCleared(scan),
     createdAt: scan.createdAt,
   };
 }
@@ -93,7 +93,7 @@ export function checkReadiness(s: Store, id: string) {
     'Imported records expired. Import a fresh dataset.',
     409,
   );
-  if (scan.status === 'complete' || scan.status === 'analyzing' || scan.recordCount !== undefined)
+  if (scan.status === 'complete' || scan.status === 'analyzing' || recordsCleared(scan))
     return scan.readiness;
   scan.readiness = scan.demo
     ? {
@@ -127,7 +127,7 @@ export function runScan(s: Store, id: string, liveAnalysis: boolean) {
   if (scan.status === 'analyzing' || (scan.status === 'complete' && !scan.demo))
     return { id: scan.id, demo: false, status: scan.status, started: false };
   requireCondition(
-    scan.recordCount === undefined,
+    !recordsCleared(scan),
     "This scan's records were cleared after it stopped. Import the file again to run a new scan.",
     409,
   );
@@ -237,24 +237,32 @@ function exampleRecords(scan: Scan, finding: Finding) {
 export const STUCK_ANALYSIS_MS = 3600_000;
 /** How long a failed scan keeps its rows so it can be run again. */
 export const FAILED_RETRY_MS = 86400_000;
-const since = (...times: (string | undefined)[]) => Date.parse(times.find(Boolean) ?? '');
+/** Rows dropped; the scan can no longer be checked or run again. */
+export const recordsCleared = (scan: Scan) => scan.recordCount !== undefined;
+/** Whether the first recorded time is more than `age` before `now`; false when none is recorded. */
+function olderThan(age: number, now: number, ...times: (string | undefined)[]) {
+  return Date.parse(times.find(Boolean) ?? '') < now - age;
+}
+/** A scan analyzing past the cutoff lost its worker; it fails so its rows can be retried or freed. */
+export function failStuckScan(scan: Scan, now = Date.now()) {
+  if (
+    scan.status === 'analyzing' &&
+    olderThan(STUCK_ANALYSIS_MS, now, scan.analysisStartedAt, scan.createdAt)
+  ) {
+    scan.status = 'failed';
+    scan.failedAt = new Date(now).toISOString();
+  }
+}
 /**
  * A finished scan is never analyzed again, so it keeps only the rows its findings show as
  * examples; a failed one keeps its rows for a day of retries, then none. Imported rows otherwise
  * fill the tenant's bounded state within a few scans.
  */
 export function compactScan(s: Store, scan: Scan, now = Date.now()) {
-  if (scan.demo || scan.recordCount !== undefined) return;
-  if (
-    scan.status === 'analyzing' &&
-    since(scan.analysisStartedAt, scan.createdAt) < now - STUCK_ANALYSIS_MS
-  ) {
-    scan.status = 'failed';
-    scan.failedAt = new Date(now).toISOString();
-  }
+  if (scan.demo || recordsCleared(scan)) return;
   const retryable =
     scan.status === 'failed' &&
-    !(since(scan.failedAt, scan.analysisStartedAt, scan.createdAt) < now - FAILED_RETRY_MS);
+    !olderThan(FAILED_RETRY_MS, now, scan.failedAt, scan.analysisStartedAt, scan.createdAt);
   if ((scan.status !== 'complete' && scan.status !== 'failed') || retryable) return;
   const keep = new Set(
     s.findings
@@ -264,9 +272,12 @@ export function compactScan(s: Store, scan: Scan, now = Date.now()) {
   scan.recordCount = scan.records.length;
   scan.records = scan.records.filter((r) => keep.has(r.id));
 }
-/** Compacts every finished, failed or stuck scan; a no-op once each is compacted. */
+/** Fails stuck scans, then compacts every finished or failed one; a no-op once each is compacted. */
 export function compactScans(s: Store, now = Date.now()) {
-  for (const scan of s.scans) compactScan(s, scan, now);
+  for (const scan of s.scans) {
+    failStuckScan(scan, now);
+    compactScan(s, scan, now);
+  }
 }
 /** A finding with up to four distinct job notes behind it, while its scan's records are kept. */
 export function findingDetailDto(s: Store, id?: string) {
