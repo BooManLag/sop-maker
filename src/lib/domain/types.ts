@@ -159,6 +159,13 @@ export interface EvidenceMetadata {
   heldOutResult: string;
   methodology: string;
   demonstration: boolean;
+  /** Computed findings only: the numbers behind the grade, as percentages (0-100, one decimal). */
+  statistics?: {
+    discovery: { practiceRate: number; baselineRate: number };
+    heldOut: { practiceRate: number; baselineRate: number; practiceJobs: number };
+    /** Mantel-Haenszel z on the earlier jobs; positive means fewer callbacks with the practice. */
+    z: number;
+  };
 }
 export interface Finding {
   id: ID;
@@ -239,6 +246,8 @@ export interface Scan {
   readiness?: Readiness;
   status: 'uploaded' | 'ready' | 'analyzing' | 'failed' | 'complete';
   findingIds: ID[];
+  /** Rows imported, set once a finished scan drops the rows its findings do not show. */
+  recordCount?: number;
   /** Live scans only: jobs reviewed through to practices that held on later jobs. */
   funnel?: number[];
   createdAt?: string;

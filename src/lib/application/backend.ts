@@ -121,6 +121,7 @@ export class Backend {
       const body = parseInput('captureAnalyze', input);
       const snapshot = await repository.transact((s) => {
         pruneExpired(s);
+        evidence.compactScans(s);
         const p = processes.getProcess(s, id);
         processes.requireDraft(p);
         const c = s.captures.find((c) => c.id === body.captureId && c.processId === p.id);
@@ -187,6 +188,7 @@ export class Backend {
     };
     const response = await repository.transact((s) => {
       pruneExpired(s);
+      evidence.compactScans(s);
       const cached = replay(s);
       if (cached) return cached.response;
       consumeQuota(s, `write:${context.actor.userId}`, LIMITS.mutationsPerMinute, 60_000);
@@ -349,7 +351,7 @@ export class Backend {
       case 'scanGet':
         return evidence.scanDetailDto(evidence.getScan(s, id));
       case 'findingGet':
-        return evidence.getFinding(s, id);
+        return evidence.findingDetailDto(s, id);
       case 'trialGet':
         return evidence.trialDetailDto(s, id);
       case 'scanFindings': {

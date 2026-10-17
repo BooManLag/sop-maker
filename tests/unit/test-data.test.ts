@@ -5,9 +5,9 @@ import { join } from 'node:path';
 import { readServiceRecords } from '../../src/lib/domain/records';
 import { EvidenceEngine, normalizeRecords } from '../../src/lib/application/evidence-engine';
 
-const dir = join(process.cwd(), 'test-data', 'manufacturing');
+const dir = join(process.cwd(), 'test-data');
 const load = async (name: string) => {
-  const bytes = await readFile(join(dir, name));
+  const bytes = await readFile(join(dir, name.includes('/') ? name : `manufacturing/${name}`));
   const rows = await readServiceRecords({
     size: bytes.byteLength,
     arrayBuffer: async () =>
@@ -22,6 +22,10 @@ for (const name of [
   'injection-mold-changeover.csv',
   'robot-weld-torch-service.csv',
   'smt-stencil-printer-service-small.csv',
+  'processes/soldering-202.csv',
+  'processes/iphone-11-screen-repair.csv',
+  'processes/shed-building.csv',
+  'processes/reset-bios.csv',
 ])
   test(`${name} passes the data readiness check`, async () => {
     const records = await load(name);
