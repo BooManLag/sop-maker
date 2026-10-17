@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { readServiceRecords } from '../../src/lib/domain/records';
 import { normalizeRecords } from '../../src/lib/application/evidence-engine';
 import { AnalysisToolkit, clusterSignals } from '../../src/lib/application/analysis/toolkit';
-import { OfflineEmbedder, offlineDriver } from '../../src/lib/infrastructure/offline-analysis';
+import { OfflineNoteGrouper, offlineDriver } from '../../src/lib/infrastructure/offline-analysis';
 import { manufacturingProcesses } from '../../src/lib/domain/manufacturing-sops';
 import { evidenceSummary } from '../../src/features/findings/evidence-summary';
 import type { Finding } from '../../src/lib/domain/types';
@@ -22,7 +22,7 @@ async function analyze(file: string, processId: string) {
   const kit = new AnalysisToolkit(
     records,
     steps,
-    await clusterSignals(records, new OfflineEmbedder()),
+    await clusterSignals(records, new OfflineNoteGrouper()),
   );
   await offlineDriver(kit, new AbortController().signal);
   const notes = new Map(records.map((r) => [r.id, r.notes]));

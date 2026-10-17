@@ -27,10 +27,6 @@ const environment = z.object({
     .string()
     .regex(/^[a-z0-9.-]{3,64}$/)
     .optional(),
-  GOOD_EXCEPTION_EMBEDDING_MODEL: z
-    .string()
-    .regex(/^[a-z0-9.-]{3,64}$/)
-    .default('gemini-embedding-001'),
   GOOD_EXCEPTION_TASKS_QUEUE: z
     .string()
     .regex(/^projects\/[a-z0-9-]+\/locations\/[a-z0-9-]+\/queues\/[A-Za-z0-9-]+$/)
@@ -58,7 +54,7 @@ export interface ServerConfig {
   allowedOrigins: string[];
   projectId?: string;
   databaseId: string;
-  gemini?: { model: string; agentModel: string; embeddingModel: string; location: string };
+  gemini?: { model: string; agentModel: string; location: string };
   tasks?: { queue: string; workerUrl: string; invokerEmail: string };
   pseudonymKey?: string;
   requireMfa: boolean;
@@ -141,7 +137,6 @@ export function readConfig(env: Record<string, string | undefined> = process.env
       ? {
           model: e.GOOD_EXCEPTION_GEMINI_MODEL,
           agentModel: e.GOOD_EXCEPTION_AGENT_MODEL ?? e.GOOD_EXCEPTION_GEMINI_MODEL,
-          embeddingModel: e.GOOD_EXCEPTION_EMBEDDING_MODEL,
           location: e.GOOGLE_CLOUD_LOCATION,
         }
       : undefined,

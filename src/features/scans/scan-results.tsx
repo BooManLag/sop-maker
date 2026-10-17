@@ -130,7 +130,7 @@ function Funnel({ counts, demo }: { counts: number[]; demo: boolean }) {
         <p>
           {demo
             ? 'This is an illustrative funnel, not an analysis of uploaded records.'
-            : 'Similar job notes were grouped with Gemini embeddings. Each group was compared with all other jobs on 30-day callbacks using the oldest 70% of jobs, then checked on the newest 30%. A Gemini agent chose which practices to propose; every rate was computed from your records.'}{' '}
+            : 'Job notes describing the same thing were grouped by Gemini. Each group was compared with all other jobs on 30-day callbacks using the oldest 70% of jobs, then checked on the newest 30%. A Gemini agent chose which practices to propose; every rate was computed from your records.'}{' '}
           Historical association does not establish causation.
         </p>
       </Disclosure>
