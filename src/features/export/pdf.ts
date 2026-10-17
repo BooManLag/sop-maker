@@ -441,7 +441,8 @@ function drawRevisions(w: Writer, doc: SopDocument) {
 }
 
 function drawApproval(w: Writer, doc: SopDocument) {
-  w.heading(doc.title.evidence.length ? 7 : 6, 'Approval');
+  // The note and the whole sign-off table (header plus three 12 mm rows) stay with the heading.
+  w.heading(doc.title.evidence.length ? 7 : 6, 'Approval', 2 * lineHeight(10) + 4 + 7 + 3 * 12);
   const { pdf } = w;
   w.paragraph(
     doc.control.approved
