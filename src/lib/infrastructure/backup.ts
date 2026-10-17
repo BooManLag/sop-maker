@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { JsonRepository } from './json-repository';
 import { migrateStore, type AuditEvent, type Store } from '../application/store';
@@ -44,10 +44,16 @@ export async function restoreDemo(file: string, dataDirectory: string) {
     'Backup checksum or format is invalid.',
   );
   const state = migrateStore(JSON.parse(backup.payload), 'demo-org');
-  if (audit) state.auditEvents.unshift(...(JSON.parse(audit) as AuditEvent[]));
+  const events = [...(audit ? (JSON.parse(audit) as AuditEvent[]) : []), ...state.auditEvents];
+  state.auditEvents = [];
   const repository = new JsonRepository(dataDirectory);
+  // The restored log replaces the target's; it is swapped in once the state has committed.
+  await mkdir(dataDirectory, { recursive: true, mode: 0o700 });
+  const log = `${repository.auditFile}.restore`;
+  await writeFile(log, events.map((e) => JSON.stringify(e) + '\n').join(''), { mode: 0o600 });
   await repository.transact((store) => {
     Object.assign(store, state);
   });
+  await rename(log, repository.auditFile);
   return state as Store;
 }
