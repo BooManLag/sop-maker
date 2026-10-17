@@ -8,8 +8,8 @@ Target: AI Builder Cup (JPAC). Judging weight that drives this plan: Technical M
 |---|---|
 | Runtime | Cloud Run from the existing `Dockerfile`; min instances 0, request-based CPU, tuned concurrency |
 | Region | `asia-northeast1` (Tokyo) for Cloud Run, Firestore (permanent), Cloud Tasks |
-| AI | Gemini on Vertex AI via the `global` endpoint; Flash for extraction, questions and triage; Pro only for change proposals; Vertex text embeddings |
-| Scan analysis | Gemini embeddings group job notes in memory; an ADK agent picks practices to test; code computes every rate with a held-out check on the newest 30% of jobs. Runs via Cloud Tasks (max 2 concurrent, 3 attempts). Embeddings are not persisted yet: tenant state is one size-capped document. |
+| AI | Gemini on Vertex AI via the `global` endpoint; Flash for extraction, questions and triage; Pro only for change proposals |
+| Scan analysis | Gemini groups the distinct job notes in memory; an ADK agent picks practices to test; code computes every rate with a held-out check on the newest 30% of jobs. Runs via Cloud Tasks (max 2 concurrent, 3 attempts). Groups are not persisted: tenant state is one size-capped document. |
 | Multimodal | Deferred. If time allows: short browser audio clips sent straight to Gemini |
 | Agent | ADK "good-exception finder" in Cloud Run; tools: get SOP, list note clusters, evaluate practice, propose finding; findings are candidates for human review. Firestore vector search across scans is a later addition |
 | Quality | Structured output, safety settings (dangerous content blocks only at high, since SOPs name hazards), extraction and agent evals. Context caching skipped: our prompts are far below Vertex's minimum cacheable size |

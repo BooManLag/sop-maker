@@ -16,6 +16,6 @@ Each file also holds a shortcut that raises callbacks (sealing before testing, s
 The expected grades are what the app's statistics give when the notes describing the practice are grouped together.
 
 - **Local demo:** run `npm run seed:manufacturing` to add the four SOPs, then scan. The simulated analysis returns exactly the finding in the table for each file, with the same numbers.
-- **Production:** the live scan groups notes by Gemini embedding similarity. At the current threshold it merges all notes in a dataset into one group, so it returns no findings for these files until that is fixed.
+- **Production:** the live scan has Gemini group the distinct notes. Measured with gemini-3.5-flash, the practice notes in each file form their own groups and give the grades in the table.
 
 Each scan stores its rows in the workspace for 30 days. Together the four files take roughly 300 KB of the workspace's 750 KB limit, so avoid re-importing them repeatedly.

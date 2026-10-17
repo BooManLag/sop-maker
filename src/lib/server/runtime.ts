@@ -5,14 +5,14 @@ import { FirestoreRepositoryProvider } from '../infrastructure/firestore-reposit
 import { firebaseTokenVerifier, firestoreDatabase } from '../infrastructure/firebase';
 import { GuardedCaptureAdapter, UnavailableCaptureAdapter } from './ai';
 import { DemoGeminiAdapter } from '../infrastructure/demo-capture-adapter';
-import { VertexGeminiAdapter } from './gemini';
+import { VertexGeminiAdapter, vertexGenerate } from './gemini';
 import { createHttpHandler } from './http';
 import { AdmissionControl } from './limits';
 import { AnalysisWorker, InlineAnalysisQueue } from '../application/analysis/worker';
-import { adkDriver, vertexEmbedder } from './scan-agent';
+import { adkDriver, geminiNoteGrouper } from './scan-agent';
 import {
   OFFLINE_ANALYSIS,
-  OfflineEmbedder,
+  OfflineNoteGrouper,
   offlineDriver,
 } from '../infrastructure/offline-analysis';
 import { CloudTasksQueue, cloudTasksVerifier, mediaWorkerUrl } from './cloud-tasks';
@@ -56,13 +56,13 @@ function compose() {
   const worker = vertex
     ? new AnalysisWorker(
         repositories,
-        vertexEmbedder({ ...vertex, model: vertex.agentModel }),
+        geminiNoteGrouper(vertexGenerate({ ...vertex, model: vertex.agentModel })),
         adkDriver({ ...vertex, model: vertex.agentModel }),
       )
     : config.mode === 'demo'
       ? new AnalysisWorker(
           repositories,
-          new OfflineEmbedder(),
+          new OfflineNoteGrouper(),
           offlineDriver,
           undefined,
           OFFLINE_ANALYSIS,

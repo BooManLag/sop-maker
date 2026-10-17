@@ -10,7 +10,7 @@ Browser (Next.js/React client, Firebase Auth)
    ▼
 Firebase Hosting ──rewrite──▶ Cloud Run "sop-app" (asia-northeast1, Next.js standalone)
                                   ├─ Firestore (data, idempotency, audit)
-                                  ├─ Vertex AI Gemini (gemini-3.5-flash, gemini-embedding-001)
+                                  ├─ Vertex AI Gemini (gemini-3.5-flash)
                                   ├─ Google ADK scan agent
                                   ├─ Cloud Storage (media)
                                   ├─ Secret Manager (pseudonym key)
@@ -43,7 +43,7 @@ Code is organized by feature in `src/features/*` (auth, capture, changes, findin
 | Auth (server) | `firebase-admin` ID-token verification, tenant scoping, reviewer/admin roles via custom claims, MFA for privileged roles |
 | Persistence | Firestore repository (prod); JSON-file repository + `proper-lockfile` for demo/tests |
 | Write safety | Transactional idempotency keys, audit events, workflow constraints |
-| AI | `@google/genai` on Vertex AI — Gemini `gemini-3.5-flash`, embeddings `gemini-embedding-001` |
+| AI | `@google/genai` on Vertex AI — Gemini `gemini-3.5-flash` |
 | Agent | Google Agent Development Kit (`@google/adk`) scan agent (`lib/server/scan-agent.ts`) |
 | Background jobs | Cloud Tasks queue (max 2 concurrent, 3 attempts) calling an internal worker endpoint, OIDC-authenticated as a dedicated service account |
 | Observability | Structured JSON logs (`ai_usage` events), `instrumentation.ts`, Cloud Trace |
