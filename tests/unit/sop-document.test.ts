@@ -57,6 +57,8 @@ test('a published SOP becomes a title page and one page per step', () => {
       action: 'Isolate the supply',
       details: [{ label: 'Warning', text: 'Line may be pressurized' }],
       hasImage: true,
+      required: true,
+      validated: false,
     },
     {
       id: 's2',
@@ -67,9 +69,25 @@ test('a published SOP becomes a title page and one page per step', () => {
         { label: 'Why', text: 'Seals settle' },
       ],
       hasImage: false,
+      required: true,
+      validated: false,
     },
   ]);
   assert.equal(doc.fileName, 'valve-replacement-v1');
+  assert.deepEqual(doc.control, {
+    documentId: 'SOP-P1',
+    versionDate: '2026-10-01',
+    approved: true,
+    published: true,
+  });
+  assert.deepEqual(doc.revisions, [
+    {
+      version: 1,
+      date: '2026-10-01',
+      status: 'Approved',
+      change: 'Updated with a practice validated in a controlled trial',
+    },
+  ]);
 });
 test('unpublished and demo SOPs carry visible labels', () => {
   const doc = buildSopDocument(process(false), { demo: true, generatedAt });
@@ -99,4 +117,34 @@ test('a step marked as needing no picture exports with no image and no placehold
   const [page] = doc.steps;
   assert.equal(page.hasImage, false);
   assert.ok(!JSON.stringify(page).toLowerCase().includes('picture'));
+});
+
+test('steps carry whether they are optional, how long they take and if a trial validated them', () => {
+  const doc = buildSopDocument(process(true), {
+    demo: false,
+    generatedAt,
+    steps: [
+      step(1, 'Wait', { durationMinSeconds: 180, durationMaxSeconds: 300 }),
+      step(2, 'Photograph the gauge', { required: false, durationMinSeconds: 45 }),
+      step(3, 'Test again', { source: 'validated_field_practice', durationMaxSeconds: 90 }),
+    ],
+  });
+  assert.deepEqual(
+    doc.steps.map(({ required, duration, validated }) => ({ required, duration, validated })),
+    [
+      { required: true, duration: '3–5 min', validated: false },
+      { required: false, duration: '45 s', validated: false },
+      { required: true, duration: '1.5 min', validated: true },
+    ],
+  );
+});
+test('a draft is listed in the revision history as a draft', () => {
+  const doc = buildSopDocument(process(false), { demo: false, generatedAt });
+  assert.equal(doc.revisions[0].status, 'Draft');
+  assert.deepEqual(doc.control, {
+    documentId: 'SOP-P1',
+    versionDate: '2026-10-01',
+    approved: false,
+    published: false,
+  });
 });

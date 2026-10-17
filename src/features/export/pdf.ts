@@ -1,102 +1,512 @@
-import { jsPDF } from 'jspdf';
+import { GState, jsPDF } from 'jspdf';
 import type { SopDocument, SopPage } from './sop-document';
 import { jpegDataUri, labelLine, type StepImages } from './images';
 
-/** Landscape A4 in millimetres, laid out like the deck's 16:9 slides. */
-const page = { width: 297, height: 210, margin: 18 };
-const ink: [number, number, number] = [31, 42, 28];
-const muted: [number, number, number] = [107, 119, 102];
-const warning: [number, number, number] = [161, 92, 0];
-const image = { x: 160, y: 36, width: 119, height: 89 };
+type Rgb = [number, number, number];
+/** Portrait A4 in millimetres. */
+const page = { width: 210, height: 297, margin: 16 };
+const content = { left: page.margin, right: page.width - page.margin, top: 30, bottom: 278 };
+const ink: Rgb = [31, 42, 28];
+const muted: Rgb = [107, 119, 102];
+const rule: Rgb = [214, 220, 210];
+const band: Rgb = [242, 245, 240];
+const brand: Rgb = [46, 92, 58];
+const warning: Rgb = [161, 92, 0];
+const warningSurface: Rgb = [253, 244, 228];
+/** Procedure table columns: step number, instruction (with picture), sign-off box. */
+const columns = { number: 14, check: 16 };
+const picture = { width: 62, height: 46 };
 
-/** The SOP for print: a title page, then one page per step, from the same model as the deck. */
+/**
+ * The SOP as a controlled document for print: a header and footer on every page, a
+ * document-control table, purpose and scope, the safety warnings gathered in one place, the
+ * procedure as a numbered table with pictures and sign-off boxes, revision history and an
+ * approval block. Built from the same model as the deck.
+ */
 export async function renderPdf(doc: SopDocument, images: StepImages): Promise<Uint8Array> {
-  const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-  pdf.setProperties({ title: doc.title.title });
-  drawTitlePage(pdf, doc);
-  for (const step of doc.steps) {
-    pdf.addPage();
-    drawStepPage(pdf, doc, step, images[step.id]);
-  }
+  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  pdf.setProperties({ title: doc.title.title, subject: 'Standard operating procedure' });
+  const writer = new Writer(pdf);
+  drawCover(writer, doc);
+  drawPurposeAndScope(writer, doc);
+  drawSafety(writer, doc);
+  drawProcedure(writer, doc, images);
+  drawReferences(writer, doc);
+  drawRevisions(writer, doc);
+  drawApproval(writer, doc);
+  finishPages(pdf, doc);
   return new Uint8Array(pdf.output('arraybuffer'));
 }
 
-function drawTitlePage(pdf: jsPDF, doc: SopDocument) {
-  drawLabels(pdf, doc);
-  const { title } = doc;
-  write(pdf, title.title, { y: 70, size: 28, bold: true });
-  write(pdf, title.equipment, { y: 84, size: 15, color: muted });
-  const facts = [
-    `${title.version} · ${title.approval}`,
-    ...title.evidence,
-    `Generated ${title.generatedAt}`,
-  ];
-  write(pdf, facts.join('\n'), { y: 104, size: 12, color: muted });
+/** Tracks the cursor and starts a new page when the next block will not fit. */
+class Writer {
+  y = content.top;
+  constructor(readonly pdf: jsPDF) {}
+  ensure(height: number, onNewPage?: () => void) {
+    if (this.y + height <= content.bottom) return;
+    this.pdf.addPage();
+    this.y = content.top;
+    onNewPage?.();
+  }
+  heading(number: number, text: string) {
+    this.ensure(18);
+    this.y += 4;
+    setText(this.pdf, 12, true, brand);
+    this.pdf.text(`${number}.  ${text.toUpperCase()}`, content.left, this.y, { baseline: 'top' });
+    this.y += 6;
+    line(this.pdf, content.left, this.y, content.right, this.y, brand, 0.4);
+    this.y += 4;
+  }
+  paragraph(
+    text: string,
+    options: { size?: number; color?: Rgb; x?: number; width?: number } = {},
+  ) {
+    const lines = wrap(this.pdf, text, options.width ?? content.right - content.left, options.size);
+    const height = lines.length * lineHeight(options.size ?? 10);
+    this.ensure(height);
+    setText(this.pdf, options.size ?? 10, false, options.color ?? ink);
+    this.pdf.text(lines, options.x ?? content.left, this.y, { baseline: 'top' });
+    this.y += height + 2;
+  }
 }
 
-function drawStepPage(pdf: jsPDF, doc: SopDocument, step: SopPage, jpeg?: Uint8Array) {
-  drawLabels(pdf, doc);
-  const width = jpeg ? image.x - page.margin - 8 : page.width - 2 * page.margin;
-  write(pdf, `Step ${step.number}`, { y: 30, size: 11, color: muted });
-  let y = write(pdf, step.action, { y: 42, size: 20, bold: true, width }) + 6;
-  for (const detail of step.details)
-    y =
-      write(pdf, `${detail.label}: ${detail.text}`, {
-        y,
-        size: 12,
-        width,
-        color: detail.label === 'Warning' ? warning : ink,
-      }) + 3;
-  if (jpeg)
+function drawCover(w: Writer, doc: SopDocument) {
+  const { pdf } = w;
+  setText(pdf, 9, true, brand);
+  pdf.text('STANDARD OPERATING PROCEDURE', content.left, w.y, {
+    baseline: 'top',
+    charSpace: 0.6,
+  });
+  w.y += 7;
+  const title = wrap(pdf, doc.title.title, content.right - content.left, 22, true);
+  setText(pdf, 22, true, ink);
+  pdf.text(title, content.left, w.y, { baseline: 'top' });
+  w.y += title.length * lineHeight(22) + 1;
+  setText(pdf, 12, false, muted);
+  pdf.text(doc.title.equipment, content.left, w.y, { baseline: 'top' });
+  w.y += 10;
+
+  const rows: [string, string][] = [
+    ['Document ID', doc.control.documentId],
+    ['Version', doc.control.published ? doc.title.version.replace('Version ', '') : 'Draft'],
+    ['Status', doc.title.approval],
+    ['Version date', doc.control.versionDate],
+    ['Equipment / job', doc.title.equipment],
+    ['Steps', `${doc.steps.length} (${doc.steps.filter((s) => s.required).length} required)`],
+    ['Generated', doc.title.generatedAt],
+  ];
+  const labelWidth = 38;
+  const half = (content.right - content.left) / 2;
+  const rowHeight = 8;
+  const pairs = Math.ceil(rows.length / 2);
+  pdf.setDrawColor(...rule);
+  pdf.setLineWidth(0.2);
+  for (let i = 0; i < pairs; i++) {
+    for (let col = 0; col < 2; col++) {
+      const row = rows[i * 2 + col];
+      const x = content.left + col * half;
+      const y = w.y + i * rowHeight;
+      pdf.setFillColor(...band);
+      pdf.rect(x, y, labelWidth, rowHeight, 'FD');
+      pdf.rect(x + labelWidth, y, half - labelWidth, rowHeight, 'S');
+      if (!row) continue;
+      setText(pdf, 8, true, muted);
+      pdf.text(row[0], x + 2.5, y + rowHeight / 2, { baseline: 'middle' });
+      setText(pdf, 9.5, row[0] === 'Status', statusColor(doc, row[0]));
+      const value = wrap(pdf, row[1], half - labelWidth - 5, 9.5)[0];
+      pdf.text(value, x + labelWidth + 2.5, y + rowHeight / 2, { baseline: 'middle' });
+    }
+  }
+  w.y += pairs * rowHeight + 4;
+}
+const statusColor = (doc: SopDocument, label: string): Rgb =>
+  label === 'Status' ? (doc.control.approved ? brand : warning) : ink;
+
+function drawPurposeAndScope(w: Writer, doc: SopDocument) {
+  const { title, steps } = doc;
+  w.heading(1, 'Purpose');
+  w.paragraph(
+    `This procedure sets out how to carry out "${title.title}" so that the job is done the same ` +
+      'way every time. The steps were captured from an expert walkthrough and ' +
+      (doc.control.approved
+        ? 'approved by a reviewer before publication.'
+        : 'have not yet been approved by a reviewer.'),
+  );
+  w.heading(2, 'Scope');
+  const optional = steps.filter((s) => !s.required).length;
+  w.paragraph(
+    `Applies to ${title.equipment}. The procedure has ${steps.length} step${steps.length === 1 ? '' : 's'}` +
+      (optional
+        ? `, of which ${optional} ${optional === 1 ? 'is' : 'are'} optional.`
+        : '; all are required.') +
+      ' Follow the steps in order and sign off each one as it is completed.',
+  );
+}
+
+function drawSafety(w: Writer, doc: SopDocument) {
+  w.heading(3, 'Safety and warnings');
+  const warnings = doc.steps.flatMap((step) =>
+    step.details
+      .filter((d) => d.label === 'Warning')
+      .map((d) => ({ step: step.number, text: d.text })),
+  );
+  if (!warnings.length) {
+    w.paragraph('No step-specific warnings were recorded. Follow your site safety rules.', {
+      color: muted,
+    });
+    return;
+  }
+  const { pdf } = w;
+  const textX = content.left + 34;
+  for (const item of warnings) {
+    const lines = wrap(pdf, item.text, content.right - textX - 4, 10);
+    const height = Math.max(10, lines.length * lineHeight(10) + 5);
+    w.ensure(height + 2);
+    pdf.setFillColor(...warningSurface);
+    pdf.setDrawColor(...warning);
+    pdf.setLineWidth(0.3);
+    pdf.roundedRect(content.left, w.y, content.right - content.left, height, 1.5, 1.5, 'FD');
+    drawWarningSign(pdf, content.left + 7, w.y + height / 2);
+    setText(pdf, 9, true, warning);
+    pdf.text(`Step ${item.step}`, content.left + 14, w.y + 2.8, { baseline: 'top' });
+    setText(pdf, 10, false, ink);
+    pdf.text(lines, textX, w.y + 2.5, { baseline: 'top' });
+    w.y += height + 2;
+  }
+}
+
+function drawProcedure(w: Writer, doc: SopDocument, images: StepImages) {
+  w.heading(4, 'Procedure');
+  const { pdf } = w;
+  const tableWidth = content.right - content.left;
+  const body = tableWidth - columns.number - columns.check;
+  const header = () => {
+    pdf.setFillColor(...brand);
+    pdf.rect(content.left, w.y, tableWidth, 7, 'F');
+    setText(pdf, 8, true, [255, 255, 255]);
+    pdf.text('STEP', content.left + columns.number / 2, w.y + 3.5, {
+      align: 'center',
+      baseline: 'middle',
+    });
+    pdf.text('INSTRUCTION', content.left + columns.number + 3, w.y + 3.5, { baseline: 'middle' });
+    pdf.text('DONE', content.right - columns.check / 2, w.y + 3.5, {
+      align: 'center',
+      baseline: 'middle',
+    });
+    w.y += 7;
+  };
+  w.ensure(30);
+  header();
+  for (const step of doc.steps) {
+    const jpeg = images[step.id];
+    const layout = layoutStep(pdf, step, body, jpeg);
+    w.ensure(layout.height, header);
+    drawStepRow(pdf, step, layout, w.y, jpeg);
+    w.y += layout.height;
+  }
+  w.y += 4;
+}
+
+interface StepLayout {
+  height: number;
+  textWidth: number;
+  action: string[];
+  tags: string;
+  details: { label: string; lines: string[]; warning: boolean }[];
+  picture?: { width: number; height: number };
+}
+
+const detailLabelWidth = 20;
+function layoutStep(pdf: jsPDF, step: SopPage, body: number, jpeg?: Uint8Array): StepLayout {
+  const fitted = jpeg ? fitPicture(pdf, jpeg) : undefined;
+  const textWidth = body - 6 - (fitted ? picture.width + 4 : 0);
+  const action = wrap(pdf, step.action, textWidth, 11, true);
+  const tags = [
+    step.required ? undefined : 'Optional',
+    step.duration && `Expected time: ${step.duration}`,
+    step.validated ? 'Validated in a field trial' : undefined,
+  ]
+    .filter(Boolean)
+    .join('  ·  ');
+  const details = step.details.map((d) => ({
+    label: d.label,
+    lines: wrap(pdf, d.text, textWidth - detailLabelWidth, 9),
+    warning: d.label === 'Warning',
+  }));
+  const textHeight =
+    action.length * lineHeight(11) +
+    (tags ? lineHeight(8) + 1 : 0) +
+    details.reduce((sum, d) => sum + d.lines.length * lineHeight(9) + 1.5, details.length ? 2 : 0);
+  const height = Math.max(textHeight, fitted?.height ?? 0, 10) + 8;
+  return { height, textWidth, action, tags, details, picture: fitted };
+}
+
+function drawStepRow(
+  pdf: jsPDF,
+  step: SopPage,
+  layout: StepLayout,
+  top: number,
+  jpeg?: Uint8Array,
+) {
+  const x = content.left;
+  const width = content.right - content.left;
+  const bodyX = x + columns.number + 3;
+  pdf.setDrawColor(...rule);
+  pdf.setLineWidth(0.2);
+  pdf.rect(x, top, width, layout.height, 'S');
+  line(pdf, x + columns.number, top, x + columns.number, top + layout.height, rule, 0.2);
+  line(
+    pdf,
+    content.right - columns.check,
+    top,
+    content.right - columns.check,
+    top + layout.height,
+    rule,
+    0.2,
+  );
+
+  pdf.setFillColor(...brand);
+  pdf.circle(x + columns.number / 2, top + 7, 4, 'F');
+  setText(pdf, 10, true, [255, 255, 255]);
+  pdf.text(String(step.number), x + columns.number / 2, top + 7, {
+    align: 'center',
+    baseline: 'middle',
+  });
+
+  let y = top + 4;
+  setText(pdf, 11, true, ink);
+  pdf.text(layout.action, bodyX, y, { baseline: 'top' });
+  y += layout.action.length * lineHeight(11);
+  if (layout.tags) {
+    y += 1;
+    setText(pdf, 8, false, step.validated ? brand : muted);
+    pdf.text(layout.tags, bodyX, y, { baseline: 'top' });
+    y += lineHeight(8);
+  }
+  if (layout.details.length) y += 2;
+  for (const detail of layout.details) {
+    const color = detail.warning ? warning : ink;
+    setText(pdf, 8, true, detail.warning ? warning : muted);
+    pdf.text(detail.label.toUpperCase(), bodyX, y + 0.4, { baseline: 'top' });
+    setText(pdf, 9, false, color);
+    pdf.text(detail.lines, bodyX + detailLabelWidth, y, { baseline: 'top' });
+    y += detail.lines.length * lineHeight(9) + 1.5;
+  }
+
+  if (jpeg && layout.picture) {
+    const px = content.right - columns.check - 3 - picture.width;
+    const py = top + 4;
     pdf.addImage(
       jpegDataUri(jpeg),
       'JPEG',
-      image.x,
-      image.y,
-      image.width,
-      image.height,
+      px + (picture.width - layout.picture.width) / 2,
+      py,
+      layout.picture.width,
+      layout.picture.height,
       undefined,
       'FAST',
     );
+    pdf.setDrawColor(...rule);
+    pdf.rect(
+      px + (picture.width - layout.picture.width) / 2,
+      py,
+      layout.picture.width,
+      layout.picture.height,
+      'S',
+    );
+  }
+
+  const box = 6;
+  pdf.setDrawColor(...muted);
+  pdf.setLineWidth(0.35);
+  pdf.rect(content.right - columns.check / 2 - box / 2, top + 4, box, box, 'S');
 }
 
-function drawLabels(pdf: jsPDF, doc: SopDocument) {
-  if (!doc.labels.length) return;
-  write(pdf, labelLine(doc), {
-    y: 12,
-    size: 10,
-    bold: true,
-    color: warning,
-    x: page.width - page.margin,
-    align: 'right',
-  });
+/** Scales a picture into the column, keeping its aspect ratio. */
+function fitPicture(pdf: jsPDF, jpeg: Uint8Array) {
+  try {
+    const { width, height } = pdf.getImageProperties(jpegDataUri(jpeg));
+    if (width > 0 && height > 0) {
+      const scale = Math.min(picture.width / width, picture.height / height);
+      return { width: width * scale, height: height * scale };
+    }
+  } catch {
+    // An unreadable header still embeds at the column's default proportions.
+  }
+  return { ...picture };
 }
 
-/** Writes wrapped text and returns the y just below it. */
-function write(
+function drawReferences(w: Writer, doc: SopDocument) {
+  if (!doc.title.evidence.length) return;
+  w.heading(5, 'References');
+  for (const reference of doc.title.evidence) w.paragraph(`•  ${reference}`);
+}
+
+function drawRevisions(w: Writer, doc: SopDocument) {
+  w.heading(doc.title.evidence.length ? 6 : 5, 'Revision history');
+  const { pdf } = w;
+  const cols = [
+    { label: 'VERSION', width: 22 },
+    { label: 'DATE', width: 28 },
+    { label: 'STATUS', width: 36 },
+    { label: 'CHANGE', width: content.right - content.left - 86 },
+  ];
+  const row = (cells: string[], heading: boolean) => {
+    const lines = cells.map((cell, i) => wrap(pdf, cell, cols[i].width - 4, heading ? 8 : 9));
+    const height = Math.max(...lines.map((l) => l.length)) * lineHeight(heading ? 8 : 9) + 4;
+    w.ensure(height);
+    let x = content.left;
+    if (heading) {
+      pdf.setFillColor(...band);
+      pdf.rect(x, w.y, content.right - content.left, height, 'F');
+    }
+    pdf.setDrawColor(...rule);
+    pdf.setLineWidth(0.2);
+    pdf.rect(x, w.y, content.right - content.left, height, 'S');
+    lines.forEach((cellLines, i) => {
+      setText(pdf, heading ? 8 : 9, heading, heading ? muted : ink);
+      pdf.text(cellLines, x + 2, w.y + 2, { baseline: 'top' });
+      x += cols[i].width;
+    });
+    w.y += height;
+  };
+  row(
+    cols.map((c) => c.label),
+    true,
+  );
+  for (const revision of doc.revisions)
+    row([`v${revision.version}`, revision.date, revision.status, revision.change], false);
+  w.y += 4;
+}
+
+function drawApproval(w: Writer, doc: SopDocument) {
+  w.heading(doc.title.evidence.length ? 7 : 6, 'Approval');
+  const { pdf } = w;
+  w.paragraph(
+    doc.control.approved
+      ? 'This version was approved in Good Exception. Sign below for local document control.'
+      : 'This version is not approved. It must not be used as the standard until a reviewer approves it.',
+    { color: doc.control.approved ? ink : warning },
+  );
+  const roles = ['Prepared by', 'Reviewed by', 'Approved by'];
+  const cols = [
+    { label: 'ROLE', width: 34 },
+    { label: 'NAME', width: 52 },
+    { label: 'SIGNATURE', width: 52 },
+    { label: 'DATE', width: content.right - content.left - 138 },
+  ];
+  w.ensure(7 + roles.length * 12);
+  let x = content.left;
+  pdf.setFillColor(...band);
+  pdf.rect(content.left, w.y, content.right - content.left, 7, 'F');
+  for (const col of cols) {
+    setText(pdf, 8, true, muted);
+    pdf.text(col.label, x + 2, w.y + 3.5, { baseline: 'middle' });
+    x += col.width;
+  }
+  w.y += 7;
+  for (const role of roles) {
+    x = content.left;
+    pdf.setDrawColor(...rule);
+    pdf.setLineWidth(0.2);
+    pdf.rect(content.left, w.y, content.right - content.left, 12, 'S');
+    for (const col of cols.slice(0, -1)) {
+      x += col.width;
+      line(pdf, x, w.y, x, w.y + 12, rule, 0.2);
+    }
+    setText(pdf, 9, true, ink);
+    pdf.text(role, content.left + 2, w.y + 6, { baseline: 'middle' });
+    w.y += 12;
+  }
+}
+
+/** Header, footer, page numbers and the draft watermark, once the page count is known. */
+function finishPages(pdf: jsPDF, doc: SopDocument) {
+  const total = pdf.getNumberOfPages();
+  for (let n = 1; n <= total; n++) {
+    pdf.setPage(n);
+    if (!doc.control.published) {
+      pdf.saveGraphicsState();
+      pdf.setGState(new GState({ opacity: 0.07 }));
+      setText(pdf, 96, true, warning);
+      // Rotation pivots on the text's start, so offset it to centre the word on the page.
+      const half = pdf.getTextWidth('DRAFT') / 2;
+      pdf.text(
+        'DRAFT',
+        page.width / 2 - half * Math.SQRT1_2,
+        page.height / 2 + half * Math.SQRT1_2,
+        {
+          angle: 45,
+          baseline: 'middle',
+        },
+      );
+      pdf.restoreGraphicsState();
+    }
+    setText(pdf, 8, true, ink);
+    const heading = wrap(pdf, doc.title.title, 110, 8, true)[0];
+    pdf.text(heading, content.left, 12, { baseline: 'top' });
+    setText(pdf, 8, false, muted);
+    pdf.text(
+      `${doc.control.documentId}  ·  ${doc.title.version}  ·  ${doc.title.approval}`,
+      content.left,
+      16.5,
+      {
+        baseline: 'top',
+      },
+    );
+    if (doc.labels.length) {
+      setText(pdf, 8, true, warning);
+      const label = labelLine(doc);
+      const width = pdf.getTextWidth(label) + 6;
+      pdf.setFillColor(...warningSurface);
+      pdf.setDrawColor(...warning);
+      pdf.setLineWidth(0.3);
+      pdf.roundedRect(content.right - width, 11, width, 6, 1.2, 1.2, 'FD');
+      pdf.text(label, content.right - width / 2, 14, { align: 'center', baseline: 'middle' });
+    }
+    line(pdf, content.left, 21.5, content.right, 21.5, rule, 0.3);
+
+    line(pdf, content.left, 284, content.right, 284, rule, 0.3);
+    setText(pdf, 7.5, false, muted);
+    pdf.text(
+      `Printed copies are uncontrolled. Check that this is the current version before use.  Generated ${doc.title.generatedAt}`,
+      content.left,
+      287,
+      { baseline: 'top' },
+    );
+    setText(pdf, 8, true, ink);
+    pdf.text(`Page ${n} of ${total}`, content.right, 287, { align: 'right', baseline: 'top' });
+  }
+}
+
+function drawWarningSign(pdf: jsPDF, cx: number, cy: number) {
+  pdf.setFillColor(...warning);
+  pdf.triangle(cx, cy - 3.2, cx - 3.6, cy + 2.8, cx + 3.6, cy + 2.8, 'F');
+  setText(pdf, 7, true, [255, 255, 255]);
+  pdf.text('!', cx, cy + 0.2, { align: 'center', baseline: 'middle' });
+}
+
+function setText(pdf: jsPDF, size: number, bold: boolean, color: Rgb) {
+  pdf.setFont('helvetica', bold ? 'bold' : 'normal');
+  pdf.setFontSize(size);
+  pdf.setTextColor(...color);
+}
+function wrap(pdf: jsPDF, text: string, width: number, size = 10, bold = false) {
+  pdf.setFont('helvetica', bold ? 'bold' : 'normal');
+  pdf.setFontSize(size);
+  return pdf.splitTextToSize(text, width) as string[];
+}
+const lineHeight = (size: number) => (size * 1.25 * 25.4) / 72;
+function line(
   pdf: jsPDF,
-  text: string,
-  options: {
-    y: number;
-    size: number;
-    bold?: boolean;
-    color?: [number, number, number];
-    width?: number;
-    x?: number;
-    align?: 'left' | 'right';
-  },
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  color: Rgb,
+  width: number,
 ) {
-  pdf.setFont('helvetica', options.bold ? 'bold' : 'normal');
-  pdf.setFontSize(options.size);
-  pdf.setTextColor(...(options.color ?? ink));
-  const lines = pdf.splitTextToSize(
-    text,
-    options.width ?? page.width - 2 * page.margin,
-  ) as string[];
-  pdf.text(lines, options.x ?? page.margin, options.y, {
-    align: options.align ?? 'left',
-    baseline: 'top',
-  });
-  const lineHeightMm = (options.size * pdf.getLineHeightFactor() * 25.4) / 72;
-  return options.y + lines.length * lineHeightMm;
+  pdf.setDrawColor(...color);
+  pdf.setLineWidth(width);
+  pdf.line(x1, y1, x2, y2);
 }
