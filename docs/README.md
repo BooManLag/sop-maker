@@ -12,6 +12,7 @@ Project documents, grouped by category. The product's own readme is [../README.m
 |---|---|
 | [product/architecture.md](product/architecture.md) | Domain boundaries, API contracts, statistical limits, Google Cloud target and production prerequisites |
 | [product/video-sop-pipeline.md](product/video-sop-pipeline.md) | Build plan for video-first capture (transcription, then a frame per step) and PPTX/PDF export. Planned, not started |
+| [product/bigquery-evidence-layer.md](product/bigquery-evidence-layer.md) | Build plan for moving scan records and statistics to BigQuery: tables, SQL, file import and scan worker changes. Planned, not started |
 
 ## Backend engineering
 
