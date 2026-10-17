@@ -18,11 +18,14 @@ import { LIMITS } from '../server/config';
 
 type Recording = ExpertCapture & { media: NonNullable<ExpertCapture['media']> };
 const chargedSeconds = (seconds = 0) => Math.ceil(seconds);
+/** Outlasts the 900s request and task deadline, so a live attempt never loses its claim. */
+const CLAIM_MS = 16 * 60_000;
 
 /**
  * Turns one uploaded recording into a draft. Safe to repeat: a capture that is no longer
- * awaiting its upload is left alone, and every storage step tolerates having already run,
- * so storage-event redelivery never transcribes twice or strands a half-moved file.
+ * awaiting its upload is left alone, one attempt at a time holds a claim on it, and every
+ * storage step tolerates having already run, so redelivery never transcribes twice or
+ * strands a half-moved file.
  */
 export class MediaWorker {
   constructor(
@@ -37,14 +40,40 @@ export class MediaWorker {
     const repository = this.repositories.forTenant(organizationId);
     const recording = await this.pendingRecording(repository, job.objectPath);
     if (!recording) return;
-    const admitted = recording.media.cleanPath
-      ? recording
-      : await this.admit(repository, recording);
-    if (!admitted) return;
-    await this.storage.promote(admitted.media.objectPath, admitted.media.cleanPath!);
-    const result = await this.transcribe(repository, admitted);
-    if (result.transcription) await this.applyDraft(repository, admitted, result);
-    else await this.fail(repository, admitted, finalAttempt, result.issues ?? []);
+    // A duplicate delivery during a live attempt fails, so the queue retries it once that attempt is done.
+    if (!(await this.claim(repository, recording.id, finalAttempt)))
+      throw new Error('Another attempt is transcribing this recording.');
+    try {
+      const admitted = recording.media.cleanPath
+        ? recording
+        : await this.admit(repository, recording);
+      if (!admitted) return;
+      await this.storage.promote(admitted.media.objectPath, admitted.media.cleanPath!);
+      const result = await this.transcribe(repository, admitted);
+      if (result.transcription) await this.applyDraft(repository, admitted, result);
+      else await this.fail(repository, admitted, finalAttempt, result.issues ?? []);
+    } finally {
+      await this.release(repository, recording.id);
+    }
+  }
+  /**
+   * Takes the recording for this attempt unless a live attempt already holds it. The final
+   * attempt always takes it: earlier ones have failed or timed out, so a claim left behind
+   * belongs to an instance that died and would otherwise strand the recording.
+   */
+  private claim(repository: Repository, captureId: string, finalAttempt: boolean) {
+    return repository.transact((s) => {
+      const media = processes.getCapture(s, captureId).media!;
+      const held = media.transcribingUntil && Date.parse(media.transcribingUntil) > Date.now();
+      if (held && !finalAttempt) return false;
+      media.transcribingUntil = new Date(Date.now() + CLAIM_MS).toISOString();
+      return true;
+    });
+  }
+  private release(repository: Repository, captureId: string) {
+    return repository.transact((s) => {
+      delete processes.getCapture(s, captureId).media?.transcribingUntil;
+    });
   }
   private pendingRecording(repository: Repository, objectPath: string) {
     return repository.query(
@@ -63,12 +92,14 @@ export class MediaWorker {
     if (seconds > LIMITS.mediaSecondsCeiling)
       return this.reject(repository, recording, 'The recording is too long to process.');
     const sha256 = await this.storage.sha256(objectPath);
-    const media = { ...recording.media, seconds, sha256, cleanPath: mediaPaths.clean(objectPath) };
+    const measured = { seconds, sha256, cleanPath: mediaPaths.clean(objectPath) };
+    const media = { ...recording.media, ...measured };
     try {
       // Recorded before the move, so a crash after it still finds the clean copy on retry.
+      // Merged rather than replaced, so this attempt keeps its claim.
       await repository.transact((s) => {
         reserveMediaSeconds(s, chargedSeconds(seconds));
-        processes.getCapture(s, recording.id).media = media;
+        Object.assign(processes.getCapture(s, recording.id).media!, measured);
       });
     } catch (error) {
       if (!(error instanceof ApiError && error.status === 429)) throw error;

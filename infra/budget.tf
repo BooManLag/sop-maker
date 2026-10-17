@@ -25,3 +25,14 @@ resource "google_billing_budget" "monthly" {
   }
   depends_on = [google_project_service.apis, google_pubsub_topic_iam_member.budget_publisher]
 }
+
+# Destination for the Cloud Billing export, which shows spend by service and SKU. The export itself
+# has no API: turn on "Detailed usage cost" in Billing > Billing export and pick this dataset.
+# A multi-region dataset, as Google recommends, so the export can backfill earlier months.
+resource "google_bigquery_dataset" "billing_export" {
+  count       = var.billing_account == "" ? 0 : 1
+  dataset_id  = "billing_export"
+  location    = "US"
+  description = "Cloud Billing detailed usage cost export."
+  depends_on  = [google_project_service.apis]
+}

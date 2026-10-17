@@ -66,6 +66,8 @@ export interface ExpertCapture {
     contentType: MediaContentType;
     /** Length read from the file by the media worker; absent until inspection. */
     seconds?: number;
+    /** While in the future, one worker attempt owns this recording's transcription. */
+    transcribingUntil?: string;
   };
   /** Who confirmed that everyone in the recording agreed to be recorded. */
   consent?: { confirmedBy: string; confirmedAt: string };
