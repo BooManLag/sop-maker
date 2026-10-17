@@ -1,4 +1,4 @@
-import { GoogleGenAI, HarmBlockThreshold, HarmCategory } from '@google/genai';
+import { GoogleGenAI, HarmBlockThreshold, HarmCategory, ThinkingLevel } from '@google/genai';
 import type { ProcessStep } from '../domain/types';
 import type { CaptureAdapter } from '../application/ports';
 import { DemoGeminiAdapter } from '../infrastructure/demo-capture-adapter';
@@ -10,13 +10,16 @@ export interface GeminiSettings {
   location: string;
   model: string;
 }
-type Generate = (request: {
+/** One JSON-schema generation call; returns the response text. */
+export type Generate = (request: {
   feature: AiFeature;
   system: string;
   prompt: string;
   schema: object;
   signal?: AbortSignal;
   maxOutputTokens: number;
+  /** For mechanical tasks that need little reasoning; the model default otherwise. */
+  thinking?: 'low';
 }) => Promise<string | undefined>;
 
 const EXTRACT_INSTRUCTION = `You turn an expert's spoken or written walkthrough into an ordered standard operating procedure.
@@ -76,13 +79,13 @@ export const SAFETY_SETTINGS = [
   },
 ];
 
-function vertexGenerate(settings: GeminiSettings): Generate {
+export function vertexGenerate(settings: GeminiSettings): Generate {
   const client = new GoogleGenAI({
     vertexai: true,
     project: settings.projectId,
     location: settings.location,
   });
-  return ({ feature, system, prompt, schema, signal, maxOutputTokens }) =>
+  return ({ feature, system, prompt, schema, signal, maxOutputTokens, thinking }) =>
     metered(feature, settings.model, async () => {
       const response = await client.models.generateContent({
         model: settings.model,
@@ -95,6 +98,7 @@ function vertexGenerate(settings: GeminiSettings): Generate {
           maxOutputTokens,
           safetySettings: SAFETY_SETTINGS,
           abortSignal: signal,
+          ...(thinking && { thinkingConfig: { thinkingLevel: ThinkingLevel.LOW } }),
         },
       });
       const used = tokens(response.usageMetadata);

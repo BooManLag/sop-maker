@@ -1,4 +1,4 @@
-import type { Embedder, AnalysisToolkit } from '../application/analysis/toolkit';
+import type { AnalysisToolkit, NoteGrouper } from '../application/analysis/toolkit';
 import { MAX_FINDINGS } from '../application/analysis/toolkit';
 import type { AnalysisMethod } from '../application/evidence-service';
 
@@ -19,35 +19,48 @@ const stopWords = new Set(
 );
 const stem = (word: string) => word.replace(/(ing|ed|es|s)$/, '') || word;
 
-/** Words of the free-text note only: parts and checklist suffixes repeat on every job. */
-export function noteWords(signal: string) {
-  const note = signal
-    .split(' | ')
-    .filter((part) => !/^(Parts|Checklist):/.test(part))
-    .join(' ');
-  return (note.toLowerCase().match(/[a-z0-9]+/g) ?? [])
-    .filter((word) => word.length > 2 && !stopWords.has(word))
-    .map(stem);
-}
+/** The checklist and parts segments `signalText` appends after the note. */
+const suffix = /^(Not done|Other parts|Without usual parts):/;
 export const noteText = (signal: string) =>
   signal
     .split(' | ')
-    .filter((part) => !/^(Parts|Checklist):/.test(part))
+    .filter((part) => !suffix.test(part))
     .join(' | ')
     .trim();
+/** Words of the free-text note only, so jobs are grouped by what their notes say. */
+export function noteWords(signal: string) {
+  return (
+    noteText(signal)
+      .toLowerCase()
+      .match(/[a-z0-9]+/g) ?? []
+  )
+    .filter((word) => word.length > 2 && !stopWords.has(word))
+    .map(stem);
+}
 
-/** Word-count vectors over the scan's own vocabulary: identical notes match, different ones rarely do. */
-export class OfflineEmbedder implements Embedder {
-  async embed(texts: string[]) {
-    const words = texts.map(noteWords);
-    const vocabulary = new Map<string, number>();
-    for (const list of words)
-      for (const word of list) if (!vocabulary.has(word)) vocabulary.set(word, vocabulary.size);
-    return words.map((list) => {
-      const vector = new Array<number>(vocabulary.size).fill(0);
-      for (const word of list) vector[vocabulary.get(word)!] += 1;
-      return vector;
+const SIMILARITY = 0.82;
+function cosine(a: Map<string, number>, b: Map<string, number>) {
+  let dot = 0;
+  for (const [word, n] of a) dot += n * (b.get(word) ?? 0);
+  const norm = (v: Map<string, number>) =>
+    Math.sqrt([...v.values()].reduce((sum, n) => sum + n * n, 0));
+  return dot ? dot / (norm(a) * norm(b)) : 0;
+}
+/**
+ * Word-count vectors of each note, grouped greedily: a note joins the first group whose first
+ * note is similar enough. Identical notes match, different ones rarely do.
+ */
+export class OfflineNoteGrouper implements NoteGrouper {
+  async group(texts: string[]) {
+    const groups: { leader: Map<string, number>; members: number[] }[] = [];
+    texts.forEach((text, i) => {
+      const vector = new Map<string, number>();
+      for (const word of noteWords(text)) vector.set(word, (vector.get(word) ?? 0) + 1);
+      const home = groups.find((g) => cosine(g.leader, vector) >= SIMILARITY);
+      if (home) home.members.push(i);
+      else groups.push({ leader: vector, members: [i] });
     });
+    return groups.map((g) => ({ label: '', members: g.members }));
   }
 }
 

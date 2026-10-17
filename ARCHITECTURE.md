@@ -45,7 +45,7 @@ flowchart LR
   run -->|enqueue| tasks[Cloud Tasks]
   tasks -->|OIDC| worker["Cloud Run<br/>/api/v1/internal/analysis<br/>/api/v1/internal/media"]
   worker --> gemini
-  worker -->|embeddings + ADK agent| gemini
+  worker -->|note grouping + ADK agent| gemini
   worker --> fs
   worker --> gcs
   run --> sm[Secret Manager]
@@ -75,7 +75,7 @@ src/
     server/               Transport and security boundary: HTTP, auth, contracts,
                           config, limits, AI adapters, Cloud Tasks, runtime wiring
     application/          Use cases and workflow rules, ports, store, workers
-      analysis/           Scan analysis: clustering toolkit, statistics, worker
+      analysis/           Scan analysis: note grouping toolkit, statistics, worker
     domain/               Pure types and rules: processes, steps, findings, records
     infrastructure/       Adapters: Firestore, JSON file store, GCS, local media,
                           Firebase Admin, demo AI, backup
@@ -300,7 +300,7 @@ Every step is idempotent: a recording that is no longer `awaiting_upload` is ski
 
 - **Capture extraction** (`lib/server/gemini.ts`) turns text into structured steps and clarification questions with Gemini on Vertex AI. `GuardedCaptureAdapter` (`ai.ts`) bounds input size, output tokens and time, validates the output against a strict schema, and isolates failures.
 - **Transcription** (`gemini-transcriber.ts`) produces timed segments and suggested steps that must fit the measured recording length.
-- **Scan agent** (`scan-agent.ts`) uses the Google Agent Development Kit with Gemini embeddings.
+- **Scan agent** (`scan-agent.ts`) groups job notes with Gemini and runs the Google Agent Development Kit agent.
 - **Metering.** Every model call is wrapped by `ai-usage.ts` and logged as an `ai_usage` event (feature, model, tokens, latency), which Cloud Monitoring turns into metrics and a dashboard. Per-user and per-tenant hourly call quotas are enforced in the store.
 
 Model output is always a candidate. It cannot publish an SOP, change permissions, write evidence or call anything beyond its declared tools. Extraction runs outside the database transaction, and the backend checks the draft has not changed before committing the result. There is no silent provider fallback and no automatic model retry; failures show as an unavailable state.
@@ -309,8 +309,8 @@ Model output is always a candidate. It cannot publish an SOP, change permissions
 
 A scan run enqueues a job (Cloud Tasks in production, inline otherwise) that `AnalysisWorker` processes within a 4-minute budget:
 
-1. **Signals.** Only free-text notes, parts used and checklist values are sent to the model, never outcomes or technician IDs (`analysis/toolkit.ts`).
-2. **Clusters.** Notes are embedded and grouped into recurring differences from the SOP (cosine similarity ≥ 0.82, at least 3 jobs).
+1. **Signals.** Each job becomes one line: its notes, checklist items not done, and parts that differ from what is usual for the equipment model (`analysis/toolkit.ts`). Checklists and parts every job shares are left out, because they made all jobs look alike. Outcomes and technician IDs are never sent to the model.
+2. **Clusters.** Gemini sorts the distinct lines into groups that describe the same thing (structured JSON, 250 lines per call; larger scans are grouped in parts that are then joined). Code checks the answer: indexes in range, every line in exactly one group, nothing dropped. Groups need at least 3 jobs. Embedding similarity was tried first, but notes from one domain all scored above 0.9 against each other and negations ("suspended BitLocker" vs "without suspending BitLocker") scored as similar, so every scan collapsed into one group.
 3. **Agent.** The ADK agent has exactly four tools: `get_sop`, `list_clusters`, `evaluate_practice` (statistics computed in code) and `propose_finding`. It proposes at most five findings, each of which a human reviews.
 4. **Statistics in code.** `analysis/stats.ts` computes callback rates, compares jobs only with jobs by the same technician on the same equipment and job type, and holds out later jobs as a check. _Promising_ needs 10 jobs, 2 technicians and a 10% reduction; _strong_ needs 30 jobs, 3 technicians, 20% and a significant held-out result. The model never computes a number that is shown as evidence.
 5. **Funnel.** The scan records how many jobs survived each stage (reviewed → recurring → enough examples → fewer callbacks → held on later jobs), which the results page shows.
@@ -371,20 +371,20 @@ Tests use temporary data directories and never touch demo or live data.
 
 All settings are validated in `src/lib/server/config.ts`.
 
-| Variable                                                                                      | Purpose                                                           |
-| --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| `GOOD_EXCEPTION_MODE`                                                                         | `demo` (default) or `production`                                  |
-| `GOOGLE_CLOUD_PROJECT`                                                                        | Firebase / Google Cloud project                                   |
-| `GOOD_EXCEPTION_ALLOWED_ORIGINS`                                                              | Comma-separated origins allowed to call the API                   |
-| `GOOD_EXCEPTION_PSEUDONYM_KEY`                                                                | HMAC key for technician pseudonyms (Secret Manager)               |
-| `GOOD_EXCEPTION_REQUIRE_MFA`                                                                  | Require a second factor for reviewer and admin actions            |
-| `GOOD_EXCEPTION_ROLES_ENFORCED`                                                               | When `false`, any role may manage processes                       |
-| `GOOD_EXCEPTION_OPEN_ORGANIZATION`, `GOOD_EXCEPTION_OPEN_ROLE`                                | Organization and role for users without claims                    |
-| `GOOD_EXCEPTION_GEMINI_MODEL`, `GOOD_EXCEPTION_AGENT_MODEL`, `GOOD_EXCEPTION_EMBEDDING_MODEL` | Vertex AI models; AI is off when the main model is unset          |
-| `GOOD_EXCEPTION_TASKS_QUEUE`, `GOOD_EXCEPTION_WORKER_URL`, `GOOD_EXCEPTION_TASKS_INVOKER`     | Cloud Tasks queue, worker URL and OIDC invoker; all three or none |
-| `GOOD_EXCEPTION_MEDIA_BUCKET`                                                                 | Bucket for recordings and step images                             |
-| `GOOD_EXCEPTION_LOCAL`                                                                        | Local live mode: relay media through the dev server               |
-| `GOOD_EXCEPTION_DATA_DIR`                                                                     | Demo JSON store location                                          |
+| Variable                                                                                  | Purpose                                                           |
+| ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `GOOD_EXCEPTION_MODE`                                                                     | `demo` (default) or `production`                                  |
+| `GOOGLE_CLOUD_PROJECT`                                                                    | Firebase / Google Cloud project                                   |
+| `GOOD_EXCEPTION_ALLOWED_ORIGINS`                                                          | Comma-separated origins allowed to call the API                   |
+| `GOOD_EXCEPTION_PSEUDONYM_KEY`                                                            | HMAC key for technician pseudonyms (Secret Manager)               |
+| `GOOD_EXCEPTION_REQUIRE_MFA`                                                              | Require a second factor for reviewer and admin actions            |
+| `GOOD_EXCEPTION_ROLES_ENFORCED`                                                           | When `false`, any role may manage processes                       |
+| `GOOD_EXCEPTION_OPEN_ORGANIZATION`, `GOOD_EXCEPTION_OPEN_ROLE`                            | Organization and role for users without claims                    |
+| `GOOD_EXCEPTION_GEMINI_MODEL`, `GOOD_EXCEPTION_AGENT_MODEL`                               | Vertex AI models; AI is off when the main model is unset          |
+| `GOOD_EXCEPTION_TASKS_QUEUE`, `GOOD_EXCEPTION_WORKER_URL`, `GOOD_EXCEPTION_TASKS_INVOKER` | Cloud Tasks queue, worker URL and OIDC invoker; all three or none |
+| `GOOD_EXCEPTION_MEDIA_BUCKET`                                                             | Bucket for recordings and step images                             |
+| `GOOD_EXCEPTION_LOCAL`                                                                    | Local live mode: relay media through the dev server               |
+| `GOOD_EXCEPTION_DATA_DIR`                                                                 | Demo JSON store location                                          |
 
 ## 17. Further reading
 

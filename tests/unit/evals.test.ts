@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { extractionCases, scoreExtraction } from '../../evals/extraction-cases';
 import { scanRecords, scoreScan } from '../../evals/scan-cases';
 import { evaluatePractice } from '../../src/lib/application/analysis/stats';
+import { signalText, usualValues } from '../../src/lib/application/analysis/toolkit';
 
 test('the extraction scorer passes a faithful draft and fails injected or reordered ones', () => {
   const c = extractionCases.find((x) => x.name.startsWith('prompt injection'))!;
@@ -56,4 +57,12 @@ test('the scan scorer requires the planted practice on the torque step and nothi
     false,
   );
   assert.equal(scoreScan([]).pass, false);
+});
+test('the scan eval shares parts and checklists across jobs, which grouping must look past', () => {
+  const records = scanRecords();
+  const usual = usualValues(records);
+  const planted = records.find((r) => r.notes.startsWith('Waited 30s'))!;
+  const harmful = records.find((r) => r.notes.startsWith('Skipped leak'))!;
+  assert.equal(signalText(planted, usual), planted.notes);
+  assert.equal(signalText(harmful, usual), `${harmful.notes} | Not done: leak test`);
 });

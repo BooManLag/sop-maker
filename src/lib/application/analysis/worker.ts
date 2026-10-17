@@ -1,6 +1,6 @@
 import type { RepositoryProvider } from '../ports';
 import * as evidence from '../evidence-service';
-import { AnalysisToolkit, clusterSignals, type Embedder } from './toolkit';
+import { AnalysisToolkit, clusterSignals, type NoteGrouper } from './toolkit';
 
 export interface AnalysisJob {
   organizationId: string;
@@ -20,7 +20,7 @@ export const ANALYSIS_TIMEOUT_MS = 240_000;
 export class AnalysisWorker {
   constructor(
     private repositories: RepositoryProvider,
-    private embedder: Embedder,
+    private grouper: NoteGrouper,
     private driver: Driver,
     private log: (entry: Record<string, unknown>) => void = (e) => console.log(JSON.stringify(e)),
     private method: evidence.AnalysisMethod = evidence.GEMINI_ANALYSIS,
@@ -33,7 +33,7 @@ export class AnalysisWorker {
     const abort = new AbortController();
     const timer = setTimeout(() => abort.abort(), ANALYSIS_TIMEOUT_MS);
     try {
-      const clusters = await clusterSignals(input.records, this.embedder);
+      const clusters = await clusterSignals(input.records, this.grouper, abort.signal);
       const toolkit = new AnalysisToolkit(input.records, input.steps, clusters);
       if (clusters.length) await this.driver(toolkit, abort.signal);
       const outcome = { findings: toolkit.proposals, funnel: toolkit.funnel() };
