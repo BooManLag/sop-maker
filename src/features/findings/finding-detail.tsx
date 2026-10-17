@@ -26,11 +26,13 @@ import { QueryState } from '@/components/common/query-state';
 import { WithSideRail, sideRailClass } from '@/components/common/layouts';
 import { api } from '@/lib/client/browser';
 import { useFinding, useWorkspace, useWorkspaceMutation } from '@/lib/client/queries';
+import type { FindingDetail as FindingWithExamples } from '@/lib/client/api';
 import type { Finding, TechnicianResponse } from '@/lib/domain/types';
 
 type Explanation = Omit<TechnicianResponse, 'id' | 'findingId'>;
 import { needsReview, relativeReduction } from '@/lib/domain/findings';
 import { OutcomeGrid } from './outcome-grid';
+import { evidenceSummary } from './evidence-summary';
 
 export function FindingDetail({ findingId }: { findingId: string }) {
   return (
@@ -38,7 +40,7 @@ export function FindingDetail({ findingId }: { findingId: string }) {
   );
 }
 
-function FindingReview({ finding }: { finding: Finding }) {
+function FindingReview({ finding }: { finding: FindingWithExamples }) {
   const router = useRouter();
   const processTitle = useWorkspace().data?.processes.find(
     (p) => p.id === finding.processId,
@@ -67,7 +69,11 @@ function FindingReview({ finding }: { finding: Finding }) {
           .join(' · ')
           .toUpperCase()}
         title={finding.title}
-        description="A promising practice. A reason to investigate before changing the standard."
+        description={
+          strong
+            ? 'A strong candidate. Worth testing in a controlled trial before changing the standard.'
+            : 'A promising practice. A reason to investigate before changing the standard.'
+        }
         action={needsReview(finding) ? <Badge tone="amber">Needs review</Badge> : undefined}
       />
       <WithSideRail>
@@ -78,12 +84,12 @@ function FindingReview({ finding }: { finding: Finding }) {
             <OutcomeGrid
               outcomes={[
                 {
-                  label: 'Without extra check',
+                  label: 'Without this practice',
                   rate: finding.baselineRate,
                   caption: '30-day callbacks',
                 },
                 {
-                  label: 'With extra check',
+                  label: 'With this practice',
                   rate: finding.practiceRate,
                   caption: '30-day callbacks',
                   highlight: true,
@@ -98,11 +104,18 @@ function FindingReview({ finding }: { finding: Finding }) {
                     </span>
                   </strong>
                   <span className="text-tiny">relative reduction</span>
-                  <small className="text-2xs">Sample association, not causation</small>
+                  <small className="text-2xs">
+                    {finding.evidence.demonstration
+                      ? 'Sample association'
+                      : 'Historical association'}
+                    , not causation
+                  </small>
                 </>
               }
             />
           </Card>
+          <EvidenceExplained finding={finding} />
+          <FieldNotes finding={finding} />
           <TrustPanel finding={finding} />
           {explain.data ? (
             <ExpertResponse response={explain.data} />
@@ -195,6 +208,49 @@ function Comparison({ finding }: { finding: Finding }) {
   );
 }
 
+function EvidenceExplained({ finding }: { finding: Finding }) {
+  return (
+    <Card>
+      <Eyebrow>WHAT THE NUMBERS SAY</Eyebrow>
+      {evidenceSummary(finding).map((paragraph) => (
+        <p key={paragraph} className="my-3 text-sm leading-[1.6]">
+          {paragraph}
+        </p>
+      ))}
+    </Card>
+  );
+}
+
+function FieldNotes({ finding }: { finding: FindingWithExamples }) {
+  if (finding.evidence.demonstration) return null;
+  return (
+    <Card>
+      <Eyebrow>WHAT TECHNICIANS WROTE</Eyebrow>
+      {finding.examples.length ? (
+        <>
+          {finding.examples.map((note) => (
+            <blockquote
+              key={note}
+              className="border-brand-200 my-4 border-l-2 pl-4 font-serif text-md leading-[1.6] text-brand-500"
+            >
+              “{note}”
+            </blockquote>
+          ))}
+          <small className="text-2xs text-muted-foreground">
+            Job notes from the imported records, with contact details removed. They are deleted with
+            the records 30 days after import.
+          </small>
+        </>
+      ) : (
+        <p className="my-3 text-sm">
+          The job notes behind this finding were deleted with the imported records 30 days after
+          import.
+        </p>
+      )}
+    </Card>
+  );
+}
+
 function TrustPanel({ finding }: { finding: Finding }) {
   const signals = [
     'Compared technicians against their own jobs',
@@ -207,7 +263,11 @@ function TrustPanel({ finding }: { finding: Finding }) {
   const { evidence } = finding;
   return (
     <Card>
-      <Eyebrow>WHY WE TRUST THIS SAMPLE SIGNAL</Eyebrow>
+      <Eyebrow>
+        {finding.evidence.demonstration
+          ? 'WHY WE TRUST THIS SAMPLE SIGNAL'
+          : 'WHY WE TRUST THIS SIGNAL'}
+      </Eyebrow>
       {signals.map((signal) => (
         <p key={signal} className="my-4 flex items-center gap-2 text-sm text-brand-500">
           <CheckCircle2 size={17} aria-hidden className="text-brand-300" />
@@ -223,11 +283,17 @@ function TrustPanel({ finding }: { finding: Finding }) {
             ['Analysis version', evidence.analysisVersion],
             ['Source record references', evidence.sourceRecordIds.join(', ')],
             ['Held-out result', evidence.heldOutResult],
+            ...(evidence.statistics
+              ? ([['Significance score (z)', evidence.statistics.z]] as [string, number][])
+              : []),
           ]}
         />
-        <p>
-          No confidence interval or significance claim is calculated for this illustrative scenario.
-        </p>
+        {evidence.demonstration && (
+          <p>
+            No confidence interval or significance claim is calculated for this illustrative
+            scenario.
+          </p>
+        )}
       </Disclosure>
     </Card>
   );

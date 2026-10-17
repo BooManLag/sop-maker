@@ -41,7 +41,9 @@ npm start
 
 Tests exercise privacy normalization, insufficient-data behavior, sample-size planning, human approval and the complete sample lifecycle. Tests use a temporary data directory and never touch your demo data. Normal seed preserves existing data; run `npm run demo:reset` to discard local demo changes and restore the scenario. Demo data persists in ignored `.demo-data/store.json`.
 
-For a fuller workspace, `npm run seed:manufacturing` adds a fictional manufacturing SOP library: seven published SOPs (CNC spindle bearings, mold changeover, weld torch service, stencil printer, press brake tooling, gearbox oil change, hydraulic seals), two drafts at different capture stages and two illustrative findings. It only adds what is missing, and `npm run demo:reset` removes it. Matching service-record files for scans are in [test-data/manufacturing](test-data/manufacturing/README.md).
+For a fuller workspace, `npm run seed:manufacturing` adds a fictional SOP library: eleven published SOPs (CNC spindle bearings, mold changeover, weld torch service, stencil printer, press brake tooling, gearbox oil change, hydraulic seals, Soldering 202, iPhone 11 screen repair, shed building, BIOS reset), two drafts at different capture stages and two illustrative findings. It only adds what is missing, and `npm run demo:reset` removes it. Matching service-record files for scans are in [test-data/manufacturing](test-data/manufacturing/README.md) and [test-data/processes](test-data/processes/README.md).
+
+In the local demo, scanning an imported file runs a simulated analysis: notes are grouped by the words they share instead of by Gemini, and a scripted analyst stands in for the agent. Every rate, grade and held-out check is still computed by the same code as production, and findings say how they were produced.
 
 ## Explore
 

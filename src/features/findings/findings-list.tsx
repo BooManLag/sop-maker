@@ -93,7 +93,13 @@ function FindingCard({ finding }: { finding: Finding }) {
         <div className="flex flex-wrap items-center gap-3 text-2xs text-muted-foreground [&>span+span]:before:mr-1 [&>span+span]:before:text-subtle-foreground [&>span+span]:before:content-['·']">
           <span>{finding.technicians} technicians</span>
           <span>{finding.evidence.sampleSize} comparable jobs</span>
-          <span>{finding.grade === 'strong' ? 'Held on later jobs' : 'Small sample'}</span>
+          <span>
+            {finding.grade === 'strong'
+              ? 'Held on later jobs'
+              : finding.evidence.sampleSize < 30
+                ? 'Small sample'
+                : 'Needs more evidence'}
+          </span>
         </div>
       </div>
       <div className="flex min-w-[145px] flex-col items-start gap-1.5 border-t border-border pt-5 sm:border-t-0 sm:border-l sm:pt-0 sm:pl-4.5 md:min-w-[165px] md:pl-7">

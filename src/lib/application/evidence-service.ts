@@ -2,10 +2,19 @@ import { randomUUID } from 'node:crypto';
 import type { Store } from './store';
 import type { Actor } from '../server/auth';
 import { ApiError, requireCondition } from '../server/errors';
-import { trialPrimaryOutcome, type Finding } from '../domain/types';
+import { trialPrimaryOutcome, type Finding, type Scan } from '../domain/types';
 import type { AnalysisOutcome } from './analysis/toolkit';
 import { DISCOVERY_SHARE } from './analysis/stats';
 export const ANALYSIS_VERSION = 'agent-v1';
+/** How a scan's jobs were grouped and analyzed; recorded on every finding it produces. */
+export interface AnalysisMethod {
+  version: string;
+  grouping: string;
+}
+export const GEMINI_ANALYSIS: AnalysisMethod = {
+  version: ANALYSIS_VERSION,
+  grouping: 'Jobs grouped by similar notes (Gemini embeddings)',
+};
 import { EvidenceEngine, normalizeRecords, requiredSamplePerGroup } from './evidence-engine';
 import type { schemas } from '../server/contracts';
 import type { z } from 'zod';
@@ -61,7 +70,7 @@ export function scanDto(scan: ReturnType<typeof getScan>) {
     processId: scan.processId,
     demo: scan.demo,
     status: scan.status,
-    recordCount: scan.records.length,
+    recordCount: scan.recordCount ?? scan.records.length,
     createdAt: scan.createdAt,
   };
 }
@@ -156,6 +165,7 @@ export function completeAnalysis(
   id: string,
   outcome: AnalysisOutcome,
   sopVersion: number,
+  method: AnalysisMethod = GEMINI_ANALYSIS,
 ) {
   const scan = s.scans.find((x) => x.id === id);
   if (!scan || scan.status !== 'analyzing') return;
@@ -173,13 +183,25 @@ export function completeAnalysis(
     evidence: {
       sourceRecordIds: p.jobIds.slice(0, 200),
       sopVersion,
-      analysisVersion: ANALYSIS_VERSION,
+      analysisVersion: method.version,
       sampleSize: p.evaluation.jobs,
       heldOutResult: p.evaluation.heldOut.holds
         ? `Held on later jobs: ${percent(p.evaluation.heldOut.practice.rate)}% vs ${percent(p.evaluation.heldOut.baseline.rate)}% callbacks`
         : 'Did not hold on later jobs',
-      methodology: `Jobs grouped by similar notes (Gemini embeddings); oldest ${Math.round(DISCOVERY_SHARE * 100)}% used for discovery, newest jobs held out. Rates computed in code, not by the model.`,
+      methodology: `${method.grouping}; oldest ${Math.round(DISCOVERY_SHARE * 100)}% used for discovery, newest jobs held out. Rates computed in code, not by the model.`,
       demonstration: false,
+      statistics: {
+        discovery: {
+          practiceRate: percent(p.evaluation.discovery.practice.rate),
+          baselineRate: percent(p.evaluation.discovery.baseline.rate),
+        },
+        heldOut: {
+          practiceRate: percent(p.evaluation.heldOut.practice.rate),
+          baselineRate: percent(p.evaluation.heldOut.baseline.rate),
+          practiceJobs: p.evaluation.heldOut.practice.jobs,
+        },
+        z: p.evaluation.discovery.z,
+      },
     },
     status: 'candidate',
   }));
@@ -187,6 +209,45 @@ export function completeAnalysis(
   scan.findingIds = findings.map((f) => f.id);
   scan.funnel = outcome.funnel;
   scan.status = 'complete';
+  compactScan(s, scan);
+}
+const EXAMPLES_PER_FINDING = 4;
+/** The first record of each distinct note behind a finding: what its page shows as examples. */
+function exampleRecords(scan: Scan, finding: Finding) {
+  const sources = new Set(finding.evidence.sourceRecordIds);
+  const notes = new Set<string>();
+  const records = [];
+  for (const record of scan.records) {
+    if (notes.size >= EXAMPLES_PER_FINDING) break;
+    if (!sources.has(record.id) || !record.notes || notes.has(record.notes)) continue;
+    notes.add(record.notes);
+    records.push(record);
+  }
+  return records;
+}
+/**
+ * A finished scan is never analyzed again, so it keeps only the rows its findings show as
+ * examples. Imported rows otherwise fill the tenant's bounded state within a few scans.
+ */
+export function compactScan(s: Store, scan: Scan) {
+  if (scan.status !== 'complete' || scan.demo || scan.recordCount !== undefined) return;
+  const keep = new Set(
+    s.findings
+      .filter((f) => scan.findingIds.includes(f.id))
+      .flatMap((f) => exampleRecords(scan, f).map((r) => r.id)),
+  );
+  scan.recordCount = scan.records.length;
+  scan.records = scan.records.filter((r) => keep.has(r.id));
+}
+/** Compacts scans that finished before compaction existed; a no-op once each is compacted. */
+export function compactScans(s: Store) {
+  for (const scan of s.scans) compactScan(s, scan);
+}
+/** A finding with up to four distinct job notes behind it, while its scan's records are kept. */
+export function findingDetailDto(s: Store, id?: string) {
+  const finding = getFinding(s, id);
+  const scan = s.scans.find((x) => x.findingIds.includes(finding.id));
+  return { ...finding, examples: scan ? exampleRecords(scan, finding).map((r) => r.notes) : [] };
 }
 export function failAnalysis(s: Store, id: string) {
   const scan = s.scans.find((x) => x.id === id);
@@ -230,11 +291,8 @@ export function createTrial(s: Store, body: Input<'trialCreate'>, actor: Actor) 
     f.grade === 'strong' && f.status !== 'dismissed',
     'A strong active finding is required.',
   );
-  requireCondition(
-    actor.demo && f.evidence.demonstration,
-    'Live trial allocation is not connected.',
-    503,
-  );
+  // The loopback demo runs sample trials for any finding, including simulated scans.
+  requireCondition(actor.demo, 'Live trial allocation is not connected.', 503);
   const existing = s.trials.find((t) => t.findingId === f.id);
   if (existing) {
     requireCondition(

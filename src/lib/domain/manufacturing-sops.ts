@@ -302,6 +302,74 @@ export const manufacturingProcesses: Process[] = [
       'Record the seal batch numbers and close the work order',
     ],
   ),
+  // Baselines for the scan files in test-data/processes.
+  published('soldering-202', 'Soldering 202', 'Hakko FX-888D', '2026-02-09T08:00:00Z', [
+    'Put on the ESD strap and set the iron to the alloy temperature',
+    'Tin the tip and wipe it on the brass sponge',
+    'Remove the old solder with braid or a desoldering pump',
+    'Clean and flux the pads',
+    'Solder the joint and feed solder until it wets the pad and lead',
+    [
+      'Inspect the joint under the magnifier',
+      {
+        rationale:
+          'A good joint is shiny and concave. Dull or balled joints crack under vibration.',
+        evidence: 'Record pass or fail for each joint.',
+      },
+    ],
+    'Record the rework and return the board to test',
+  ]),
+  published(
+    'iphone-11-screen-repair',
+    'iPhone 11 Screen Repair',
+    'iPhone 11',
+    '2026-02-16T08:00:00Z',
+    [
+      [
+        'Power off the phone and heat the display edges',
+        {
+          warning: 'A swollen battery can catch fire. Stop if the screen is lifting on its own.',
+          durationMinSeconds: 60,
+          durationMaxSeconds: 120,
+        },
+      ],
+      'Open the display with a suction handle and opening picks',
+      ['Disconnect the battery connector first', { warning: 'Never work on a live board.' }],
+      'Disconnect and remove the old display',
+      'Transfer the earpiece and sensor assembly to the new display',
+      'Connect the new display and the battery',
+      'Test the touch screen, Face ID and True Tone',
+      'Fit a new adhesive gasket and press the display into place',
+      'Record the part used and return the phone',
+    ],
+  ),
+  published('shed-building', 'Shed Building', '8x10 gable shed kit', '2026-02-23T08:00:00Z', [
+    'Clear and mark the site',
+    [
+      'Set the foundation blocks or skids',
+      { rationale: 'An uneven base racks the frame and the doors stop closing.' },
+    ],
+    'Build the floor frame and fit the floor panels',
+    'Raise and brace the wall frames',
+    'Fit the roof trusses and sheathing',
+    'Install the roofing and trim',
+    'Hang and adjust the doors',
+    'Walk through with the customer and record the job',
+  ]),
+  published('reset-bios', 'Reset BIOS', 'Dell OptiPlex 7090', '2026-03-02T08:00:00Z', [
+    'Confirm the user has saved their work and back up any local data',
+    'Shut down and disconnect power',
+    [
+      'Reset the BIOS to defaults from setup or by clearing CMOS',
+      {
+        warning:
+          'Clearing the security chip or Secure Boot settings can trigger BitLocker recovery.',
+      },
+    ],
+    'Boot the machine and confirm it reaches Windows',
+    'Check the date, time and boot order',
+    'Record the reset and close the ticket',
+  ]),
   draft(
     'paint-booth-filter-change',
     'Paint Booth Filter Change',

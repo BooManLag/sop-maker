@@ -1,0 +1,241 @@
+job_id,technician_id,asset_id,equipment_model,job_type,timestamp,checklist_values,parts_used,notes,callback_within_30_days
+BIO-0001,it-003,PC-H-002,HP EliteDesk 800 G6,BIOS reset to defaults,2026-03-02T15:15:00Z,data_backed_up:true;boot_tested:false,CR2032 CMOS battery,"Loaded defaults without checking the boot mode, user waiting",false
+BIO-0002,it-002,PC-H-003,HP EliteDesk 800 G6,BIOS reset to defaults,2026-03-03T12:30:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Cleared CMOS and confirmed POST,false
+BIO-0003,it-003,PC-D-023,Dell OptiPlex 7090,BIOS reset to defaults,2026-03-04T06:15:00Z,data_backed_up:true;boot_tested:true,none,Loaded optimized defaults and rebooted,false
+BIO-0004,it-004,PC-H-026,HP EliteDesk 800 G6,BIOS reset to defaults,2026-03-04T12:00:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,BIOS reset to factory defaults per guide,false
+BIO-0005,it-003,PC-H-005,HP EliteDesk 800 G6,BIOS reset to defaults,2026-03-04T13:30:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,BIOS reset to factory defaults per guide,false
+BIO-0006,it-005,PC-D-019,Dell OptiPlex 7090,BIOS reset to defaults,2026-03-05T12:30:00Z,data_backed_up:true;boot_tested:true,none,BIOS reset to factory defaults per guide,false
+BIO-0007,it-005,PC-H-020,HP EliteDesk 800 G6,BIOS reset to defaults,2026-03-09T09:00:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Cleared CMOS and confirmed POST,false
+BIO-0008,it-001,PC-D-014,Dell OptiPlex 7090,BIOS reset to defaults,2026-03-09T10:30:00Z,data_backed_up:true;boot_tested:true,none,Loaded optimized defaults and rebooted,false
+BIO-0009,it-007,PC-H-027,HP EliteDesk 800 G6,BIOS reset to defaults,2026-03-09T11:00:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Cleared CMOS and confirmed POST,true
+BIO-0010,it-001,PC-L-028,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-03-10T06:30:00Z,data_backed_up:true;boot_tested:true,none,BIOS reset to factory defaults per guide,false
+BIO-0011,it-004,PC-H-003,HP EliteDesk 800 G6,BIOS reset to defaults,2026-03-10T07:45:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,BIOS reset to factory defaults per guide,false
+BIO-0012,it-003,PC-D-003,Dell OptiPlex 7090,BIOS reset to defaults,2026-03-12T13:00:00Z,data_backed_up:true;boot_tested:true,none,BIOS reset to factory defaults per guide,false
+BIO-0013,it-002,PC-H-004,HP EliteDesk 800 G6,BIOS reset to defaults,2026-03-16T06:30:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Cleared CMOS and confirmed POST,false
+BIO-0014,it-004,PC-D-010,Dell OptiPlex 7090,BIOS reset to defaults,2026-03-16T08:30:00Z,data_backed_up:true;boot_tested:true,none,Cleared CMOS and confirmed POST,true
+BIO-0015,it-007,PC-L-010,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-03-16T10:45:00Z,data_backed_up:true;boot_tested:true,none,BIOS reset to factory defaults per guide,false
+BIO-0016,it-004,PC-H-019,HP EliteDesk 800 G6,BIOS reset to defaults,2026-03-16T11:00:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Loaded optimized defaults and rebooted,false
+BIO-0017,it-005,PC-D-025,Dell OptiPlex 7090,BIOS reset to defaults,2026-03-16T11:15:00Z,data_backed_up:true;boot_tested:true,none,BIOS reset to factory defaults per guide,false
+BIO-0018,it-006,PC-H-027,HP EliteDesk 800 G6,BIOS reset to defaults,2026-03-16T11:30:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Loaded optimized defaults and rebooted,false
+BIO-0019,it-005,PC-L-022,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-03-16T12:30:00Z,data_backed_up:true;boot_tested:true,none,BIOS reset to factory defaults per guide,true
+BIO-0020,it-002,PC-L-020,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-03-16T12:45:00Z,data_backed_up:true;boot_tested:true,none,Loaded optimized defaults and rebooted,false
+BIO-0021,it-002,PC-D-030,Dell OptiPlex 7090,BIOS reset to defaults,2026-03-16T14:15:00Z,data_backed_up:true;boot_tested:true,none,Cleared CMOS and confirmed POST,false
+BIO-0022,it-004,PC-H-023,HP EliteDesk 800 G6,BIOS reset to defaults,2026-03-17T06:15:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Loaded optimized defaults and rebooted,false
+BIO-0023,it-002,PC-H-012,HP EliteDesk 800 G6,BIOS reset to defaults,2026-03-17T08:45:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Cleared CMOS and confirmed POST,false
+BIO-0024,it-005,PC-L-002,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-03-18T13:30:00Z,data_backed_up:true;boot_tested:true,none,Cleared CMOS and confirmed POST,false
+BIO-0025,it-007,PC-D-008,Dell OptiPlex 7090,BIOS reset to defaults,2026-03-18T15:00:00Z,data_backed_up:true;boot_tested:true,none,Loaded optimized defaults and rebooted,false
+BIO-0026,it-007,PC-H-013,HP EliteDesk 800 G6,BIOS reset to defaults,2026-03-19T06:15:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Cleared CMOS and confirmed POST,false
+BIO-0027,it-006,PC-D-020,Dell OptiPlex 7090,BIOS reset to defaults,2026-03-19T14:00:00Z,data_backed_up:true;boot_tested:true,none,BIOS reset to factory defaults per guide,false
+BIO-0028,it-001,PC-L-011,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-03-20T10:00:00Z,data_backed_up:true;boot_tested:false,none,"Loaded defaults without checking the boot mode, user waiting",true
+BIO-0029,it-004,PC-H-016,HP EliteDesk 800 G6,BIOS reset to defaults,2026-03-20T10:15:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Docking station firmware was also outdated,false
+BIO-0030,it-005,PC-H-012,HP EliteDesk 800 G6,BIOS reset to defaults,2026-03-23T08:00:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Loaded optimized defaults and rebooted,false
+BIO-0031,it-001,PC-L-009,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-03-23T09:00:00Z,data_backed_up:true;boot_tested:true,none,BIOS reset to factory defaults per guide,false
+BIO-0032,it-001,PC-D-021,Dell OptiPlex 7090,BIOS reset to defaults,2026-03-23T12:30:00Z,data_backed_up:true;boot_tested:true,none,Cleared CMOS and confirmed POST,false
+BIO-0033,it-003,PC-H-018,HP EliteDesk 800 G6,BIOS reset to defaults,2026-03-25T10:00:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,BIOS reset to factory defaults per guide,false
+BIO-0034,it-006,PC-D-015,Dell OptiPlex 7090,BIOS reset to defaults,2026-03-27T09:15:00Z,data_backed_up:true;boot_tested:true,none,Loaded optimized defaults and rebooted,false
+BIO-0035,it-006,PC-L-027,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-04-01T07:45:00Z,data_backed_up:true;boot_tested:true,none,Cleared CMOS and confirmed POST,false
+BIO-0036,it-006,PC-D-012,Dell OptiPlex 7090,BIOS reset to defaults,2026-04-02T08:30:00Z,data_backed_up:true;boot_tested:true,none,Loaded optimized defaults and rebooted,false
+BIO-0037,it-006,PC-H-016,HP EliteDesk 800 G6,BIOS reset to defaults,2026-04-02T08:45:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,BIOS reset to factory defaults per guide,false
+BIO-0038,it-006,PC-H-030,HP EliteDesk 800 G6,BIOS reset to defaults,2026-04-03T15:45:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Swapped the keyboard while on site,false
+BIO-0039,it-002,PC-H-015,HP EliteDesk 800 G6,BIOS reset to defaults,2026-04-06T06:15:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,BIOS reset to factory defaults per guide,false
+BIO-0040,it-006,PC-L-019,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-04-06T06:15:00Z,data_backed_up:true;boot_tested:true,none,BIOS reset to factory defaults per guide,false
+BIO-0041,it-005,PC-D-019,Dell OptiPlex 7090,BIOS reset to defaults,2026-04-06T09:00:00Z,data_backed_up:true;boot_tested:true,none,Cleared CMOS and confirmed POST,false
+BIO-0042,it-002,PC-L-011,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-04-06T13:45:00Z,data_backed_up:true;boot_tested:true,none,Loaded optimized defaults and rebooted,false
+BIO-0043,it-003,PC-D-010,Dell OptiPlex 7090,BIOS reset to defaults,2026-04-06T14:30:00Z,data_backed_up:true;boot_tested:true,none,Cleared CMOS and confirmed POST,true
+BIO-0044,it-002,PC-D-027,Dell OptiPlex 7090,BIOS reset to defaults,2026-04-07T07:15:00Z,data_backed_up:true;boot_tested:true,none,BIOS reset to factory defaults per guide,false
+BIO-0045,it-005,PC-L-022,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-04-07T07:45:00Z,data_backed_up:true;boot_tested:false,none,"Loaded defaults without checking the boot mode, user waiting",false
+BIO-0046,it-006,PC-L-013,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-04-07T09:00:00Z,data_backed_up:true;boot_tested:true,none,Loaded optimized defaults and rebooted,false
+BIO-0047,it-002,PC-L-025,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-04-08T09:15:00Z,data_backed_up:true;boot_tested:true,none,Docking station firmware was also outdated,false
+BIO-0048,it-007,PC-D-001,Dell OptiPlex 7090,BIOS reset to defaults,2026-04-08T11:45:00Z,data_backed_up:true;boot_tested:true,none,Loaded optimized defaults and rebooted,false
+BIO-0049,it-005,PC-H-002,HP EliteDesk 800 G6,BIOS reset to defaults,2026-04-08T13:00:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Cleared CMOS and confirmed POST,false
+BIO-0050,it-003,PC-D-006,Dell OptiPlex 7090,BIOS reset to defaults,2026-04-09T06:00:00Z,data_backed_up:true;boot_tested:true,none,Loaded optimized defaults and rebooted,false
+BIO-0051,it-001,PC-L-008,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-04-10T07:00:00Z,data_backed_up:true;boot_tested:true,none,Cleared CMOS and confirmed POST,false
+BIO-0052,it-005,PC-L-003,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-04-13T09:00:00Z,data_backed_up:true;boot_tested:true,none,Loaded optimized defaults and rebooted,false
+BIO-0053,it-001,PC-L-024,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-04-13T11:00:00Z,data_backed_up:true;boot_tested:true,none,Loaded optimized defaults and rebooted,true
+BIO-0054,it-004,PC-L-021,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-04-13T11:30:00Z,data_backed_up:true;boot_tested:true,none,Loaded optimized defaults and rebooted,false
+BIO-0055,it-003,PC-H-021,HP EliteDesk 800 G6,BIOS reset to defaults,2026-04-13T12:45:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Loaded optimized defaults and rebooted,true
+BIO-0056,it-005,PC-H-017,HP EliteDesk 800 G6,BIOS reset to defaults,2026-04-13T12:45:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Loaded optimized defaults and rebooted,true
+BIO-0057,it-001,PC-L-001,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-04-13T13:00:00Z,data_backed_up:true;boot_tested:true,none,Loaded optimized defaults and rebooted,false
+BIO-0058,it-002,PC-L-015,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-04-13T13:45:00Z,data_backed_up:true;boot_tested:true,none,Cleared CMOS and confirmed POST,false
+BIO-0059,it-007,PC-L-016,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-04-17T10:30:00Z,data_backed_up:true;boot_tested:false,none,"Loaded defaults without checking the boot mode, user waiting",false
+BIO-0060,it-005,PC-D-014,Dell OptiPlex 7090,BIOS reset to defaults,2026-04-20T06:30:00Z,data_backed_up:true;boot_tested:true,none,Loaded optimized defaults and rebooted,false
+BIO-0061,it-005,PC-L-029,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-04-20T09:30:00Z,data_backed_up:true;boot_tested:true,none,Cleared CMOS and confirmed POST,false
+BIO-0062,it-004,PC-L-029,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-04-21T10:15:00Z,data_backed_up:true;boot_tested:true,none,Loaded optimized defaults and rebooted,false
+BIO-0063,it-005,PC-L-002,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-04-21T10:45:00Z,data_backed_up:true;boot_tested:true,none,Loaded optimized defaults and rebooted,false
+BIO-0064,it-002,PC-H-001,HP EliteDesk 800 G6,BIOS reset to defaults,2026-04-21T15:00:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Cleared CMOS and confirmed POST,false
+BIO-0065,it-007,PC-D-007,Dell OptiPlex 7090,BIOS reset to defaults,2026-04-22T06:15:00Z,data_backed_up:true;boot_tested:true,none,Cleared CMOS and confirmed POST,false
+BIO-0066,it-007,PC-H-029,HP EliteDesk 800 G6,BIOS reset to defaults,2026-04-22T06:30:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Cleared CMOS and confirmed POST,false
+BIO-0067,it-002,PC-D-010,Dell OptiPlex 7090,BIOS reset to defaults,2026-04-22T08:15:00Z,data_backed_up:true;boot_tested:true,none,Loaded optimized defaults and rebooted,false
+BIO-0068,it-007,PC-D-008,Dell OptiPlex 7090,BIOS reset to defaults,2026-04-27T06:30:00Z,data_backed_up:true;boot_tested:true,none,BIOS reset to factory defaults per guide,false
+BIO-0069,it-006,PC-D-006,Dell OptiPlex 7090,BIOS reset to defaults,2026-04-27T06:45:00Z,data_backed_up:true;boot_tested:true,none,Docking station firmware was also outdated,false
+BIO-0070,it-001,PC-D-011,Dell OptiPlex 7090,BIOS reset to defaults,2026-04-27T10:45:00Z,data_backed_up:true;boot_tested:true,none,"User was away from the desk, rescheduled",true
+BIO-0071,it-004,PC-L-024,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-04-27T11:15:00Z,data_backed_up:true;boot_tested:true,none,Loaded optimized defaults and rebooted,false
+BIO-0072,it-006,PC-D-018,Dell OptiPlex 7090,BIOS reset to defaults,2026-04-28T08:00:00Z,data_backed_up:true;boot_tested:true,none,Cleared CMOS and confirmed POST,false
+BIO-0073,it-006,PC-H-016,HP EliteDesk 800 G6,BIOS reset to defaults,2026-04-29T11:45:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Loaded optimized defaults and rebooted,false
+BIO-0074,it-006,PC-D-027,Dell OptiPlex 7090,BIOS reset to defaults,2026-04-29T14:00:00Z,data_backed_up:true;boot_tested:true,none,Loaded optimized defaults and rebooted,false
+BIO-0075,it-002,PC-D-020,Dell OptiPlex 7090,BIOS reset to defaults,2026-04-29T14:00:00Z,data_backed_up:true;boot_tested:true,none,Loaded optimized defaults and rebooted,false
+BIO-0076,it-005,PC-D-001,Dell OptiPlex 7090,BIOS reset to defaults,2026-04-30T10:15:00Z,data_backed_up:true;boot_tested:true,none,Cleared CMOS and confirmed POST,false
+BIO-0077,it-005,PC-L-028,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-05-01T09:00:00Z,data_backed_up:true;boot_tested:true,none,BIOS reset to factory defaults per guide,false
+BIO-0078,it-004,PC-D-014,Dell OptiPlex 7090,BIOS reset to defaults,2026-05-01T09:45:00Z,data_backed_up:true;boot_tested:true,none,Loaded optimized defaults and rebooted,false
+BIO-0079,it-006,PC-D-001,Dell OptiPlex 7090,BIOS reset to defaults,2026-05-01T10:45:00Z,data_backed_up:true;boot_tested:true,none,Loaded optimized defaults and rebooted,false
+BIO-0080,it-005,PC-H-019,HP EliteDesk 800 G6,BIOS reset to defaults,2026-05-04T10:15:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Cleared CMOS and confirmed POST,false
+BIO-0081,it-001,PC-H-015,HP EliteDesk 800 G6,BIOS reset to defaults,2026-05-04T15:30:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Swapped the keyboard while on site,false
+BIO-0082,it-006,PC-D-005,Dell OptiPlex 7090,BIOS reset to defaults,2026-05-05T09:00:00Z,data_backed_up:true;boot_tested:true,none,BIOS reset to factory defaults per guide,false
+BIO-0083,it-005,PC-D-003,Dell OptiPlex 7090,BIOS reset to defaults,2026-05-08T13:45:00Z,data_backed_up:true;boot_tested:true,none,BIOS reset to factory defaults per guide,false
+BIO-0084,it-002,PC-H-013,HP EliteDesk 800 G6,BIOS reset to defaults,2026-05-11T08:30:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,BIOS reset to factory defaults per guide,false
+BIO-0085,it-004,PC-H-009,HP EliteDesk 800 G6,BIOS reset to defaults,2026-05-11T09:15:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Loaded optimized defaults and rebooted,false
+BIO-0086,it-001,PC-L-014,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-05-11T10:45:00Z,data_backed_up:true;boot_tested:true,none,Cleared CMOS and confirmed POST,true
+BIO-0087,it-007,PC-D-005,Dell OptiPlex 7090,BIOS reset to defaults,2026-05-11T14:45:00Z,data_backed_up:true;boot_tested:true,none,Cleared CMOS and confirmed POST,false
+BIO-0088,it-004,PC-H-002,HP EliteDesk 800 G6,BIOS reset to defaults,2026-05-12T06:15:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,BIOS reset to factory defaults per guide,false
+BIO-0089,it-004,PC-H-003,HP EliteDesk 800 G6,BIOS reset to defaults,2026-05-13T08:00:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,BIOS reset to factory defaults per guide,false
+BIO-0090,it-001,PC-H-010,HP EliteDesk 800 G6,BIOS reset to defaults,2026-05-14T08:45:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Docking station firmware was also outdated,true
+BIO-0091,it-002,PC-D-002,Dell OptiPlex 7090,BIOS reset to defaults,2026-05-14T09:00:00Z,data_backed_up:true;boot_tested:true,none,BIOS reset to factory defaults per guide,false
+BIO-0092,it-001,PC-H-029,HP EliteDesk 800 G6,BIOS reset to defaults,2026-05-15T08:00:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Cleared CMOS and confirmed POST,false
+BIO-0093,it-006,PC-D-015,Dell OptiPlex 7090,BIOS reset to defaults,2026-05-18T08:00:00Z,data_backed_up:true;boot_tested:true,none,"User was away from the desk, rescheduled",false
+BIO-0094,it-003,PC-L-010,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-05-18T08:30:00Z,data_backed_up:true;boot_tested:true,none,Loaded optimized defaults and rebooted,false
+BIO-0095,it-003,PC-H-022,HP EliteDesk 800 G6,BIOS reset to defaults,2026-05-18T10:00:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Cleared CMOS and confirmed POST,false
+BIO-0096,it-005,PC-D-010,Dell OptiPlex 7090,BIOS reset to defaults,2026-05-18T13:00:00Z,data_backed_up:true;boot_tested:true,none,Cleared CMOS and confirmed POST,false
+BIO-0097,it-001,PC-L-006,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-05-18T15:30:00Z,data_backed_up:true;boot_tested:true,none,Loaded optimized defaults and rebooted,false
+BIO-0098,it-002,PC-D-005,Dell OptiPlex 7090,BIOS reset to defaults,2026-05-20T09:15:00Z,data_backed_up:true;boot_tested:true,none,BIOS reset to factory defaults per guide,false
+BIO-0099,it-001,PC-H-012,HP EliteDesk 800 G6,BIOS reset to defaults,2026-05-20T12:00:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Cleared CMOS and confirmed POST,false
+BIO-0100,it-007,PC-L-001,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-05-21T10:45:00Z,data_backed_up:true;boot_tested:true,none,Cleared CMOS and confirmed POST,false
+BIO-0101,it-005,PC-H-015,HP EliteDesk 800 G6,BIOS reset to defaults,2026-05-21T12:00:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,BIOS reset to factory defaults per guide,false
+BIO-0102,it-007,PC-H-006,HP EliteDesk 800 G6,BIOS reset to defaults,2026-05-25T08:15:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Docking station firmware was also outdated,false
+BIO-0103,it-004,PC-L-028,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-05-25T08:45:00Z,data_backed_up:true;boot_tested:true,none,"Suspended BitLocker and photographed the boot settings before the reset, then restored UEFI and Secure Boot",false
+BIO-0104,it-007,PC-L-019,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-05-25T14:45:00Z,data_backed_up:true;boot_tested:false,none,Swapped the keyboard while on site,true
+BIO-0105,it-003,PC-L-016,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-05-26T10:45:00Z,data_backed_up:true;boot_tested:true,none,"User was away from the desk, rescheduled",false
+BIO-0106,it-004,PC-D-009,Dell OptiPlex 7090,BIOS reset to defaults,2026-05-26T10:45:00Z,data_backed_up:true;boot_tested:true,none,Took photos of the BIOS settings first and re-applied boot mode and Secure Boot after resetting,false
+BIO-0107,it-002,PC-H-030,HP EliteDesk 800 G6,BIOS reset to defaults,2026-05-26T12:30:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,BIOS reset to factory defaults per guide,false
+BIO-0108,it-005,PC-L-008,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-05-26T14:30:00Z,data_backed_up:true;boot_tested:true,none,Loaded optimized defaults and rebooted,false
+BIO-0109,it-007,PC-H-021,HP EliteDesk 800 G6,BIOS reset to defaults,2026-05-27T09:45:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Cleared CMOS and confirmed POST,false
+BIO-0110,it-007,PC-D-010,Dell OptiPlex 7090,BIOS reset to defaults,2026-05-27T13:15:00Z,data_backed_up:true;boot_tested:true,none,Loaded optimized defaults and rebooted,false
+BIO-0111,it-004,PC-H-027,HP EliteDesk 800 G6,BIOS reset to defaults,2026-05-27T13:45:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,"Suspended BitLocker and photographed the boot settings before the reset, then restored UEFI and Secure Boot",false
+BIO-0112,it-001,PC-D-007,Dell OptiPlex 7090,BIOS reset to defaults,2026-05-28T06:45:00Z,data_backed_up:true;boot_tested:true,none,Cleared CMOS and confirmed POST,true
+BIO-0113,it-005,PC-D-006,Dell OptiPlex 7090,BIOS reset to defaults,2026-05-28T11:45:00Z,data_backed_up:true;boot_tested:true,none,"User was away from the desk, rescheduled",false
+BIO-0114,it-002,PC-L-027,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-05-28T15:30:00Z,data_backed_up:true;boot_tested:true,none,BIOS reset to factory defaults per guide,false
+BIO-0115,it-006,PC-D-027,Dell OptiPlex 7090,BIOS reset to defaults,2026-06-01T07:15:00Z,data_backed_up:true;boot_tested:true,none,Took photos of the BIOS settings first and re-applied boot mode and Secure Boot after resetting,false
+BIO-0116,it-002,PC-D-024,Dell OptiPlex 7090,BIOS reset to defaults,2026-06-01T11:45:00Z,data_backed_up:true;boot_tested:true,none,Cleared CMOS and confirmed POST,false
+BIO-0117,it-001,PC-L-015,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-06-01T12:15:00Z,data_backed_up:true;boot_tested:true,none,"User was away from the desk, rescheduled",true
+BIO-0118,it-007,PC-L-005,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-06-01T15:00:00Z,data_backed_up:true;boot_tested:true,none,Cleared CMOS and confirmed POST,true
+BIO-0119,it-006,PC-L-008,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-06-01T15:45:00Z,data_backed_up:true;boot_tested:true,none,"User was away from the desk, rescheduled",false
+BIO-0120,it-007,PC-D-028,Dell OptiPlex 7090,BIOS reset to defaults,2026-06-02T07:15:00Z,data_backed_up:true;boot_tested:true,none,Loaded optimized defaults and rebooted,false
+BIO-0121,it-001,PC-L-003,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-06-03T09:30:00Z,data_backed_up:true;boot_tested:true,none,BIOS reset to factory defaults per guide,false
+BIO-0122,it-004,PC-H-010,HP EliteDesk 800 G6,BIOS reset to defaults,2026-06-03T10:15:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,"Suspended BitLocker and photographed the boot settings before the reset, then restored UEFI and Secure Boot",false
+BIO-0123,it-001,PC-L-029,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-06-03T10:45:00Z,data_backed_up:true;boot_tested:true,none,Cleared CMOS and confirmed POST,false
+BIO-0124,it-002,PC-H-026,HP EliteDesk 800 G6,BIOS reset to defaults,2026-06-04T12:15:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Cleared CMOS and confirmed POST,false
+BIO-0125,it-003,PC-L-009,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-06-05T06:45:00Z,data_backed_up:true;boot_tested:true,none,Took photos of the BIOS settings first and re-applied boot mode and Secure Boot after resetting,false
+BIO-0126,it-002,PC-H-010,HP EliteDesk 800 G6,BIOS reset to defaults,2026-06-05T09:15:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Loaded optimized defaults and rebooted,false
+BIO-0127,it-002,PC-D-022,Dell OptiPlex 7090,BIOS reset to defaults,2026-06-05T13:00:00Z,data_backed_up:true;boot_tested:true,none,Loaded optimized defaults and rebooted,false
+BIO-0128,it-002,PC-H-028,HP EliteDesk 800 G6,BIOS reset to defaults,2026-06-05T14:15:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Cleared CMOS and confirmed POST,false
+BIO-0129,it-007,PC-H-027,HP EliteDesk 800 G6,BIOS reset to defaults,2026-06-08T06:45:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,"User was away from the desk, rescheduled",false
+BIO-0130,it-005,PC-D-026,Dell OptiPlex 7090,BIOS reset to defaults,2026-06-08T10:15:00Z,data_backed_up:true;boot_tested:true,none,Cleared CMOS and confirmed POST,false
+BIO-0131,it-007,PC-H-004,HP EliteDesk 800 G6,BIOS reset to defaults,2026-06-10T06:45:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Loaded optimized defaults and rebooted,false
+BIO-0132,it-005,PC-H-010,HP EliteDesk 800 G6,BIOS reset to defaults,2026-06-10T12:00:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Cleared CMOS and confirmed POST,false
+BIO-0133,it-006,PC-H-016,HP EliteDesk 800 G6,BIOS reset to defaults,2026-06-11T07:15:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Suspended BitLocker before clearing CMOS and set Secure Boot back afterwards,false
+BIO-0134,it-002,PC-L-022,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-06-11T08:45:00Z,data_backed_up:true;boot_tested:true,none,Loaded optimized defaults and rebooted,false
+BIO-0135,it-001,PC-L-004,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-06-11T09:15:00Z,data_backed_up:true;boot_tested:true,none,Loaded optimized defaults and rebooted,false
+BIO-0136,it-005,PC-H-002,HP EliteDesk 800 G6,BIOS reset to defaults,2026-06-11T14:00:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,BIOS reset to factory defaults per guide,false
+BIO-0137,it-001,PC-L-028,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-06-12T14:45:00Z,data_backed_up:true;boot_tested:true,none,BIOS reset to factory defaults per guide,false
+BIO-0138,it-001,PC-H-002,HP EliteDesk 800 G6,BIOS reset to defaults,2026-06-15T09:30:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Docking station firmware was also outdated,false
+BIO-0139,it-006,PC-L-003,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-06-16T13:15:00Z,data_backed_up:true;boot_tested:true,none,BIOS reset to factory defaults per guide,false
+BIO-0140,it-002,PC-H-019,HP EliteDesk 800 G6,BIOS reset to defaults,2026-06-18T11:45:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,"User was away from the desk, rescheduled",false
+BIO-0141,it-001,PC-H-003,HP EliteDesk 800 G6,BIOS reset to defaults,2026-06-18T13:15:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Cleared CMOS and confirmed POST,false
+BIO-0142,it-004,PC-H-003,HP EliteDesk 800 G6,BIOS reset to defaults,2026-06-22T08:45:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,"Suspended BitLocker and photographed the boot settings before the reset, then restored UEFI and Secure Boot",false
+BIO-0143,it-003,PC-H-020,HP EliteDesk 800 G6,BIOS reset to defaults,2026-06-22T10:30:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Swapped the keyboard while on site,false
+BIO-0144,it-005,PC-H-018,HP EliteDesk 800 G6,BIOS reset to defaults,2026-06-22T14:15:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,"Suspended BitLocker and photographed the boot settings before the reset, then restored UEFI and Secure Boot",false
+BIO-0145,it-002,PC-D-017,Dell OptiPlex 7090,BIOS reset to defaults,2026-06-23T11:30:00Z,data_backed_up:true;boot_tested:true,none,Docking station firmware was also outdated,false
+BIO-0146,it-001,PC-H-024,HP EliteDesk 800 G6,BIOS reset to defaults,2026-06-25T10:00:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Suspended BitLocker before clearing CMOS and set Secure Boot back afterwards,false
+BIO-0147,it-004,PC-H-025,HP EliteDesk 800 G6,BIOS reset to defaults,2026-06-25T10:15:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,"Suspended BitLocker and photographed the boot settings before the reset, then restored UEFI and Secure Boot",false
+BIO-0148,it-007,PC-D-023,Dell OptiPlex 7090,BIOS reset to defaults,2026-06-26T09:00:00Z,data_backed_up:true;boot_tested:true,none,BIOS reset to factory defaults per guide,false
+BIO-0149,it-004,PC-D-020,Dell OptiPlex 7090,BIOS reset to defaults,2026-06-26T12:45:00Z,data_backed_up:true;boot_tested:true,none,Suspended BitLocker before clearing CMOS and set Secure Boot back afterwards,false
+BIO-0150,it-005,PC-H-026,HP EliteDesk 800 G6,BIOS reset to defaults,2026-06-26T14:45:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Took photos of the BIOS settings first and re-applied boot mode and Secure Boot after resetting,false
+BIO-0151,it-006,PC-L-018,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-06-29T07:45:00Z,data_backed_up:true;boot_tested:true,none,"Suspended BitLocker and photographed the boot settings before the reset, then restored UEFI and Secure Boot",false
+BIO-0152,it-001,PC-H-009,HP EliteDesk 800 G6,BIOS reset to defaults,2026-06-29T09:15:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Took photos of the BIOS settings first and re-applied boot mode and Secure Boot after resetting,false
+BIO-0153,it-005,PC-D-025,Dell OptiPlex 7090,BIOS reset to defaults,2026-06-29T09:30:00Z,data_backed_up:true;boot_tested:true,none,"Suspended BitLocker and photographed the boot settings before the reset, then restored UEFI and Secure Boot",false
+BIO-0154,it-006,PC-D-017,Dell OptiPlex 7090,BIOS reset to defaults,2026-06-29T11:15:00Z,data_backed_up:true;boot_tested:true,none,Suspended BitLocker before clearing CMOS and set Secure Boot back afterwards,false
+BIO-0155,it-001,PC-H-016,HP EliteDesk 800 G6,BIOS reset to defaults,2026-07-01T06:30:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,"Suspended BitLocker and photographed the boot settings before the reset, then restored UEFI and Secure Boot",false
+BIO-0156,it-007,PC-L-007,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-07-01T10:30:00Z,data_backed_up:true;boot_tested:true,none,Loaded optimized defaults and rebooted,true
+BIO-0157,it-001,PC-L-001,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-07-06T06:45:00Z,data_backed_up:true;boot_tested:true,none,Cleared CMOS and confirmed POST,false
+BIO-0158,it-004,PC-H-020,HP EliteDesk 800 G6,BIOS reset to defaults,2026-07-06T09:45:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Took photos of the BIOS settings first and re-applied boot mode and Secure Boot after resetting,false
+BIO-0159,it-002,PC-L-003,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-07-06T10:15:00Z,data_backed_up:true;boot_tested:true,none,Loaded optimized defaults and rebooted,false
+BIO-0160,it-005,PC-D-010,Dell OptiPlex 7090,BIOS reset to defaults,2026-07-06T12:45:00Z,data_backed_up:true;boot_tested:true,none,BIOS reset to factory defaults per guide,false
+BIO-0161,it-007,PC-D-001,Dell OptiPlex 7090,BIOS reset to defaults,2026-07-06T13:15:00Z,data_backed_up:true;boot_tested:true,none,Docking station firmware was also outdated,false
+BIO-0162,it-001,PC-D-022,Dell OptiPlex 7090,BIOS reset to defaults,2026-07-06T15:30:00Z,data_backed_up:true;boot_tested:true,none,Loaded optimized defaults and rebooted,false
+BIO-0163,it-007,PC-D-018,Dell OptiPlex 7090,BIOS reset to defaults,2026-07-06T15:45:00Z,data_backed_up:true;boot_tested:true,none,Swapped the keyboard while on site,false
+BIO-0164,it-003,PC-L-006,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-07-07T06:00:00Z,data_backed_up:true;boot_tested:true,none,Loaded optimized defaults and rebooted,false
+BIO-0165,it-002,PC-H-025,HP EliteDesk 800 G6,BIOS reset to defaults,2026-07-08T09:45:00Z,data_backed_up:true;boot_tested:false,CR2032 CMOS battery,Pulled the CMOS battery without suspending BitLocker,true
+BIO-0166,it-002,PC-D-012,Dell OptiPlex 7090,BIOS reset to defaults,2026-07-08T11:30:00Z,data_backed_up:true;boot_tested:true,none,Swapped the keyboard while on site,true
+BIO-0167,it-007,PC-D-017,Dell OptiPlex 7090,BIOS reset to defaults,2026-07-08T15:00:00Z,data_backed_up:true;boot_tested:false,none,Pulled the CMOS battery without suspending BitLocker,true
+BIO-0168,it-005,PC-L-006,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-07-10T06:30:00Z,data_backed_up:true;boot_tested:true,none,"User was away from the desk, rescheduled",false
+BIO-0169,it-005,PC-H-012,HP EliteDesk 800 G6,BIOS reset to defaults,2026-07-10T09:30:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Cleared CMOS and confirmed POST,false
+BIO-0170,it-004,PC-L-027,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-07-13T07:00:00Z,data_backed_up:true;boot_tested:true,none,Suspended BitLocker before clearing CMOS and set Secure Boot back afterwards,false
+BIO-0171,it-004,PC-D-013,Dell OptiPlex 7090,BIOS reset to defaults,2026-07-13T07:30:00Z,data_backed_up:true;boot_tested:true,none,"Suspended BitLocker and photographed the boot settings before the reset, then restored UEFI and Secure Boot",false
+BIO-0172,it-004,PC-H-020,HP EliteDesk 800 G6,BIOS reset to defaults,2026-07-13T09:00:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Docking station firmware was also outdated,false
+BIO-0173,it-005,PC-L-022,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-07-13T10:45:00Z,data_backed_up:true;boot_tested:true,none,"User was away from the desk, rescheduled",false
+BIO-0174,it-005,PC-H-017,HP EliteDesk 800 G6,BIOS reset to defaults,2026-07-13T11:30:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,"Suspended BitLocker and photographed the boot settings before the reset, then restored UEFI and Secure Boot",false
+BIO-0175,it-007,PC-D-022,Dell OptiPlex 7090,BIOS reset to defaults,2026-07-13T15:00:00Z,data_backed_up:true;boot_tested:true,none,Swapped the keyboard while on site,false
+BIO-0176,it-003,PC-H-028,HP EliteDesk 800 G6,BIOS reset to defaults,2026-07-14T11:15:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Suspended BitLocker before clearing CMOS and set Secure Boot back afterwards,false
+BIO-0177,it-007,PC-D-025,Dell OptiPlex 7090,BIOS reset to defaults,2026-07-15T08:45:00Z,data_backed_up:true;boot_tested:true,none,Cleared CMOS and confirmed POST,false
+BIO-0178,it-005,PC-L-002,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-07-16T10:00:00Z,data_backed_up:true;boot_tested:true,none,Suspended BitLocker before clearing CMOS and set Secure Boot back afterwards,false
+BIO-0179,it-004,PC-D-012,Dell OptiPlex 7090,BIOS reset to defaults,2026-07-17T12:00:00Z,data_backed_up:true;boot_tested:true,none,Swapped the keyboard while on site,false
+BIO-0180,it-002,PC-H-023,HP EliteDesk 800 G6,BIOS reset to defaults,2026-07-20T09:15:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,BIOS reset to factory defaults per guide,false
+BIO-0181,it-002,PC-L-001,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-07-20T09:45:00Z,data_backed_up:true;boot_tested:true,none,Loaded optimized defaults and rebooted,false
+BIO-0182,it-003,PC-H-021,HP EliteDesk 800 G6,BIOS reset to defaults,2026-07-20T15:00:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Loaded optimized defaults and rebooted,false
+BIO-0183,it-001,PC-L-003,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-07-22T09:00:00Z,data_backed_up:true;boot_tested:true,none,Suspended BitLocker before clearing CMOS and set Secure Boot back afterwards,false
+BIO-0184,it-003,PC-H-016,HP EliteDesk 800 G6,BIOS reset to defaults,2026-07-22T09:15:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,"User was away from the desk, rescheduled",true
+BIO-0185,it-002,PC-H-015,HP EliteDesk 800 G6,BIOS reset to defaults,2026-07-23T09:30:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Cleared CMOS and confirmed POST,false
+BIO-0186,it-002,PC-D-001,Dell OptiPlex 7090,BIOS reset to defaults,2026-07-23T13:15:00Z,data_backed_up:true;boot_tested:true,none,BIOS reset to factory defaults per guide,true
+BIO-0187,it-003,PC-D-009,Dell OptiPlex 7090,BIOS reset to defaults,2026-07-27T06:00:00Z,data_backed_up:true;boot_tested:true,none,Took photos of the BIOS settings first and re-applied boot mode and Secure Boot after resetting,false
+BIO-0188,it-001,PC-H-013,HP EliteDesk 800 G6,BIOS reset to defaults,2026-07-27T06:00:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,"Suspended BitLocker and photographed the boot settings before the reset, then restored UEFI and Secure Boot",false
+BIO-0189,it-002,PC-H-007,HP EliteDesk 800 G6,BIOS reset to defaults,2026-07-27T07:45:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Loaded optimized defaults and rebooted,false
+BIO-0190,it-006,PC-L-004,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-07-27T07:45:00Z,data_backed_up:true;boot_tested:true,none,Loaded optimized defaults and rebooted,false
+BIO-0191,it-002,PC-D-003,Dell OptiPlex 7090,BIOS reset to defaults,2026-07-27T14:15:00Z,data_backed_up:true;boot_tested:true,none,BIOS reset to factory defaults per guide,false
+BIO-0192,it-005,PC-H-028,HP EliteDesk 800 G6,BIOS reset to defaults,2026-07-27T14:45:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Took photos of the BIOS settings first and re-applied boot mode and Secure Boot after resetting,false
+BIO-0193,it-005,PC-L-019,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-07-27T15:15:00Z,data_backed_up:true;boot_tested:true,none,Cleared CMOS and confirmed POST,false
+BIO-0194,it-006,PC-H-002,HP EliteDesk 800 G6,BIOS reset to defaults,2026-07-29T14:15:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Docking station firmware was also outdated,false
+BIO-0195,it-007,PC-D-006,Dell OptiPlex 7090,BIOS reset to defaults,2026-07-29T14:15:00Z,data_backed_up:true;boot_tested:true,none,BIOS reset to factory defaults per guide,true
+BIO-0196,it-004,PC-L-009,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-07-30T07:30:00Z,data_backed_up:true;boot_tested:true,none,Docking station firmware was also outdated,false
+BIO-0197,it-004,PC-H-019,HP EliteDesk 800 G6,BIOS reset to defaults,2026-07-31T09:00:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Suspended BitLocker before clearing CMOS and set Secure Boot back afterwards,false
+BIO-0198,it-002,PC-H-028,HP EliteDesk 800 G6,BIOS reset to defaults,2026-08-03T07:00:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Cleared CMOS and confirmed POST,false
+BIO-0199,it-004,PC-H-015,HP EliteDesk 800 G6,BIOS reset to defaults,2026-08-03T08:30:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,BIOS reset to factory defaults per guide,false
+BIO-0200,it-007,PC-H-010,HP EliteDesk 800 G6,BIOS reset to defaults,2026-08-03T10:45:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Loaded optimized defaults and rebooted,false
+BIO-0201,it-007,PC-L-016,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-08-03T11:45:00Z,data_backed_up:true;boot_tested:true,none,"User was away from the desk, rescheduled",true
+BIO-0202,it-006,PC-D-009,Dell OptiPlex 7090,BIOS reset to defaults,2026-08-03T14:15:00Z,data_backed_up:true;boot_tested:true,none,"Suspended BitLocker and photographed the boot settings before the reset, then restored UEFI and Secure Boot",true
+BIO-0203,it-006,PC-H-015,HP EliteDesk 800 G6,BIOS reset to defaults,2026-08-03T14:15:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Docking station firmware was also outdated,false
+BIO-0204,it-002,PC-L-006,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-08-03T15:45:00Z,data_backed_up:true;boot_tested:true,none,Cleared CMOS and confirmed POST,false
+BIO-0205,it-002,PC-H-012,HP EliteDesk 800 G6,BIOS reset to defaults,2026-08-04T06:45:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Cleared CMOS and confirmed POST,false
+BIO-0206,it-006,PC-D-009,Dell OptiPlex 7090,BIOS reset to defaults,2026-08-04T09:15:00Z,data_backed_up:true;boot_tested:true,none,Took photos of the BIOS settings first and re-applied boot mode and Secure Boot after resetting,false
+BIO-0207,it-001,PC-D-011,Dell OptiPlex 7090,BIOS reset to defaults,2026-08-04T14:45:00Z,data_backed_up:true;boot_tested:true,none,"User was away from the desk, rescheduled",false
+BIO-0208,it-001,PC-D-020,Dell OptiPlex 7090,BIOS reset to defaults,2026-08-05T11:15:00Z,data_backed_up:true;boot_tested:true,none,"User was away from the desk, rescheduled",false
+BIO-0209,it-002,PC-H-001,HP EliteDesk 800 G6,BIOS reset to defaults,2026-08-05T14:00:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Cleared CMOS and confirmed POST,true
+BIO-0210,it-002,PC-L-001,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-08-07T10:30:00Z,data_backed_up:true;boot_tested:true,none,BIOS reset to factory defaults per guide,false
+BIO-0211,it-001,PC-L-005,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-08-10T06:45:00Z,data_backed_up:true;boot_tested:true,none,Suspended BitLocker before clearing CMOS and set Secure Boot back afterwards,false
+BIO-0212,it-003,PC-L-006,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-08-10T06:45:00Z,data_backed_up:true;boot_tested:true,none,BIOS reset to factory defaults per guide,false
+BIO-0213,it-007,PC-L-015,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-08-10T08:30:00Z,data_backed_up:true;boot_tested:true,none,Loaded optimized defaults and rebooted,false
+BIO-0214,it-006,PC-H-007,HP EliteDesk 800 G6,BIOS reset to defaults,2026-08-11T14:45:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Docking station firmware was also outdated,false
+BIO-0215,it-006,PC-D-022,Dell OptiPlex 7090,BIOS reset to defaults,2026-08-12T07:30:00Z,data_backed_up:true;boot_tested:true,none,Swapped the keyboard while on site,false
+BIO-0216,it-005,PC-D-025,Dell OptiPlex 7090,BIOS reset to defaults,2026-08-12T08:45:00Z,data_backed_up:true;boot_tested:true,none,"Suspended BitLocker and photographed the boot settings before the reset, then restored UEFI and Secure Boot",false
+BIO-0217,it-005,PC-H-020,HP EliteDesk 800 G6,BIOS reset to defaults,2026-08-12T12:00:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Took photos of the BIOS settings first and re-applied boot mode and Secure Boot after resetting,false
+BIO-0218,it-001,PC-L-016,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-08-13T15:00:00Z,data_backed_up:true;boot_tested:true,none,Swapped the keyboard while on site,false
+BIO-0219,it-007,PC-H-017,HP EliteDesk 800 G6,BIOS reset to defaults,2026-08-14T14:45:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Cleared CMOS and confirmed POST,false
+BIO-0220,it-005,PC-D-001,Dell OptiPlex 7090,BIOS reset to defaults,2026-08-17T10:00:00Z,data_backed_up:true;boot_tested:true,none,Docking station firmware was also outdated,false
+BIO-0221,it-005,PC-D-029,Dell OptiPlex 7090,BIOS reset to defaults,2026-08-17T12:45:00Z,data_backed_up:true;boot_tested:true,none,Cleared CMOS and confirmed POST,false
+BIO-0222,it-005,PC-H-014,HP EliteDesk 800 G6,BIOS reset to defaults,2026-08-21T07:30:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Suspended BitLocker before clearing CMOS and set Secure Boot back afterwards,false
+BIO-0223,it-005,PC-L-014,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-08-21T08:15:00Z,data_backed_up:true;boot_tested:true,none,Suspended BitLocker before clearing CMOS and set Secure Boot back afterwards,false
+BIO-0224,it-003,PC-D-028,Dell OptiPlex 7090,BIOS reset to defaults,2026-08-21T13:15:00Z,data_backed_up:true;boot_tested:true,none,BIOS reset to factory defaults per guide,false
+BIO-0225,it-006,PC-L-006,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-08-24T08:45:00Z,data_backed_up:true;boot_tested:true,none,Cleared CMOS and confirmed POST,false
+BIO-0226,it-002,PC-D-011,Dell OptiPlex 7090,BIOS reset to defaults,2026-08-24T10:00:00Z,data_backed_up:true;boot_tested:true,none,Loaded optimized defaults and rebooted,false
+BIO-0227,it-001,PC-L-018,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-08-24T13:00:00Z,data_backed_up:true;boot_tested:true,none,Took photos of the BIOS settings first and re-applied boot mode and Secure Boot after resetting,false
+BIO-0228,it-002,PC-D-024,Dell OptiPlex 7090,BIOS reset to defaults,2026-08-24T13:30:00Z,data_backed_up:true;boot_tested:true,none,Cleared CMOS and confirmed POST,false
+BIO-0229,it-002,PC-H-014,HP EliteDesk 800 G6,BIOS reset to defaults,2026-08-24T14:15:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Cleared CMOS and confirmed POST,false
+BIO-0230,it-001,PC-D-013,Dell OptiPlex 7090,BIOS reset to defaults,2026-08-25T11:30:00Z,data_backed_up:true;boot_tested:true,none,Swapped the keyboard while on site,true
+BIO-0231,it-003,PC-H-015,HP EliteDesk 800 G6,BIOS reset to defaults,2026-08-26T07:30:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Took photos of the BIOS settings first and re-applied boot mode and Secure Boot after resetting,false
+BIO-0232,it-007,PC-D-004,Dell OptiPlex 7090,BIOS reset to defaults,2026-08-26T12:30:00Z,data_backed_up:true;boot_tested:true,none,BIOS reset to factory defaults per guide,false
+BIO-0233,it-001,PC-H-005,HP EliteDesk 800 G6,BIOS reset to defaults,2026-08-27T06:45:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,"Suspended BitLocker and photographed the boot settings before the reset, then restored UEFI and Secure Boot",false
+BIO-0234,it-003,PC-L-023,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-08-27T07:00:00Z,data_backed_up:true;boot_tested:true,none,Took photos of the BIOS settings first and re-applied boot mode and Secure Boot after resetting,false
+BIO-0235,it-005,PC-L-013,Lenovo ThinkCentre M70q,BIOS reset to defaults,2026-08-28T14:15:00Z,data_backed_up:true;boot_tested:true,none,Took photos of the BIOS settings first and re-applied boot mode and Secure Boot after resetting,false
+BIO-0236,it-005,PC-H-024,HP EliteDesk 800 G6,BIOS reset to defaults,2026-08-31T06:15:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Loaded optimized defaults and rebooted,false
+BIO-0237,it-007,PC-D-006,Dell OptiPlex 7090,BIOS reset to defaults,2026-08-31T12:30:00Z,data_backed_up:true;boot_tested:false,none,"Loaded defaults without checking the boot mode, user waiting",false
+BIO-0238,it-006,PC-D-009,Dell OptiPlex 7090,BIOS reset to defaults,2026-09-02T12:30:00Z,data_backed_up:true;boot_tested:true,none,Took photos of the BIOS settings first and re-applied boot mode and Secure Boot after resetting,false
+BIO-0239,it-003,PC-H-017,HP EliteDesk 800 G6,BIOS reset to defaults,2026-09-03T08:30:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,Suspended BitLocker before clearing CMOS and set Secure Boot back afterwards,false
+BIO-0240,it-006,PC-H-021,HP EliteDesk 800 G6,BIOS reset to defaults,2026-09-03T13:45:00Z,data_backed_up:true;boot_tested:true,CR2032 CMOS battery,BIOS reset to factory defaults per guide,true
