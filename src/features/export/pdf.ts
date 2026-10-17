@@ -44,12 +44,16 @@ class Writer {
   constructor(readonly pdf: jsPDF) {}
   ensure(height: number, onNewPage?: () => void) {
     if (this.y + height <= content.bottom) return;
+    this.newPage(onNewPage);
+  }
+  newPage(onNewPage?: () => void) {
     this.pdf.addPage();
     this.y = content.top;
     onNewPage?.();
   }
-  heading(number: number, text: string) {
-    this.ensure(18);
+  /** `keepWith` is the height of what must follow on the same page, so a heading is never orphaned. */
+  heading(number: number, text: string, keepWith = 12) {
+    this.ensure(14 + Math.min(keepWith, content.bottom - content.top - 14));
     this.y += 4;
     setText(this.pdf, 12, true, brand);
     this.pdf.text(`${number}.  ${text.toUpperCase()}`, content.left, this.y, { baseline: 'top' });
@@ -83,8 +87,10 @@ function drawCover(w: Writer, doc: SopDocument) {
   pdf.text(title, content.left, w.y, { baseline: 'top' });
   w.y += title.length * lineHeight(22) + 1;
   setText(pdf, 12, false, muted);
-  pdf.text(doc.title.equipment, content.left, w.y, { baseline: 'top' });
-  w.y += 10;
+  const equipment = wrap(pdf, doc.title.equipment, content.right - content.left, 12);
+  setText(pdf, 12, false, muted);
+  pdf.text(equipment, content.left, w.y, { baseline: 'top' });
+  w.y += equipment.length * lineHeight(12) + 5;
 
   const rows: [string, string][] = [
     ['Document ID', doc.control.documentId],
@@ -97,27 +103,32 @@ function drawCover(w: Writer, doc: SopDocument) {
   ];
   const labelWidth = 38;
   const half = (content.right - content.left) / 2;
-  const rowHeight = 8;
-  const pairs = Math.ceil(rows.length / 2);
-  pdf.setDrawColor(...rule);
-  pdf.setLineWidth(0.2);
-  for (let i = 0; i < pairs; i++) {
+  const valueWidth = half - labelWidth - 5;
+  for (let i = 0; i < rows.length; i += 2) {
+    // Every value is shown in full; a long one makes its row taller rather than being cut.
+    const pair = rows.slice(i, i + 2).map(([label, value]) => ({
+      label,
+      lines: wrap(pdf, value, valueWidth, 9.5, label === 'Status'),
+    }));
+    const rowHeight = Math.max(8, ...pair.map((cell) => cell.lines.length * lineHeight(9.5) + 4));
+    w.ensure(rowHeight);
     for (let col = 0; col < 2; col++) {
-      const row = rows[i * 2 + col];
+      const cell = pair[col];
       const x = content.left + col * half;
-      const y = w.y + i * rowHeight;
+      pdf.setDrawColor(...rule);
+      pdf.setLineWidth(0.2);
       pdf.setFillColor(...band);
-      pdf.rect(x, y, labelWidth, rowHeight, 'FD');
-      pdf.rect(x + labelWidth, y, half - labelWidth, rowHeight, 'S');
-      if (!row) continue;
+      pdf.rect(x, w.y, labelWidth, rowHeight, 'FD');
+      pdf.rect(x + labelWidth, w.y, half - labelWidth, rowHeight, 'S');
+      if (!cell) continue;
       setText(pdf, 8, true, muted);
-      pdf.text(row[0], x + 2.5, y + rowHeight / 2, { baseline: 'middle' });
-      setText(pdf, 9.5, row[0] === 'Status', statusColor(doc, row[0]));
-      const value = wrap(pdf, row[1], half - labelWidth - 5, 9.5)[0];
-      pdf.text(value, x + labelWidth + 2.5, y + rowHeight / 2, { baseline: 'middle' });
+      pdf.text(cell.label, x + 2.5, w.y + 4, { baseline: 'middle' });
+      setText(pdf, 9.5, cell.label === 'Status', statusColor(doc, cell.label));
+      pdf.text(cell.lines, x + labelWidth + 2.5, w.y + 2, { baseline: 'top' });
     }
+    w.y += rowHeight;
   }
-  w.y += pairs * rowHeight + 4;
+  w.y += 4;
 }
 const statusColor = (doc: SopDocument, label: string): Rgb =>
   label === 'Status' ? (doc.control.approved ? brand : warning) : ink;
@@ -144,12 +155,15 @@ function drawPurposeAndScope(w: Writer, doc: SopDocument) {
 }
 
 function drawSafety(w: Writer, doc: SopDocument) {
-  w.heading(3, 'Safety and warnings');
   const warnings = doc.steps.flatMap((step) =>
     step.details
       .filter((d) => d.label === 'Warning')
       .map((d) => ({ step: step.number, text: d.text })),
   );
+  const textX = content.left + 34;
+  const boxHeight = (text: string) =>
+    Math.max(10, wrap(w.pdf, text, content.right - textX - 4, 10).length * lineHeight(10) + 5);
+  w.heading(3, 'Safety and warnings', warnings.length ? boxHeight(warnings[0].text) + 2 : 12);
   if (!warnings.length) {
     w.paragraph('No step-specific warnings were recorded. Follow your site safety rules.', {
       color: muted,
@@ -157,7 +171,6 @@ function drawSafety(w: Writer, doc: SopDocument) {
     return;
   }
   const { pdf } = w;
-  const textX = content.left + 34;
   for (const item of warnings) {
     const lines = wrap(pdf, item.text, content.right - textX - 4, 10);
     const height = Math.max(10, lines.length * lineHeight(10) + 5);
@@ -176,7 +189,8 @@ function drawSafety(w: Writer, doc: SopDocument) {
 }
 
 function drawProcedure(w: Writer, doc: SopDocument, images: StepImages) {
-  w.heading(4, 'Procedure');
+  const opening = doc.steps[0] && images[doc.steps[0].id] ? picture.height : 12;
+  w.heading(4, 'Procedure', 7 + opening + 2 * cellPadding);
   const { pdf } = w;
   const tableWidth = content.right - content.left;
   const body = tableWidth - columns.number - columns.check;
@@ -199,28 +213,34 @@ function drawProcedure(w: Writer, doc: SopDocument, images: StepImages) {
   header();
   for (const step of doc.steps) {
     const jpeg = images[step.id];
-    const layout = layoutStep(pdf, step, body, jpeg);
-    w.ensure(layout.height, header);
-    drawStepRow(pdf, step, layout, w.y, jpeg);
-    w.y += layout.height;
+    drawStep(w, step, layoutStep(pdf, step, body, jpeg), header, jpeg);
   }
   w.y += 4;
 }
 
-interface StepLayout {
+/** One line of a step's instruction column; rows break between lines, never inside one. */
+interface StepLine {
   height: number;
-  textWidth: number;
-  action: string[];
-  tags: string;
-  details: { label: string; lines: string[]; warning: boolean }[];
+  draw: (y: number) => void;
+}
+interface StepLayout {
+  lines: StepLine[];
   picture?: { width: number; height: number };
 }
 
+const cellPadding = 4;
 const detailLabelWidth = 20;
+const bodyX = content.left + columns.number + 3;
 function layoutStep(pdf: jsPDF, step: SopPage, body: number, jpeg?: Uint8Array): StepLayout {
   const fitted = jpeg ? fitPicture(pdf, jpeg) : undefined;
   const textWidth = body - 6 - (fitted ? picture.width + 4 : 0);
-  const action = wrap(pdf, step.action, textWidth, 11, true);
+  const lines: StepLine[] = wrap(pdf, step.action, textWidth, 11, true).map((text) => ({
+    height: lineHeight(11),
+    draw: (y) => {
+      setText(pdf, 11, true, ink);
+      pdf.text(text, bodyX, y, { baseline: 'top' });
+    },
+  }));
   const tags = [
     step.required ? undefined : 'Optional',
     step.duration && `Expected time: ${step.duration}`,
@@ -228,98 +248,119 @@ function layoutStep(pdf: jsPDF, step: SopPage, body: number, jpeg?: Uint8Array):
   ]
     .filter(Boolean)
     .join('  ·  ');
-  const details = step.details.map((d) => ({
-    label: d.label,
-    lines: wrap(pdf, d.text, textWidth - detailLabelWidth, 9),
-    warning: d.label === 'Warning',
-  }));
-  const textHeight =
-    action.length * lineHeight(11) +
-    (tags ? lineHeight(8) + 1 : 0) +
-    details.reduce((sum, d) => sum + d.lines.length * lineHeight(9) + 1.5, details.length ? 2 : 0);
-  const height = Math.max(textHeight, fitted?.height ?? 0, 10) + 8;
-  return { height, textWidth, action, tags, details, picture: fitted };
+  if (tags)
+    lines.push({
+      height: lineHeight(8) + 1,
+      draw: (y) => {
+        setText(pdf, 8, false, step.validated ? brand : muted);
+        pdf.text(tags, bodyX, y + 1, { baseline: 'top' });
+      },
+    });
+  step.details.forEach((detail, d) => {
+    const isWarning = detail.label === 'Warning';
+    const wrapped = wrap(pdf, detail.text, textWidth - detailLabelWidth, 9);
+    wrapped.forEach((text, i) => {
+      const gap = d === 0 && i === 0 ? 2 : 0;
+      lines.push({
+        height: gap + lineHeight(9) + (i === wrapped.length - 1 ? 1.5 : 0),
+        draw: (y) => {
+          if (i === 0) {
+            setText(pdf, 8, true, isWarning ? warning : muted);
+            pdf.text(detail.label.toUpperCase(), bodyX, y + gap + 0.4, { baseline: 'top' });
+          }
+          setText(pdf, 9, false, isWarning ? warning : ink);
+          pdf.text(text, bodyX + detailLabelWidth, y + gap, { baseline: 'top' });
+        },
+      });
+    });
+  });
+  return { lines, picture: fitted };
 }
 
-function drawStepRow(
-  pdf: jsPDF,
+/**
+ * Draws a step row line by line. A step too long for the rest of the page closes its row
+ * there and continues on the next page under a repeated table header, so long instructions
+ * are never cut off or drawn over the footer.
+ */
+function drawStep(
+  w: Writer,
   step: SopPage,
   layout: StepLayout,
-  top: number,
+  header: () => void,
   jpeg?: Uint8Array,
 ) {
+  const { pdf } = w;
+  const opening = Math.max(layout.picture?.height ?? 0, layout.lines[0]?.height ?? 0, 10);
+  w.ensure(opening + 2 * cellPadding, header);
+  let top = w.y;
+  let y = top + cellPadding;
+  let pictureBottom = 0;
+  if (jpeg && layout.picture) {
+    drawPicture(pdf, jpeg, layout.picture, top + cellPadding);
+    pictureBottom = top + cellPadding + layout.picture.height;
+  }
+  let first = true;
+  for (const stepLine of layout.lines) {
+    if (y + stepLine.height > content.bottom - cellPadding) {
+      drawStepFrame(pdf, step, top, Math.max(y, pictureBottom) + cellPadding - top, first);
+      first = false;
+      pictureBottom = 0;
+      w.newPage(header);
+      top = w.y;
+      y = top + cellPadding;
+      setText(pdf, 8, false, muted);
+      pdf.text(`Step ${step.number} (continued)`, bodyX, y, { baseline: 'top' });
+      y += lineHeight(8) + 1;
+    }
+    stepLine.draw(y);
+    y += stepLine.height;
+  }
+  const bottom = Math.max(y, pictureBottom, top + 10) + cellPadding;
+  drawStepFrame(pdf, step, top, bottom - top, first);
+  w.y = bottom;
+}
+
+/** Row borders, the step number and, on the row's first part, the sign-off box. */
+function drawStepFrame(pdf: jsPDF, step: SopPage, top: number, height: number, first: boolean) {
   const x = content.left;
-  const width = content.right - content.left;
-  const bodyX = x + columns.number + 3;
   pdf.setDrawColor(...rule);
   pdf.setLineWidth(0.2);
-  pdf.rect(x, top, width, layout.height, 'S');
-  line(pdf, x + columns.number, top, x + columns.number, top + layout.height, rule, 0.2);
+  pdf.rect(x, top, content.right - content.left, height, 'S');
+  line(pdf, x + columns.number, top, x + columns.number, top + height, rule, 0.2);
   line(
     pdf,
     content.right - columns.check,
     top,
     content.right - columns.check,
-    top + layout.height,
+    top + height,
     rule,
     0.2,
   );
-
-  pdf.setFillColor(...brand);
+  pdf.setFillColor(...(first ? brand : muted));
   pdf.circle(x + columns.number / 2, top + 7, 4, 'F');
   setText(pdf, 10, true, [255, 255, 255]);
   pdf.text(String(step.number), x + columns.number / 2, top + 7, {
     align: 'center',
     baseline: 'middle',
   });
-
-  let y = top + 4;
-  setText(pdf, 11, true, ink);
-  pdf.text(layout.action, bodyX, y, { baseline: 'top' });
-  y += layout.action.length * lineHeight(11);
-  if (layout.tags) {
-    y += 1;
-    setText(pdf, 8, false, step.validated ? brand : muted);
-    pdf.text(layout.tags, bodyX, y, { baseline: 'top' });
-    y += lineHeight(8);
-  }
-  if (layout.details.length) y += 2;
-  for (const detail of layout.details) {
-    const color = detail.warning ? warning : ink;
-    setText(pdf, 8, true, detail.warning ? warning : muted);
-    pdf.text(detail.label.toUpperCase(), bodyX, y + 0.4, { baseline: 'top' });
-    setText(pdf, 9, false, color);
-    pdf.text(detail.lines, bodyX + detailLabelWidth, y, { baseline: 'top' });
-    y += detail.lines.length * lineHeight(9) + 1.5;
-  }
-
-  if (jpeg && layout.picture) {
-    const px = content.right - columns.check - 3 - picture.width;
-    const py = top + 4;
-    pdf.addImage(
-      jpegDataUri(jpeg),
-      'JPEG',
-      px + (picture.width - layout.picture.width) / 2,
-      py,
-      layout.picture.width,
-      layout.picture.height,
-      undefined,
-      'FAST',
-    );
-    pdf.setDrawColor(...rule);
-    pdf.rect(
-      px + (picture.width - layout.picture.width) / 2,
-      py,
-      layout.picture.width,
-      layout.picture.height,
-      'S',
-    );
-  }
-
+  if (!first) return;
   const box = 6;
   pdf.setDrawColor(...muted);
   pdf.setLineWidth(0.35);
-  pdf.rect(content.right - columns.check / 2 - box / 2, top + 4, box, box, 'S');
+  pdf.rect(content.right - columns.check / 2 - box / 2, top + cellPadding, box, box, 'S');
+}
+
+function drawPicture(
+  pdf: jsPDF,
+  jpeg: Uint8Array,
+  size: { width: number; height: number },
+  y: number,
+) {
+  const x = content.right - columns.check - 3 - picture.width + (picture.width - size.width) / 2;
+  pdf.addImage(jpegDataUri(jpeg), 'JPEG', x, y, size.width, size.height, undefined, 'FAST');
+  pdf.setDrawColor(...rule);
+  pdf.setLineWidth(0.2);
+  pdf.rect(x, y, size.width, size.height, 'S');
 }
 
 /** Scales a picture into the column, keeping its aspect ratio. */
@@ -443,7 +484,7 @@ function finishPages(pdf: jsPDF, doc: SopDocument) {
       pdf.restoreGraphicsState();
     }
     setText(pdf, 8, true, ink);
-    const heading = wrap(pdf, doc.title.title, 110, 8, true)[0];
+    const heading = ellipsize(pdf, doc.title.title, 110);
     pdf.text(heading, content.left, 12, { baseline: 'top' });
     setText(pdf, 8, false, muted);
     pdf.text(
@@ -484,6 +525,15 @@ function drawWarningSign(pdf: jsPDF, cx: number, cy: number) {
   pdf.triangle(cx, cy - 3.2, cx - 3.6, cy + 2.8, cx + 3.6, cy + 2.8, 'F');
   setText(pdf, 7, true, [255, 255, 255]);
   pdf.text('!', cx, cy + 0.2, { align: 'center', baseline: 'middle' });
+}
+
+/** One line for the running header; the cover always shows the full title. */
+function ellipsize(pdf: jsPDF, text: string, width: number) {
+  const [first, ...rest] = wrap(pdf, text, width, 8, true);
+  if (!rest.length) return first;
+  let cut = first;
+  while (cut && pdf.getTextWidth(`${cut}…`) > width) cut = cut.slice(0, -1);
+  return `${cut.trimEnd()}…`;
 }
 
 function setText(pdf: jsPDF, size: number, bold: boolean, color: Rgb) {
