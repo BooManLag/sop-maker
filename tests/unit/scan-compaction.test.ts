@@ -4,6 +4,10 @@ import { initialStore, validateStore } from '../../src/lib/application/store';
 import {
   compactScans,
   completeAnalysis,
+  failAnalysis,
+  FAILED_RETRY_MS,
+  runScan,
+  STUCK_ANALYSIS_MS,
   findingDetailDto,
   scanDto,
 } from '../../src/lib/application/evidence-service';
@@ -104,4 +108,30 @@ test('scans finished before compaction are compacted once, freeing tenant state'
   assert.equal(s.scans.find((x) => x.id === 'scan-1')!.records.length, 240);
   compactScans(s);
   assert.ok(done.every((x) => x.recordCount === 240));
+});
+
+test('a failed scan keeps its rows for a day of retries, then drops them', () => {
+  const { s, scan } = analyzingStore();
+  failAnalysis(s, scan.id);
+  const failedAt = Date.parse(scan.failedAt!);
+  compactScans(s, failedAt + FAILED_RETRY_MS - 1);
+  assert.equal(scan.records.length, 240);
+  compactScans(s, failedAt + FAILED_RETRY_MS + 1);
+  assert.equal(scan.records.length, 0);
+  assert.equal(scanDto(scan).recordCount, 240);
+  assert.equal(scanDto(scan).recordsCleared, true);
+  scan.readiness = { eligible: true, count: 240, categories: [], can: [], cannot: [], missing: [] };
+  assert.throws(() => runScan(s, scan.id, true), /Import the file again/);
+});
+
+test('a scan analyzing past the stuck cutoff is marked failed, keeping its rows to retry', () => {
+  const { s, scan } = analyzingStore();
+  scan.analysisStartedAt = new Date(0).toISOString();
+  compactScans(s, STUCK_ANALYSIS_MS - 1);
+  assert.equal(scan.status, 'analyzing');
+  compactScans(s, STUCK_ANALYSIS_MS + 1);
+  assert.equal(scan.status, 'failed');
+  assert.equal(scan.records.length, 240);
+  compactScans(s, STUCK_ANALYSIS_MS + 1 + FAILED_RETRY_MS + 1);
+  assert.equal(scan.records.length, 0);
 });

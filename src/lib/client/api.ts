@@ -71,6 +71,8 @@ export type ScanDetail = {
   demo: boolean;
   status: 'uploaded' | 'ready' | 'analyzing' | 'failed' | 'complete';
   recordCount: number;
+  /** The imported rows were dropped; a failed scan can no longer be run again. */
+  recordsCleared?: boolean;
   readiness?: Readiness;
   funnel?: number[];
 };

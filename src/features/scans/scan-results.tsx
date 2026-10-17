@@ -66,7 +66,11 @@ export function ScanResults({ scanId }: { scanId: string }) {
         ) : scan.status === 'failed' ? (
           <EmptyState
             title="The analysis did not finish."
-            description="No findings were created. Run the scan again from the data check."
+            description={
+              scan.recordsCleared
+                ? 'No findings were created, and the imported records were cleared after a day. Import the file again to run a new scan.'
+                : 'No findings were created. Run the scan again from the data check within a day, before its records are cleared.'
+            }
             action={
               <Button asChild>
                 <Link href={`/scans/${scanId}`}>Back to data check</Link>
