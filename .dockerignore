@@ -1,0 +1,22 @@
+node_modules
+.next
+.git
+.demo-data
+.env*
+attachments
+.next-e2e
+*-debug.log
+.demo-backups
+test-results
+playwright-report
+
+# Never copy deployment credentials, Terraform state or local configuration into an image.
+gha-creds-*.json
+**/.terraform
+**/*.tfstate*
+**/*.tfvars
+**/*.tfplan
+infra/.build
+.firebase
+.mcp.json
+**/node_modules

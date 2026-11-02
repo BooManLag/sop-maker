@@ -1,0 +1,32 @@
+name: Model eval
+# Manual: run before changing GEMINI_MODEL or prompts. Calls Vertex AI, so it costs a few cents.
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: Gemini model to evaluate (default = repository GEMINI_MODEL)
+        required: false
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  eval:
+    if: github.ref == 'refs/heads/main'
+    environment: model-evaluation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.EVAL_SA }}
+      - run: npm run eval
+        env:
+          GOOGLE_CLOUD_PROJECT: ${{ vars.GCP_PROJECT_ID }}
+          GOOD_EXCEPTION_GEMINI_MODEL: ${{ inputs.model || vars.GEMINI_MODEL }}

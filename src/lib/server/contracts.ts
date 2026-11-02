@@ -1,0 +1,396 @@
+import { z } from 'zod';
+import { LIMITS } from './config';
+import { ApiError } from './errors';
+import type { Permission } from './auth';
+import { idSchema, proseText as prose, shortText as short } from '../domain/validation';
+import { mediaContentTypes } from '../domain/types';
+export { idSchema };
+const optionalProse = z.string().trim().max(2000).optional();
+export const stepSchema = z
+  .object({
+    id: idSchema,
+    sequence: z.number().int().min(1).max(LIMITS.steps),
+    action: short,
+    required: z.boolean(),
+    condition: optionalProse,
+    rationale: optionalProse,
+    warning: optionalProse,
+    evidence: optionalProse,
+    durationMinSeconds: z.number().int().min(0).max(86400).optional(),
+    durationMaxSeconds: z.number().int().min(0).max(86400).optional(),
+    source: z.enum(['expert_walkthrough', 'baseline', 'validated_field_practice']),
+    evidenceLinks: z.array(idSchema).max(20).optional(),
+    frameObjectPath: z.string().max(512).optional(),
+    imageWaived: z.boolean().optional(),
+    frameAtMs: z
+      .number()
+      .int()
+      .min(0)
+      .max(LIMITS.mediaSecondsCeiling * 1000)
+      .optional(),
+  })
+  .strict()
+  .superRefine((step, context) => {
+    if (
+      step.durationMinSeconds !== undefined &&
+      step.durationMaxSeconds !== undefined &&
+      step.durationMinSeconds > step.durationMaxSeconds
+    )
+      context.addIssue({
+        code: 'custom',
+        message: 'Minimum duration cannot exceed maximum duration.',
+      });
+  });
+const cell = z.union([z.string().max(2000), z.number().finite(), z.boolean()]);
+export const rowSchema = z
+  .object({
+    job_id: z.string().trim().min(1).max(128),
+    technician_id: cell.optional(),
+    asset_id: cell.optional(),
+    equipment_model: cell.optional(),
+    job_type: cell.optional(),
+    timestamp: cell.optional(),
+    checklist_values: cell.optional(),
+    parts_used: cell.optional(),
+    notes: cell.optional(),
+    callback_within_30_days: cell.optional(),
+  })
+  .strict();
+/** Model transcription of one recording; frame and segment times must fall inside it. */
+export const transcriptionSchema = (recordingMs: number) => {
+  const ms = z.number().int().min(0).max(recordingMs);
+  return z
+    .object({
+      segments: z
+        .array(
+          z
+            .object({ startMs: ms, endMs: ms, text: prose })
+            .strict()
+            .refine(
+              (segment) => segment.startMs <= segment.endMs,
+              'A segment ends before it starts.',
+            ),
+        )
+        .min(1)
+        .max(LIMITS.steps * 10)
+        .refine(
+          (segments) =>
+            segments.every((segment, i) => !i || segments[i - 1].endMs <= segment.startMs),
+          'Segments must be in order and must not overlap.',
+        ),
+      steps: z
+        .array(z.object({ action: short, frameAtMs: ms }).strict())
+        .min(1)
+        .max(LIMITS.steps),
+      audioSeconds: z.number().min(0),
+    })
+    .strict();
+};
+export const extractionSchema = z
+  .object({
+    steps: z
+      .array(stepSchema.safeExtend({ source: z.literal('expert_walkthrough') }))
+      .min(1)
+      .max(LIMITS.steps),
+    questions: z.array(z.string().trim().min(1).max(500)).min(1).max(3),
+  })
+  .strict()
+  .superRefine((output, ctx) => {
+    if (new Set(output.steps.map((s) => s.id)).size !== output.steps.length)
+      ctx.addIssue({ code: 'custom', message: 'Step identifiers must be unique.' });
+    if (output.steps.some((s, i) => s.sequence !== i + 1))
+      ctx.addIssue({ code: 'custom', message: 'Step sequences must be contiguous.' });
+  });
+const empty = z.object({}).strict();
+const uniqueSteps = z
+  .array(stepSchema)
+  .min(1)
+  .max(LIMITS.steps)
+  .refine((steps) => new Set(steps.map((s) => s.id)).size === steps.length, {
+    message: 'Step IDs must be unique.',
+  });
+export const schemas = {
+  workspace: empty,
+  processList: empty,
+  findingList: empty,
+  trialList: empty,
+  changeList: empty,
+  auditList: empty,
+  processCreate: z.object({ title: short, equipment: short }).strict(),
+  processGet: empty,
+  processUpdate: z
+    .object({ title: short.optional(), equipment: short.optional() })
+    .strict()
+    .refine((b) => b.title !== undefined || b.equipment !== undefined, 'Nothing to update.'),
+  processDelete: empty,
+  processPurge: z.object({ title: short }).strict(),
+  captureGet: empty,
+  processMedia: empty,
+  uploadComplete: empty,
+  captureCreate: z
+    .object({
+      kind: z.enum(['text', 'video', 'audio', 'document']),
+      expertReference: idSchema,
+      text: z.string().max(LIMITS.captureCharacters).optional(),
+      fileName: z.string().max(255).optional(),
+    })
+    .strict(),
+  uploadRequest: z
+    .object({
+      expertReference: idSchema,
+      contentType: z.enum(mediaContentTypes),
+      bytes: z.number().int().positive().max(LIMITS.mediaBytes),
+      /** Everyone in the recording agreed to be recorded. */
+      consent: z.literal(true),
+    })
+    .strict(),
+  frameRequest: z
+    .object({
+      captureId: idSchema,
+      stepId: idSchema,
+      atMs: z.number().int().min(0),
+      bytes: z.number().int().positive().max(LIMITS.frameBytes),
+    })
+    .strict(),
+  transcriptSave: z
+    .object({
+      segments: z
+        .array(
+          z
+            .object({
+              startMs: z.number().int().min(0),
+              endMs: z.number().int().min(0),
+              text: prose,
+            })
+            .strict(),
+        )
+        .min(1)
+        .max(LIMITS.steps * 10),
+    })
+    .strict(),
+  captureAnalyze: z.object({ captureId: idSchema, sample: z.boolean().default(false) }).strict(),
+  clarificationCreate: z
+    .object({
+      captureId: idSchema,
+      stepId: idSchema,
+      question: z.string().trim().min(1).max(500),
+      answer: prose,
+    })
+    .strict(),
+  processDraftSave: z.object({ steps: uniqueSteps }).strict(),
+  processPublish: z
+    .object({
+      /** No longer required: publishing is itself the reviewer's approval. Kept for old clients. */
+      approved: z.literal(true).optional(),
+      steps: uniqueSteps,
+    })
+    .strict(),
+  scanCreate: z
+    .object({
+      processId: idSchema,
+      demo: z.boolean().default(false),
+      rows: z.array(rowSchema).max(LIMITS.rows).optional(),
+    })
+    .strict()
+    .refine((v) => v.demo || !!v.rows?.length, {
+      message: 'Upload records or explicitly choose the sample.',
+    }),
+  scanGet: empty,
+  scanReadiness: empty,
+  scanRun: empty,
+  scanFindings: empty,
+  findingGet: empty,
+  findingDismiss: empty,
+  findingRestore: empty,
+  findingExplain: z
+    .object({
+      reason: prose,
+      condition: z.string().trim().max(2000).default(''),
+      warning: z.string().trim().max(2000).default(''),
+      equipment: z.string().trim().max(300).default(''),
+      doNotUse: z.string().trim().max(2000).default(''),
+    })
+    .strict(),
+  trialCreate: z.object({ findingId: idSchema, equipment: short, testGroup: prose }).strict(),
+  trialGet: empty,
+  trialResults: z.object({ sample: z.literal(true) }).strict(),
+  changeCreate: z.object({ trialId: idSchema }).strict(),
+  changeGet: empty,
+  changeSubmit: z.object({ proposedStep: prose }).strict(),
+  retention: empty,
+} satisfies Record<string, z.ZodType>;
+export type Operation = keyof typeof schemas;
+export interface Endpoint {
+  operation: Operation;
+  method: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+  path: string;
+  permission: Permission;
+  create?: boolean;
+}
+export const endpoints: Endpoint[] = [
+  { operation: 'workspace', method: 'GET', path: 'workspace', permission: 'read' },
+  { operation: 'processList', method: 'GET', path: 'processes', permission: 'read' },
+  {
+    operation: 'processCreate',
+    method: 'POST',
+    path: 'processes',
+    permission: 'process',
+    create: true,
+  },
+  { operation: 'processGet', method: 'GET', path: 'processes/:id', permission: 'read' },
+  { operation: 'processUpdate', method: 'PATCH', path: 'processes/:id', permission: 'process' },
+  { operation: 'processDelete', method: 'DELETE', path: 'processes/:id', permission: 'process' },
+  { operation: 'processPurge', method: 'POST', path: 'processes/:id/purge', permission: 'admin' },
+  { operation: 'processMedia', method: 'GET', path: 'processes/:id/media', permission: 'read' },
+  {
+    operation: 'captureCreate',
+    method: 'POST',
+    path: 'processes/:id/captures',
+    permission: 'write',
+    create: true,
+  },
+  {
+    operation: 'uploadRequest',
+    method: 'POST',
+    path: 'processes/:id/uploads',
+    permission: 'write',
+    create: true,
+  },
+  {
+    operation: 'frameRequest',
+    method: 'POST',
+    path: 'processes/:id/frames',
+    permission: 'write',
+    create: true,
+  },
+  { operation: 'captureGet', method: 'GET', path: 'captures/:id', permission: 'read' },
+  {
+    operation: 'uploadComplete',
+    method: 'POST',
+    path: 'captures/:id/uploaded',
+    permission: 'write',
+  },
+  {
+    operation: 'transcriptSave',
+    method: 'POST',
+    path: 'captures/:id/transcript',
+    permission: 'write',
+  },
+  {
+    operation: 'captureAnalyze',
+    method: 'POST',
+    path: 'processes/:id/analyze-capture',
+    permission: 'write',
+  },
+  {
+    operation: 'clarificationCreate',
+    method: 'POST',
+    path: 'processes/:id/clarifications',
+    permission: 'write',
+    create: true,
+  },
+  {
+    operation: 'processDraftSave',
+    method: 'POST',
+    path: 'processes/:id/draft',
+    permission: 'write',
+  },
+  {
+    operation: 'processPublish',
+    method: 'POST',
+    path: 'processes/:id/publish',
+    permission: 'review',
+  },
+  { operation: 'scanCreate', method: 'POST', path: 'scans', permission: 'write', create: true },
+  { operation: 'scanGet', method: 'GET', path: 'scans/:id', permission: 'read' },
+  { operation: 'scanReadiness', method: 'POST', path: 'scans/:id/readiness', permission: 'write' },
+  { operation: 'scanRun', method: 'POST', path: 'scans/:id/run', permission: 'write' },
+  { operation: 'scanFindings', method: 'GET', path: 'scans/:id/findings', permission: 'read' },
+  { operation: 'findingList', method: 'GET', path: 'findings', permission: 'read' },
+  { operation: 'findingGet', method: 'GET', path: 'findings/:id', permission: 'read' },
+  {
+    operation: 'findingDismiss',
+    method: 'POST',
+    path: 'findings/:id/dismiss',
+    permission: 'review',
+  },
+  {
+    operation: 'findingRestore',
+    method: 'POST',
+    path: 'findings/:id/restore',
+    permission: 'review',
+  },
+  {
+    operation: 'findingExplain',
+    method: 'POST',
+    path: 'findings/:id/request-explanation',
+    permission: 'write',
+  },
+  { operation: 'trialList', method: 'GET', path: 'trials', permission: 'read' },
+  { operation: 'trialCreate', method: 'POST', path: 'trials', permission: 'review', create: true },
+  { operation: 'trialGet', method: 'GET', path: 'trials/:id', permission: 'read' },
+  { operation: 'trialResults', method: 'POST', path: 'trials/:id/results', permission: 'review' },
+  { operation: 'changeList', method: 'GET', path: 'change-requests', permission: 'read' },
+  {
+    operation: 'changeCreate',
+    method: 'POST',
+    path: 'change-requests',
+    permission: 'review',
+    create: true,
+  },
+  { operation: 'changeGet', method: 'GET', path: 'change-requests/:id', permission: 'read' },
+  {
+    operation: 'changeSubmit',
+    method: 'POST',
+    path: 'change-requests/:id/submit',
+    permission: 'review',
+  },
+  { operation: 'auditList', method: 'GET', path: 'audit-events', permission: 'admin' },
+  { operation: 'retention', method: 'POST', path: 'maintenance/retention', permission: 'admin' },
+];
+export const querySchema = z
+  .object({
+    limit: z.coerce.number().int().min(1).max(100).default(50),
+    cursor: z
+      .string()
+      .regex(/^\d{1,5}$/)
+      .default('0'),
+    sort: z.enum(['asc', 'desc']).default('asc'),
+    status: z
+      .string()
+      .regex(/^[a-z_]{1,32}$/)
+      .optional(),
+  })
+  .strict();
+export type ListQuery = z.infer<typeof querySchema>;
+export function resolveEndpoint(method: string, segments: string[]) {
+  const parts = segments[0] === 'v1' ? segments.slice(1) : segments;
+  if (parts.length > 3 || parts.some((p) => !idSchema.safeParse(p).success))
+    throw new ApiError(404, 'Endpoint not found.');
+  const matches = endpoints.filter((e) => {
+    const p = e.path.split('/');
+    return p.length === parts.length && p.every((s, i) => s === ':id' || s === parts[i]);
+  });
+  const endpoint = matches.find((e) => e.method === method);
+  if (!endpoint)
+    throw new ApiError(
+      matches.length ? 405 : 404,
+      matches.length ? 'HTTP method is not supported for this endpoint.' : 'Endpoint not found.',
+    );
+  return { endpoint, id: endpoint.path.includes(':id') ? parts[1] : undefined };
+}
+export function parseInput<T extends Operation>(
+  operation: T,
+  value: unknown,
+): z.infer<(typeof schemas)[T]> {
+  const result = schemas[operation].safeParse(value);
+  if (!result.success)
+    throw new ApiError(
+      400,
+      `Invalid request: ${result.error.issues
+        .slice(0, 3)
+        .map((x) => `${x.path.join('.') || 'body'}: ${x.message}`)
+        .join('; ')}`,
+    );
+  return result.data as z.infer<(typeof schemas)[T]>;
+}

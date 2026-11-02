@@ -1,0 +1,44 @@
+import type { NextConfig } from 'next';
+// Local dev proxies the project's public web config from Firebase Hosting.
+const localProject =
+  process.env.GOOD_EXCEPTION_LOCAL === 'true' && !process.env.K_SERVICE
+    ? process.env.GOOGLE_CLOUD_PROJECT
+    : undefined;
+const config: NextConfig = {
+  output: 'standalone',
+  distDir: process.env.GOOD_EXCEPTION_NEXT_DIR || '.next',
+  serverExternalPackages: ['firebase-admin', 'proper-lockfile', '@google/adk'],
+  poweredByHeader: false,
+  async rewrites() {
+    return localProject
+      ? [
+          {
+            source: '/__/firebase/init.json',
+            destination: `https://${localProject}.web.app/__/firebase/init.json`,
+          },
+        ]
+      : [];
+  },
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'no-referrer' },
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+          {
+            key: 'Content-Security-Policy',
+            value:
+              "default-src 'self'; script-src 'self' 'unsafe-inline' https://apis.google.com" +
+              (process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : '') +
+              "; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://storage.googleapis.com https://lh3.googleusercontent.com; media-src 'self' blob: https://storage.googleapis.com; font-src 'self'; connect-src 'self'" +
+              " https://storage.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com; frame-src https://*.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
+          },
+        ],
+      },
+    ];
+  },
+};
+export default config;

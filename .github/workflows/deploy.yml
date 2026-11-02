@@ -1,0 +1,109 @@
+name: Deploy
+# Explicit repository opt-in plus the production environment's protection rules.
+on:
+  workflow_run:
+    workflows: [Backend verification]
+    types: [completed]
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+jobs:
+  deploy:
+    if: >-
+      vars.DEPLOY_ENABLED == 'true' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      IMAGE: ${{ vars.IMAGE_REPOSITORY }}/app:${{ github.event.workflow_run.head_sha }}
+      GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+      GCP_REGION: ${{ vars.GCP_REGION }}
+      APP_NAME: ${{ vars.APP_NAME }}
+      RUNTIME_SA: ${{ vars.RUNTIME_SA }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
+      - name: Reject superseded releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          LATEST_SHA=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)
+          test "$LATEST_SHA" = "$SOURCE_SHA"
+      - name: Build the verified source before creating cloud credentials
+        run: docker build -t "$IMAGE" .
+      - name: Scan the exact deployment image
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+        with:
+          image-ref: ${{ env.IMAGE }}
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '1'
+      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.DEPLOYER_SA }}
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+      - run: gcloud auth configure-docker "$GCP_REGION-docker.pkg.dev" --quiet
+      - name: Push immutable image and stage a revision without production traffic
+        run: |
+          docker push "$IMAGE"
+          DIGEST_IMAGE=$(docker image inspect "$IMAGE" --format '{{index .RepoDigests 0}}')
+          [[ "$DIGEST_IMAGE" =~ @sha256:[a-f0-9]{64}$ ]]
+          REVISION=$(gcloud run deploy "$APP_NAME" --image "$DIGEST_IMAGE" \
+            --region "$GCP_REGION" --project "$GCP_PROJECT_ID" \
+            --service-account "$RUNTIME_SA" --no-traffic --tag candidate \
+            --format='value(status.latestCreatedRevisionName)' --quiet)
+          echo "REVISION=$REVISION" >> "$GITHUB_ENV"
+      - name: Verify staged readiness and unauthenticated access denial
+        run: |
+          CANDIDATE_URL=$(gcloud run services describe "$APP_NAME" --region "$GCP_REGION" \
+            --project "$GCP_PROJECT_ID" --format=json | jq -er '.status.traffic[] | select(.tag == "candidate") | .url')
+          curl --fail --silent --show-error --max-time 30 "$CANDIDATE_URL/api/v1/health/ready"
+          STATUS=$(curl --silent --show-error --max-time 30 -o /dev/null -w '%{http_code}' "$CANDIDATE_URL/api/v1/workspace")
+          test "$STATUS" = 401
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+      - name: Generate Hosting configuration for the selected service and region
+        run: node scripts/firebase-config.mjs
+      - name: Deploy Firestore rules, indexes and Hosting
+        run: npx --yes firebase-tools@15.33.0 deploy --config .firebase-deploy.json --only firestore,hosting --project "$GCP_PROJECT_ID" --non-interactive
+      - name: Promote the verified revision
+        run: |
+          PREVIOUS=$(gcloud run services describe "$APP_NAME" --region "$GCP_REGION" --project "$GCP_PROJECT_ID" \
+            --format=json | jq -er '[.status.traffic[] | select(.percent > 0)] | max_by(.percent) | .revisionName')
+          echo "PREVIOUS=$PREVIOUS" >> "$GITHUB_ENV"
+          gcloud run services update-traffic "$APP_NAME" \
+            --to-revisions "$REVISION=100" --remove-tags candidate \
+            --region "$GCP_REGION" --project "$GCP_PROJECT_ID" --quiet
+      - name: Verify the live service
+        id: live
+        run: |
+          SERVICE_URL=$(gcloud run services describe "$APP_NAME" --region "$GCP_REGION" \
+            --project "$GCP_PROJECT_ID" --format='value(status.url)')
+          for attempt in 1 2 3 4 5; do
+            if curl --fail --silent --show-error --max-time 30 "$SERVICE_URL/api/v1/health/ready" &&
+              [ "$(curl --silent --max-time 30 -o /dev/null -w '%{http_code}' "$SERVICE_URL/api/v1/workspace")" = 401 ]; then
+              exit 0
+            fi
+            sleep 10
+          done
+          exit 1
+      - name: Roll back to the previous revision
+        if: failure() && steps.live.outcome == 'failure' && env.PREVIOUS != ''
+        run: |
+          gcloud run services update-traffic "$APP_NAME" --to-revisions "$PREVIOUS=100" \
+            --region "$GCP_REGION" --project "$GCP_PROJECT_ID" --quiet
+          echo "::error::Live checks failed; traffic returned to $PREVIOUS."

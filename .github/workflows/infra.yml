@@ -1,0 +1,178 @@
+name: Infrastructure
+# PRs: scan and plan against the real project (read-only). main: plan, then apply exactly
+# that plan after production approval. Daily: fail on drift.
+on:
+  pull_request:
+    paths: [infra/**, .github/workflows/infra.yml]
+  push:
+    branches: [main]
+    paths: [infra/**, .github/workflows/infra.yml]
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: infra-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+env:
+  TERRAFORM_IMAGE: hashicorp/terraform:1.16.5@sha256:c7926feace05d0f7e73542842bf3945924e955a1f782cf000ccbb8d18fa42d77
+  TF_IN_AUTOMATION: 'true'
+  TF_INPUT: 'false'
+  # prod.tfvars is not committed; CI mirrors it from repository variables.
+  TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
+  TF_VAR_region: ${{ vars.GCP_REGION }}
+  TF_VAR_app_name: ${{ vars.APP_NAME }}
+  TF_VAR_gemini_model: ${{ vars.GEMINI_MODEL }}
+  TF_VAR_github_repository: ${{ github.repository }}
+  TF_VAR_github_repository_id: ${{ github.repository_id }}
+  TF_VAR_initial_image: ${{ vars.TF_INITIAL_IMAGE }}
+  TF_VAR_billing_account: ${{ vars.TF_BILLING_ACCOUNT }}
+  TF_VAR_billing_cap_enabled: ${{ vars.TF_BILLING_CAP_ENABLED || 'false' }}
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Validate and test Terraform without cloud credentials
+        run: |
+          tf() { docker run --rm -v "$PWD/infra:/work" -w /work "$TERRAFORM_IMAGE" "$@"; }
+          tf fmt -check -recursive
+          tf init -backend=false -lockfile=readonly -input=false
+          tf validate
+          tf test
+      - name: Scan Terraform for misconfigurations
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+        with:
+          scan-type: config
+          scan-ref: infra
+          severity: CRITICAL,HIGH
+          exit-code: '1'
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - run: npm ci --prefix infra/functions/billing-cap --ignore-scripts
+      - run: npm audit --prefix infra/functions/billing-cap --omit=dev --audit-level=moderate
+
+  plan:
+    needs: checks
+    # Fork PRs never receive cloud credentials.
+    if: >-
+      vars.INFRA_CD_ENABLED == 'true' &&
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write
+    outputs:
+      changes: ${{ steps.plan.outputs.changes }}
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ vars.WIF_INFRA_PLAN_PROVIDER }}
+          service_account: ${{ vars.TF_PLANNER_SA }}
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.16.5
+          terraform_wrapper: false
+      - run: terraform init -lockfile=readonly -backend-config="bucket=${TF_VAR_project_id}-tfstate"
+      # Read-only identity: no state lock. A stale saved plan is rejected at apply time.
+      - name: Plan
+        id: plan
+        run: |
+          set +e
+          terraform plan -lock=false -detailed-exitcode -no-color -out=tfplan > plan.txt 2>&1
+          CODE=$?
+          set -e
+          cat plan.txt
+          test "$CODE" -ne 1
+          echo "changes=$([ "$CODE" = 2 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+      - name: Fail on drift
+        if: github.event_name == 'schedule' && steps.plan.outputs.changes == 'true'
+        run: |
+          echo "::error::Live infrastructure differs from main. Review the plan above."
+          exit 1
+      - name: Comment the plan on the PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const fs = require('fs');
+            const marker = '<!-- terraform-plan -->';
+            const text = fs.readFileSync('infra/plan.txt', 'utf8');
+            const summary = (text.match(/^(Plan:.*|No changes\..*)$/m) || ['Plan failed; see the job log.'])[0];
+            const limit = 60000;
+            const body = text.length > limit ? text.slice(-limit) + '\n…truncated; see the job log.' : text;
+            const comment = `${marker}\n### Terraform plan\n**${summary}**\n\n<details><summary>Full plan</summary>\n\n\`\`\`\n${body}\n\`\`\`\n</details>\n\n_${context.sha.slice(0, 7)}_`;
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number });
+            const existing = comments.find(c => c.body.startsWith(marker));
+            if (existing) await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body: comment });
+            else await github.rest.issues.createComment({ owner, repo, issue_number, body: comment });
+      # Plan files contain state values (including secrets), so artifacts are encrypted.
+      - name: Encrypt the reviewed plan
+        if: github.ref == 'refs/heads/main' && github.event_name != 'schedule' && steps.plan.outputs.changes == 'true'
+        env:
+          TF_PLAN_KEY: ${{ secrets.TF_PLAN_KEY }}
+        run: |
+          test -n "$TF_PLAN_KEY"
+          openssl enc -aes-256-cbc -pbkdf2 -salt -in tfplan -out tfplan.enc -pass env:TF_PLAN_KEY
+      - if: github.ref == 'refs/heads/main' && github.event_name != 'schedule' && steps.plan.outputs.changes == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: tfplan-${{ github.sha }}
+          path: infra/tfplan.enc
+          retention-days: 1
+
+  apply:
+    needs: plan
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      github.event_name != 'schedule' &&
+      needs.plan.outputs.changes == 'true'
+    environment: production
+    # Shared with deploy.yml so an app release never runs while infrastructure changes.
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: tfplan-${{ github.sha }}
+          path: infra
+      - name: Decrypt the reviewed plan
+        env:
+          TF_PLAN_KEY: ${{ secrets.TF_PLAN_KEY }}
+        run: openssl enc -d -aes-256-cbc -pbkdf2 -in tfplan.enc -out tfplan -pass env:TF_PLAN_KEY
+      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.TF_APPLIER_SA }}
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.16.5
+          terraform_wrapper: false
+      - run: terraform init -lockfile=readonly -backend-config="bucket=${TF_VAR_project_id}-tfstate"
+      # Applies exactly the approved plan; Terraform refuses it if state moved since planning.
+      - run: terraform apply -no-color tfplan

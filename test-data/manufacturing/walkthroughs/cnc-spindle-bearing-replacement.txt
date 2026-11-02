@@ -1,0 +1,7 @@
+1. Apply lockout and tagout to the machine and bleed the drawbar air
+2. Remove the spindle cartridge with the crane and mount it on the bearing stand
+3. Press off the worn bearings and clean the shaft journals
+4. Fit the new angular contact bearing set and set the preload to specification
+5. Reinstall the cartridge and reconnect coolant and lubrication lines
+6. Measure spindle runout at the taper and confirm it is within 5 microns
+7. Record runout and close the work order

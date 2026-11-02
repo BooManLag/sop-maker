@@ -1,0 +1,190 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+/*
+ * Sopify design tokens. Every colour in the UI comes from this sheet;
+ * components never use arbitrary hex values. Variable names follow shadcn/ui.
+ */
+:root {
+  --radius: 7px;
+
+  --background: #f8f9f5;
+  --foreground: #24372f;
+  --foreground-soft: #4f5f4a;
+  --card: #ffffff;
+  --card-foreground: #24372f;
+  --popover: #ffffff;
+  --popover-foreground: #24372f;
+
+  --primary: #38583e;
+  --primary-hover: #29462f;
+  --primary-foreground: #ffffff;
+  --secondary: #ffffff;
+  --secondary-hover: #eff3e9;
+  --secondary-foreground: #506448;
+
+  --muted: #edf2e9;
+  --muted-foreground: #7b827a;
+  --subtle-foreground: #a2aa98;
+  --accent: #e4eadb;
+  --accent-foreground: #345638;
+
+  --brand-800: #29462f;
+  --brand-700: #38583e;
+  --brand-600: #527748;
+  --brand-500: #628054;
+  --brand-400: #8d9f7a;
+  --brand-300: #9bb28c;
+  --brand-100: #e8eedf;
+
+  /* The logo keeps its own fixed colours wherever it appears. */
+  --logo-leaf: #95bf47;
+  --logo-shade: #5e8e3e;
+  --logo-paper: #ffffff;
+
+  --sidebar: #f1f3ed;
+  --topbar: #fafbf7;
+  --surface-sunken: #f8faf4;
+  --input-background: #fcfdf9;
+
+  --border: #e3e7df;
+  --border-strong: #d4dcc8;
+  --input: #dfe5d6;
+  --ring: #7d9a6a;
+
+  --warning: #9f8348;
+  --warning-surface: #fcf6e9;
+  --warning-border: #eadcba;
+  --destructive: #9c6052;
+  --destructive-surface: #faeeeb;
+  --destructive-border: #ead3ca;
+}
+
+@theme inline {
+  /* A bar segment that sweeps across its track, for work whose length is unknown. */
+  --animate-indeterminate: indeterminate 1.6s ease-in-out infinite;
+  @keyframes indeterminate {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(250%);
+    }
+  }
+
+  --font-sans: Arial, Helvetica, sans-serif;
+  --font-serif: Georgia, serif;
+
+  --text-2xs: 9px;
+  --text-tiny: 10px;
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-lead: 13px;
+  --text-base: 14px;
+  --text-md: 18px;
+  --text-lg: 22px;
+  --text-xl: 25px;
+  --text-2xl: 31px;
+  --text-3xl: 36px;
+  --text-4xl: 40px;
+  --text-5xl: 43px;
+  --text-6xl: 51px;
+  --text-7xl: 60px;
+
+  --spacing-sidebar: 205px;
+  --spacing-sidebar-wide: 237px;
+
+  --tracking-eyebrow: 1.6px;
+
+  --breakpoint-sm: 651px;
+  --breakpoint-md: 901px;
+  --breakpoint-lg: 1151px;
+  --breakpoint-xl: 1500px;
+
+  --radius-xs: 4px;
+  --radius-sm: 5px;
+  --radius-md: 6px;
+  --radius-lg: var(--radius);
+  --radius-xl: 8px;
+
+  --shadow-card: 0 2px 3px #20352402;
+  --shadow-pop: 0 7px 24px #263c3025;
+  --shadow-drawer: 10px 0 35px #21382022;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-foreground-soft: var(--foreground-soft);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-hover: var(--secondary-hover);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-subtle-foreground: var(--subtle-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-brand-800: var(--brand-800);
+  --color-brand-700: var(--brand-700);
+  --color-brand-600: var(--brand-600);
+  --color-brand-500: var(--brand-500);
+  --color-brand-400: var(--brand-400);
+  --color-brand-300: var(--brand-300);
+  --color-brand-100: var(--brand-100);
+  --color-logo-leaf: var(--logo-leaf);
+  --color-logo-shade: var(--logo-shade);
+  --color-logo-paper: var(--logo-paper);
+  --color-sidebar: var(--sidebar);
+  --color-topbar: var(--topbar);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-input-background: var(--input-background);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-warning: var(--warning);
+  --color-warning-surface: var(--warning-surface);
+  --color-warning-border: var(--warning-border);
+  --color-destructive: var(--destructive);
+  --color-destructive-surface: var(--destructive-surface);
+  --color-destructive-border: var(--destructive-border);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background font-sans text-base text-foreground antialiased;
+  }
+  h1,
+  h2 {
+    @apply font-serif font-normal;
+  }
+  h3 {
+    @apply font-medium;
+  }
+  p {
+    @apply leading-[1.7] text-muted-foreground;
+  }
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-4 outline-ring;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    scroll-behavior: auto !important;
+    transition: none !important;
+    animation: none !important;
+  }
+}

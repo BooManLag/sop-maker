@@ -1,0 +1,8 @@
+# Normalize every text file to LF in the working tree.
+#
+# Prettier is configured with the default endOfLine: "lf", but with no
+# .gitattributes a Windows checkout (core.autocrlf=true) received CRLF files,
+# so `npm run format:check` failed locally with ~149 files while the Linux CI
+# job passed. Pinning eol=lf keeps the working tree aligned with the committed
+# blobs and with CI on every platform.
+* text=auto eol=lf

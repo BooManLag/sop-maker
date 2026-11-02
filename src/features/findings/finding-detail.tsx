@@ -1,0 +1,379 @@
+'use client';
+
+import Link from 'next/link';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
+import {
+  ArrowDownRight,
+  ArrowRight,
+  ArrowUpRight,
+  CheckCircle2,
+  FlaskConical,
+  ShieldCheck,
+} from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { DefinitionList } from '@/components/common/definition-list';
+import { Disclosure } from '@/components/common/disclosure';
+import { ErrorBanner } from '@/components/common/error-banner';
+import { Eyebrow } from '@/components/common/eyebrow';
+import { PageTitle } from '@/components/common/page-title';
+import { QueryState } from '@/components/common/query-state';
+import { WithSideRail, sideRailClass } from '@/components/common/layouts';
+import { api } from '@/lib/client/browser';
+import { useFinding, useWorkspace, useWorkspaceMutation } from '@/lib/client/queries';
+import type { FindingDetail as FindingWithExamples } from '@/lib/client/api';
+import type { Finding, TechnicianResponse } from '@/lib/domain/types';
+
+type Explanation = Omit<TechnicianResponse, 'id' | 'findingId'>;
+import { needsReview, relativeReduction } from '@/lib/domain/findings';
+import { OutcomeGrid } from './outcome-grid';
+import { evidenceSummary } from './evidence-summary';
+
+export function FindingDetail({ findingId }: { findingId: string }) {
+  return (
+    <QueryState query={useFinding(findingId)}>{(f) => <FindingReview finding={f} />}</QueryState>
+  );
+}
+
+function FindingReview({ finding }: { finding: FindingWithExamples }) {
+  const router = useRouter();
+  const processTitle = useWorkspace().data?.processes.find(
+    (p) => p.id === finding.processId,
+  )?.title;
+  const [explaining, setExplaining] = useState(false);
+  const explain = useWorkspaceMutation((body: Explanation) =>
+    api.recordExplanation(finding.id, body),
+  );
+  const dismiss = useWorkspaceMutation(() => api.dismissFinding(finding.id));
+  const strong = finding.grade === 'strong';
+  const dismissed = finding.status === 'dismissed';
+  const busy = explain.isPending || dismiss.isPending;
+
+  return (
+    <>
+      <ErrorBanner
+        error={explain.error ?? dismiss.error}
+        onDismiss={() => {
+          explain.reset();
+          dismiss.reset();
+        }}
+      />
+      <PageTitle
+        eyebrow={[processTitle, finding.evidence.demonstration ? 'SAMPLE FINDING' : 'FINDING']
+          .filter(Boolean)
+          .join(' · ')
+          .toUpperCase()}
+        title={finding.title}
+        description={
+          strong
+            ? 'A strong candidate. Worth testing in a controlled trial before changing the standard.'
+            : 'A promising practice. A reason to investigate before changing the standard.'
+        }
+        action={needsReview(finding) ? <Badge tone="amber">Needs review</Badge> : undefined}
+      />
+      <WithSideRail>
+        <div className="grid gap-5">
+          <Comparison finding={finding} />
+          <Card>
+            <Eyebrow>DID THE OUTCOME IMPROVE?</Eyebrow>
+            <OutcomeGrid
+              outcomes={[
+                {
+                  label: 'Without this practice',
+                  rate: finding.baselineRate,
+                  caption: '30-day callbacks',
+                },
+                {
+                  label: 'With this practice',
+                  rate: finding.practiceRate,
+                  caption: '30-day callbacks',
+                  highlight: true,
+                },
+              ]}
+              summary={
+                <>
+                  <strong className="text-4xl font-normal tracking-[-1.3px] md:text-3xl lg:text-5xl">
+                    {relativeReduction(finding)}
+                    <span className="ml-0.5 text-lg">
+                      % <ArrowDownRight size={20} aria-hidden className="inline" />
+                    </span>
+                  </strong>
+                  <span className="text-tiny">relative reduction</span>
+                  <small className="text-2xs">
+                    {finding.evidence.demonstration
+                      ? 'Sample association'
+                      : 'Historical association'}
+                    , not causation
+                  </small>
+                </>
+              }
+            />
+          </Card>
+          <EvidenceExplained finding={finding} />
+          <FieldNotes finding={finding} />
+          <TrustPanel finding={finding} />
+          {explain.data ? (
+            <ExpertResponse response={explain.data} />
+          ) : (
+            explaining && (
+              <ExplanationForm
+                busy={explain.isPending}
+                onSubmit={(body) => explain.mutate(body)}
+                onCancel={() => setExplaining(false)}
+              />
+            )
+          )}
+        </div>
+
+        <Card className={`${sideRailClass} md:sticky md:top-6`}>
+          <span className="mb-6 grid size-11 place-items-center rounded-lg bg-brand-100 text-brand-400">
+            <FlaskConical size={24} aria-hidden />
+          </span>
+          <Eyebrow>WHAT SHOULD HAPPEN NEXT?</Eyebrow>
+          <h2 className="mt-4.5 text-xl leading-[1.3]">
+            {strong ? 'Worth a controlled trial.' : 'Gather more evidence.'}
+          </h2>
+          <p>
+            {strong
+              ? 'The historical signal is promising. Test this practice deliberately before proposing a new standard.'
+              : 'A small sample is not enough. Collect comparable jobs and later outcomes before creating a trial.'}
+          </p>
+          <Button
+            variant="secondary"
+            disabled={busy || dismissed}
+            onClick={() => setExplaining(true)}
+          >
+            Record why it works
+            <ArrowUpRight size={15} aria-hidden />
+          </Button>
+          {strong && !dismissed ? (
+            <Button asChild>
+              <Link href={`/findings/${finding.id}/trial`}>
+                Create validation trial
+                <ArrowRight size={15} aria-hidden />
+              </Link>
+            </Button>
+          ) : (
+            <Button disabled>
+              Create validation trial
+              <ArrowRight size={15} aria-hidden />
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            className="w-full pt-5.5 text-tiny"
+            disabled={busy || dismissed}
+            onClick={() =>
+              dismiss.mutate(undefined, {
+                onSuccess: () => {
+                  toast.success('Finding dismissed. The SOP was not changed.');
+                  router.push('/findings');
+                },
+              })
+            }
+          >
+            Dismiss finding
+          </Button>
+          <div className="mt-6 border-t border-border" />
+          <small className="flex! items-start gap-2">
+            <ShieldCheck size={16} aria-hidden className="shrink-0" />
+            Practices are analyzed. People are never ranked.
+          </small>
+        </Card>
+      </WithSideRail>
+    </>
+  );
+}
+
+function Comparison({ finding }: { finding: Finding }) {
+  return (
+    <div className="grid items-center gap-3 rounded-lg border border-border-strong bg-muted p-5 sm:grid-cols-[1fr_24px_1fr] lg:gap-5 lg:p-7">
+      <div>
+        <Eyebrow>THE STANDARD · V{finding.evidence.sopVersion}</Eyebrow>
+        <h3 className="my-4 text-md leading-[1.55] md:text-base lg:text-md">{finding.standard}</h3>
+        <span className="text-2xs text-brand-400">What was supposed to happen</span>
+      </div>
+      <ArrowRight size={23} aria-hidden className="mx-auto rotate-90 text-brand-300 sm:rotate-0" />
+      <div>
+        <Eyebrow>WHAT SOME TECHNICIANS DO</Eyebrow>
+        <h3 className="my-4 text-md leading-[1.55] md:text-base lg:text-md">{finding.practice}</h3>
+        <span className="text-2xs text-brand-400">A repeated field practice</span>
+      </div>
+    </div>
+  );
+}
+
+function EvidenceExplained({ finding }: { finding: Finding }) {
+  return (
+    <Card>
+      <Eyebrow>WHAT THE NUMBERS SAY</Eyebrow>
+      {evidenceSummary(finding).map((paragraph) => (
+        <p key={paragraph} className="my-3 text-sm leading-[1.6]">
+          {paragraph}
+        </p>
+      ))}
+    </Card>
+  );
+}
+
+function FieldNotes({ finding }: { finding: FindingWithExamples }) {
+  if (finding.evidence.demonstration) return null;
+  return (
+    <Card>
+      <Eyebrow>WHAT TECHNICIANS WROTE</Eyebrow>
+      {finding.examples.length ? (
+        <>
+          {finding.examples.map((note) => (
+            <blockquote
+              key={note}
+              className="border-brand-200 my-4 border-l-2 pl-4 font-serif text-md leading-[1.6] text-brand-500"
+            >
+              “{note}”
+            </blockquote>
+          ))}
+          <small className="text-2xs text-muted-foreground">
+            Job notes from the imported records, with contact details removed. They are deleted with
+            the records 30 days after import.
+          </small>
+        </>
+      ) : (
+        <p className="my-3 text-sm">
+          The job notes behind this finding were deleted with the imported records 30 days after
+          import.
+        </p>
+      )}
+    </Card>
+  );
+}
+
+function TrustPanel({ finding }: { finding: Finding }) {
+  const signals = [
+    'Compared technicians against their own jobs',
+    'Similar equipment family',
+    'Similar job conditions',
+    finding.grade === 'strong'
+      ? 'Pattern remained on later jobs'
+      : 'Later-job evidence is still insufficient',
+  ];
+  const { evidence } = finding;
+  return (
+    <Card>
+      <Eyebrow>
+        {finding.evidence.demonstration
+          ? 'WHY WE TRUST THIS SAMPLE SIGNAL'
+          : 'WHY WE TRUST THIS SIGNAL'}
+      </Eyebrow>
+      {signals.map((signal) => (
+        <p key={signal} className="my-4 flex items-center gap-2 text-sm text-brand-500">
+          <CheckCircle2 size={17} aria-hidden className="text-brand-300" />
+          {signal}
+        </p>
+      ))}
+      <Disclosure summary="View statistical evidence">
+        <p>{evidence.methodology}</p>
+        <DefinitionList
+          items={[
+            ['Comparable jobs', evidence.sampleSize],
+            ['SOP version', evidence.sopVersion],
+            ['Analysis version', evidence.analysisVersion],
+            ['Source record references', evidence.sourceRecordIds.join(', ')],
+            ['Held-out result', evidence.heldOutResult],
+            ...(evidence.statistics
+              ? ([['Significance score (z)', evidence.statistics.z]] as [string, number][])
+              : []),
+          ]}
+        />
+        {evidence.demonstration && (
+          <p>
+            No confidence interval or significance claim is calculated for this illustrative
+            scenario.
+          </p>
+        )}
+      </Disclosure>
+    </Card>
+  );
+}
+
+function ExpertResponse({ response }: { response: TechnicianResponse }) {
+  const details: [string, string][] = [
+    ['Use when', response.condition],
+    ['Warning', response.warning],
+    ['Relevant equipment', response.equipment],
+    ['When not to use it', response.doNotUse],
+  ];
+  return (
+    <Card>
+      <Badge>Expert explanation</Badge>
+      <h2 className="mt-4 text-lg tracking-[-0.55px]">The why behind the practice.</h2>
+      <blockquote className="my-5 font-serif text-md leading-[1.6] text-brand-500">
+        “{response.reason}”
+      </blockquote>
+      <DefinitionList items={details.filter(([, value]) => value)} />
+    </Card>
+  );
+}
+
+const explanationFields: { key: keyof Explanation; label: string }[] = [
+  { key: 'reason', label: 'Why does this practice work?' },
+  { key: 'condition', label: 'Use when' },
+  { key: 'warning', label: 'Warning' },
+  { key: 'equipment', label: 'Relevant equipment' },
+  { key: 'doNotUse', label: 'When not to use it' },
+];
+
+/** What the technicians said, recorded by the reviewer; nothing is sent from here. */
+function ExplanationForm({
+  busy,
+  onSubmit,
+  onCancel,
+}: {
+  busy: boolean;
+  onSubmit: (body: Explanation) => void;
+  onCancel: () => void;
+}) {
+  const [values, setValues] = useState<Explanation>({
+    reason: '',
+    condition: '',
+    warning: '',
+    equipment: '',
+    doNotUse: '',
+  });
+  return (
+    <Card>
+      <form
+        className="grid gap-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          onSubmit(values);
+        }}
+      >
+        <h2 className="text-lg tracking-[-0.55px]">The why behind the practice.</h2>
+        {explanationFields.map(({ key, label }) => (
+          <div key={key} className="flex flex-col gap-2 text-xs text-foreground-soft">
+            <Label htmlFor={`explanation-${key}`}>{label}</Label>
+            <Textarea
+              id={`explanation-${key}`}
+              rows={key === 'reason' ? 3 : 2}
+              required={key === 'reason'}
+              value={values[key]}
+              onChange={(event) => setValues({ ...values, [key]: event.target.value })}
+            />
+          </div>
+        ))}
+        <div className="flex gap-3">
+          <Button type="submit" disabled={busy || !values.reason.trim()}>
+            Save explanation
+          </Button>
+          <Button type="button" variant="ghost" onClick={onCancel}>
+            Cancel
+          </Button>
+        </div>
+      </form>
+    </Card>
+  );
+}

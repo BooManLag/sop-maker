@@ -1,0 +1,165 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import {
+  EvidenceEngine,
+  normalizeRecords,
+  requiredSamplePerGroup,
+} from '../../src/lib/application/evidence-engine';
+import { handleApi } from '../support/handle-api';
+import { initialStore } from '../../src/lib/application/store';
+import { readConfig } from '../../src/lib/server/config';
+import { JsonRepositoryProvider } from '../../src/lib/infrastructure/json-repository';
+
+const repository = new JsonRepositoryProvider(readConfig().dataDir).forTenant('demo-org');
+test('imports pseudonymize technicians and preserve unknown outcomes', () => {
+  const [row] = normalizeRecords([
+    { job_id: 'one', technician_id: 'Jane', callback_within_30_days: 'unknown' },
+  ]);
+  assert.match(row.technicianId, /^tech_[a-f0-9]{12}$/);
+  assert.equal(row.callback, null);
+  assert(!JSON.stringify(row).includes('Jane'));
+  assert.throws(() => normalizeRecords([{ job_id: 'a' }, { job_id: 'a' }]), /Duplicate/);
+});
+test('insufficient records cannot yield findings', async () => {
+  const engine = new EvidenceEngine();
+  const ready = engine.readiness(normalizeRecords([{ job_id: 'a' }]));
+  assert.equal(ready.eligible, false);
+  assert(ready.missing.length >= 4);
+  await assert.rejects(engine.analyze([]), /not connected/);
+});
+test('sample size is calculated rather than using the historical matched sample', () => {
+  assert(requiredSamplePerGroup() > 1000);
+  assert(requiredSamplePerGroup(0.1, 0.05) < requiredSamplePerGroup());
+});
+test('publishing needs no separate approval flag; the publisher is recorded', async () => {
+  const process = (await handleApi('POST', ['processes'], {
+    title: 'Test isolated baseline',
+    equipment: 'Valve X',
+  })) as { id: string };
+  const published = (await handleApi('POST', ['processes', process.id, 'publish'], {
+    steps: [
+      {
+        id: 'a',
+        sequence: 1,
+        action: 'Check',
+        required: true,
+        source: 'expert_walkthrough',
+        imageWaived: true,
+      },
+    ],
+  })) as { currentVersion: number; versions: { approved: boolean }[] };
+  assert.equal(published.currentVersion, 1);
+  assert.equal(published.versions[0].approved, true);
+});
+test('a validated trial is required for process changes', async () => {
+  await assert.rejects(handleApi('POST', ['change-requests'], { trialId: 'missing' }), /validated/);
+});
+test('complete demo loop preserves published baseline while submitting proposed v2', async () => {
+  const scan = (await handleApi('POST', ['scans'], {
+    processId: 'valve-replacement',
+    demo: true,
+  })) as { id: string };
+  await assert.rejects(handleApi('POST', ['scans', scan.id, 'run'], {}), /Not enough/);
+  await handleApi('POST', ['scans', scan.id, 'readiness'], {});
+  await handleApi('POST', ['scans', scan.id, 'run'], {});
+  const trial = (await handleApi('POST', ['trials'], {
+    findingId: 'finding-18',
+    equipment: 'Valve X',
+    testGroup: 'Eligible test jobs',
+  })) as { id: string };
+  await assert.rejects(handleApi('POST', ['change-requests'], { trialId: trial.id }), /validated/);
+  await handleApi('POST', ['trials', trial.id, 'results'], { sample: true });
+  const change = (await handleApi('POST', ['change-requests'], { trialId: trial.id })) as {
+    id: string;
+  };
+  await handleApi('POST', ['change-requests', change.id, 'submit'], {
+    proposedStep: 'Wait and repeat pressure test.',
+  });
+  const process = (await handleApi('GET', ['processes', 'valve-replacement'])) as {
+    currentVersion: number;
+  };
+  assert.equal(process.currentVersion, 1);
+});
+const resetStore = () =>
+  repository.transact((store) => {
+    Object.assign(store, initialStore());
+  });
+test('a published baseline cannot be changed through capture', async () => {
+  await resetStore();
+  await assert.rejects(
+    handleApi('POST', ['processes', 'valve-replacement', 'captures'], {
+      kind: 'text',
+      expertReference: 'x',
+      text: 'Do A.',
+    }),
+    /already published/,
+  );
+  const process = (await handleApi('GET', ['processes', 'valve-replacement'])) as {
+    versions: { steps: unknown[] }[];
+  };
+  assert.equal(process.versions[0].steps.length, 7);
+});
+test('repeat requests reuse the existing trial and change request', async () => {
+  await resetStore();
+  const body = { findingId: 'finding-18', equipment: 'Valve X', testGroup: 'Eligible jobs' };
+  const first = (await handleApi('POST', ['trials'], body)) as { id: string };
+  const second = (await handleApi('POST', ['trials'], body)) as { id: string };
+  assert.equal(second.id, first.id);
+  await handleApi('POST', ['trials', first.id, 'results'], { sample: true });
+  const change = (await handleApi('POST', ['change-requests'], { trialId: first.id })) as {
+    id: string;
+  };
+  const again = (await handleApi('POST', ['change-requests'], { trialId: first.id })) as {
+    id: string;
+  };
+  assert.equal(again.id, change.id);
+  const workspace = (await handleApi('GET', ['workspace'])) as {
+    trials: unknown[];
+    changes: unknown[];
+  };
+  assert.equal(workspace.trials.length, 1);
+  assert.equal(workspace.changes.length, 1);
+});
+test('dismissed findings are left out of scans and can be restored', async () => {
+  await resetStore();
+  await handleApi('POST', ['findings', 'finding-18', 'dismiss']);
+  const scan = (await handleApi('POST', ['scans'], {
+    processId: 'valve-replacement',
+    demo: true,
+  })) as { id: string };
+  await handleApi('POST', ['scans', scan.id, 'readiness']);
+  await handleApi('POST', ['scans', scan.id, 'run']);
+  const findings = (await handleApi('GET', ['scans', scan.id, 'findings'])) as { id: string }[];
+  assert(!findings.some((f) => f.id === 'finding-18'));
+  const restored = (await handleApi('POST', ['findings', 'finding-18', 'restore'])) as {
+    status: string;
+  };
+  assert.equal(restored.status, 'candidate');
+  await handleApi('POST', ['trials'], {
+    findingId: 'finding-18',
+    equipment: 'Valve X',
+    testGroup: 'Eligible jobs',
+  });
+});
+test('a scan needs a valid timestamp on every job before later jobs can be held out', () => {
+  const rows = (timestamp: (i: number) => string) =>
+    Array.from({ length: 40 }, (_, i) => ({
+      job_id: `job-${i}`,
+      technician_id: `tech-${i % 4}`,
+      equipment_model: 'V-200',
+      job_type: 'valve',
+      timestamp: timestamp(i),
+      checklist_values: 'seal=ok',
+      callback_within_30_days: i % 5 === 0 ? 'yes' : 'no',
+    }));
+  const engine = new EvidenceEngine();
+  const dated = engine.readiness(
+    normalizeRecords(rows((i) => new Date(Date.UTC(2026, 0, 1 + i)).toISOString())),
+  );
+  assert.deepEqual(dated.missing, []);
+  for (const bad of ['', 'not a date']) {
+    const undated = engine.readiness(normalizeRecords(rows((i) => (i === 7 ? bad : '2026-01-01'))));
+    assert.equal(undated.eligible, false);
+    assert.ok(undated.missing.some((m) => /timestamp/i.test(m)));
+  }
+});

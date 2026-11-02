@@ -1,0 +1,7 @@
+1. Park the robot and apply lockout to the welding power source
+2. Remove the nozzle, contact tip and liner
+3. Fit the new liner, contact tip and nozzle
+4. Set the wire feed tension and check shielding gas flow
+5. Verify the tool center point against the reference pin
+6. Run a test bead on a coupon and inspect it
+7. Release the cell and log the consumables used
